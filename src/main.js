@@ -275,11 +275,14 @@ class Game {
     const w = window.innerWidth;
     const h = window.innerHeight;
     const dpr = window.devicePixelRatio || 1;
-    const pr = scale || (this.quality === 2 ? Math.min(dpr, 2) : this.quality === 1 ? Math.min(dpr, 1.25) : 1);
+    // En pantallas retina, pasar de 1,5 casi no se nota (ya hay antialias) y cuesta casi el doble de gráfica
+    const pr = scale || (this.quality === 2 ? Math.min(dpr, 1.5) : this.quality === 1 ? Math.min(dpr, 1.25) : 1);
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
     this.composer.setPixelRatio(pr);
     this.composer.setSize(w, h);
+    // El resplandor es un borrón: a media resolución se ve igual y sale algo más barato
+    this.bloom.setSize((w * pr) / 2, (h * pr) / 2);
     this.final.uniforms.uRes.value.set(w * pr, h * pr);
     this.camera3.cam.aspect = w / h;
     this.camera3.cam.updateProjectionMatrix();
@@ -597,6 +600,9 @@ class Game {
 
   // ---------- Bucle principal ----------
   loop(t) {
+    // Tope de fotogramas para no calentar el equipo: 60 por segundo aunque la pantalla sea de 120 Hz,
+    // y en la pausa, que es una imagen casi fija, bastan 20
+    if (t - this.last < (this.paused && !this.photo.on ? 48 : 13)) return;
     const dt = Math.min(0.05, Math.max(0.001, (t - this.last) / 1000));
     this.last = t;
     this.frame++;
