@@ -51,7 +51,7 @@ export const CHARACTERS = [
     cam: 1,
   },
   {
-    id: 'iker', name: 'Iker', icon: '⚡', vehicle: 'Patinete eléctrico', blurb: 'No para quieto: sale de una calle cualquiera. Su patinete eléctrico es lo que más corre, pero pesa: salta y gira peor.',
+    id: 'iker', name: 'Iker', icon: '⚡', vehicle: 'E-Patinete', blurb: 'No para quieto: sale de una calle cualquiera. Su patinete eléctrico es lo que más corre, pero pesa: salta y gira peor.',
     look: { torso: 0x17181c, arms: 0x17181c, legs: 0x2b2d33, hair: 'crop', hairColor: 0x17110d, hairTips: 0x33271f, face: 'smile', brows: 0x17110d },
     scale: 0.9, color: 5, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
     build: (color) => createEScooter(color),
