@@ -87,7 +87,7 @@ export class Folks {
     const uni = createUnicycle(C.red);
     const wheel = uni.wheel;
     body.add(uni.group);
-    const fig = createMinifig({ torso: C.red, arms: C.white, legs: C.blue, hair: 'hair', hairColor: C.brown, face: 'grin', print: 'stripes', printColor: '#ffffff' });
+    const fig = createMinifig(characterById('yago').look);
     fig.group.scale.setScalar(0.8);
     fig.group.position.y = uni.seatY - 1.72 * 0.8;
     body.add(fig.group);

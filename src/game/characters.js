@@ -27,7 +27,7 @@ export const CHARACTERS = [
   },
   {
     id: 'yago', name: 'Yago', icon: '🤹', vehicle: 'Monociclo', blurb: 'Gira sobre una moneda y salta más que nadie, pero corre menos.',
-    look: { torso: C.red, arms: C.white, legs: C.blue, hair: 'hair', hairColor: C.brown, face: 'grin', print: 'stripes', printColor: '#ffffff' },
+    look: { torso: C.red, arms: C.white, legs: C.blue, hair: 'wavy', hairColor: 0x24160f, hairTips: 0x3e2718, face: 'serious', brows: 0x1c120c, print: 'stripes', printColor: '#ffffff' },
     scale: 0.8, color: 1, trick: 'Pirueta', alienTrick: '¡Pirueta marciana!',
     build: (color) => createUnicycle(color),
     stats: { acc: 24, vmax: 27, vboost: 42, jump: 18, turn: 4.1, spin: 9.6 },
