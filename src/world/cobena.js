@@ -26,6 +26,7 @@ const ROOFS = [TEJA, 0xa84a26, 0x8f3d1f, TEJA, 0xc0683f, C.darkRed];
 const DOORS = [C.brown, C.darkRed, C.green, C.blue, C.dgray, 0x8a5a2b];
 const SIGN_BG = ['#c91a09', '#0055bf', '#237841', '#fe8a18', '#6b3fa0', '#008f9b', '#1b1d21', '#c870a0'];
 const PROPS = ['hydrant', 'bin', 'mailbox', 'cone', 'bench', 'crate', 'flowerpot', 'barrier'];
+const HOMES = new Set(Object.values(D.places.homes).map((h) => h.b)); // casas de los personajes
 // Capas del suelo, de abajo arriba
 const LY = { field: 0, urban: 1, green: 2, water: 3, sidewalk: 4, path: 5, road: 6, mark: 7 };
 
@@ -434,7 +435,7 @@ function buildings(W) {
       default: house(W, b, rnd, fam);
     }
     if (b.kind !== 6) W.map.buildings.push(b);
-    if (i / 11 === D.home) homeDecor(W, b);
+    if (HOMES.has(i / 11)) homeDecor(W, b);
     W.batch.level = null;
   }
 }
@@ -452,7 +453,7 @@ function plot(W, b) {
   if (b.kind !== 6) fbox(W.batch, f, 0, -b.drop, 0, b.w + 0.3, b.drop, b.d + 0.3, C.stone, F.SEAMS);
 }
 
-// La casa de salida: un banderín y un buzón para reconocerla
+// Las casas de los personajes: un banderín y un buzón para reconocerlas
 function homeDecor(W, b) {
   const f = frame(b.x, b.z, b.rot);
   const fc = face(W, f, b.w, b.d, b.front);
@@ -460,7 +461,6 @@ function homeDecor(W, b) {
   W.batch.box(q[0], 0, q[1], 0.3, 11, 0.3, C.white, 0);
   fc.put(fc.len / 2 - 2.3, 8.6, 1.2, 2.4, 1.6, 0.14, C.azure);
   fc.put(fc.len / 2 - 2.3, 9.1, 1.28, 0.8, 0.6, 0.1, C.yellow, F.GLOW);
-  W.places.home = { x: b.x, z: b.z };
 }
 
 function ground(W, G) {

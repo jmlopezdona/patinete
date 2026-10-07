@@ -229,7 +229,7 @@ export class Wanted {
     const g = this.game;
     const G = this.granny;
     const lost = this.take(500);
-    const sp = g.world.places.spawn;
+    const sp = g.home.spawn;
     g.bits.burst(p.pos.x, p.pos.y + 2.5, p.pos.z, [0xff8ad1, 0xffffff, C.darkRed], 10, 9, this.T.height(p.pos.x, p.pos.z), 0.5);
     p.crash();
     p.respawnAt = { x: sp.x, z: sp.z, heading: sp.heading };

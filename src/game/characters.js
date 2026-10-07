@@ -1,9 +1,10 @@
 import { C } from '../lego/colors.js';
-import { scooterVehicle, createSkateboard, createUnicycle, createBike, createTesla } from '../lego/vehicles.js';
+import { scooterVehicle, createSkateboard, createUnicycle, createBike } from '../lego/vehicles.js';
 
 export const COLORS = [C.azure, C.red, C.lime, C.orange, C.magenta, C.yellow, C.purple, C.white];
 
-// Personajes entre los que se puede elegir. Cada uno lleva su vehículo y su forma de moverse:
+// Personajes entre los que se puede elegir. Cada uno sale de su casa (cobena-data: places.homes)
+// y lleva su vehículo y su forma de moverse:
 // acc = aceleración, vmax / vboost = velocidad punta sin y con turbo, jump = impulso del salto,
 // turn = agilidad al girar, spin = velocidad de giro en el aire.
 export const CHARACTERS = [
@@ -38,14 +39,6 @@ export const CHARACTERS = [
     build: (color) => createBike(color),
     stats: { acc: 20, vmax: 35, vboost: 51, jump: 15.5, turn: 2.9, spin: 7.2 },
     cam: 1.05,
-  },
-  {
-    id: 'jose', name: 'Jose', icon: '🏀', vehicle: 'Tesla Model X', blurb: 'Un cohete eléctrico: acelera como nadie, pero gira ancho y salta poco.',
-    look: { torso: C.white, arms: C.skin, legs: C.blue, hair: 'none', face: 'senor', print: '#23', printColor: '#c91a09' },
-    scale: 0.9, color: 7, trick: 'Alas de halcón', alienTrick: '¡Portazo marciano!',
-    build: (color) => createTesla(color),
-    stats: { acc: 30, vmax: 39, vboost: 58, jump: 12.5, turn: 2.45, spin: 6 },
-    cam: 1.32,
   },
 ];
 

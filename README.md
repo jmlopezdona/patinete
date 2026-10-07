@@ -7,8 +7,8 @@ grises, guardabarros gris, horquilla blanca en L, conectores negros, columna a r
 gris en T).
 
 El callejero es el real: calles, casas, vallas, parques, piscinas y pistas salen de
-[OpenStreetMap](https://www.openstreetmap.org) a escala 2 unidades de juego por metro. La partida
-empieza en casa, en la **calle Río Júcar, 44**, y el skatepark está donde lo están construyendo de
+[OpenStreetMap](https://www.openstreetmap.org) a escala 2 unidades de juego por metro. Cada
+personaje empieza la partida en su casa (Jose Manuel, en la **calle Río Júcar, 44**), y el skatepark está donde lo están construyendo de
 verdad: en la parcela de al lado de la rotonda de la M-103, al final de la calle.
 
 Las cuestas también son las de verdad: el relieve sale del modelo digital del terreno del
@@ -73,23 +73,27 @@ Para hacer *grind*, salta y cae sobre una barandilla del skatepark.
 ## Personajes
 
 En el menú principal (o con «Personaje» en la pausa) se elige quién sale a la calle. Cada uno
-lleva su vehículo y se conduce distinto:
+sale de su casa, lleva su vehículo y se conduce distinto:
 
-| | Personaje | Vehículo | Cómo va | Su truco (`F` en el aire) |
-| --- | --- | --- | --- | --- |
-| 🛴 | **Jose Manuel** | Patinete | El de siempre: equilibrado | Tailwhip |
-| 🥁 | **Adrián** | Monopatín | Gira fino y tiene buen ollie. Se impulsa con el pie y luego va de lado | Kickflip |
-| 🤹 | **Yago** | Monociclo | Gira sobre una moneda y salta más que nadie, pero corre menos | Pirueta |
-| 🧤 | **Teo** | Bicicleta | Más velocidad punta y buenos saltos | Tailwhip |
-| 🏀 | **Jose** | Tesla Model X | Acelera y corre como nadie, pero gira ancho y salta poco | Alas de halcón: abre las puertas en pleno vuelo |
+| | Personaje | Su casa | Vehículo | Cómo va | Su truco (`F` en el aire) |
+| --- | --- | --- | --- | --- | --- |
+| 🛴 | **Jose Manuel** | Calle Río Júcar, 44 | Patinete | El de siempre: equilibrado | Tailwhip |
+| 🥁 | **Adrián** | Calle Libertad, 17 | Monopatín | Gira fino y tiene buen ollie. Se impulsa con el pie y luego va de lado | Kickflip |
+| 🤹 | **Yago** | Calle Río Guadiana, 17 | Monociclo | Gira sobre una moneda y salta más que nadie, pero corre menos | Pirueta |
+| 🧤 | **Teo** | Avenida Río Guadalquivir, 39 | Bicicleta | Más velocidad punta y buenos saltos | Tailwhip |
+
+Al elegirlo en el menú, el personaje aparece en la puerta de su casa; en la pausa se cambia sobre
+la marcha, sin moverse del sitio. «Volver a casa» y el castigo de la abuela llevan a la casa del
+que se lleve en ese momento.
 
 Mientras llevas a un personaje, su doble desaparece del pueblo: Yago deja libre la pista de circo,
-la batería de Adrián se queda sola y callada, Jose no está en la canasta y a Teo lo sustituye otro
-portero. El color de cada vehículo se cambia con `V` y se guarda por separado.
+la batería de Adrián se queda sola y callada y a Teo lo sustituye otro portero. El color de cada
+vehículo se cambia con `V` y se guarda por separado.
 
 ## Qué hay en Cobeña
 
-- **Calle Río Júcar, 44**: la casa de salida (lleva cartel y banderín, y sale marcada en el minimapa).
+- **Las casas de los personajes**: Río Júcar, 44; Río Guadiana, 17; Río Guadalquivir, 39 y Libertad, 17.
+  Llevan cartel con el número y banderín, y la del que se lleva sale marcada en el minimapa.
 - **Skatepark nuevo**, en su parcela junto a la rotonda: half-pipe, bowl circular, funbox con
   barandilla, mesa de salto, rollers y raíles.
 - **Plaza de la Villa** con el ayuntamiento, la iglesia de San Cipriano y su campanario, y la fuente
@@ -153,8 +157,8 @@ peatones también cuenta) y aparece la primera estrella bajo el minimapa:
 | 🤹 | **Yago** | Skatepark nuevo, en su pista de circo | Monociclo, malabares, piruetas y reverencia. Si te le echas encima, te salta con una voltereta |
 | 🧤 | **Teo** | Pista Polideportiva | El portero de «Chut a Puerta»: rizos, gafas redondas y la camiseta de Argentina con sus tres estrellas |
 | 🥁 | **Adrián** | Calle Libertad, 17 | Doble bombo y flequillo a tazón. Cuanto más te acercas, más suena |
-| 🏀 | **Jose** | Pista de baloncesto más cercana a casa | Tiros en suspensión y entradas a canasta (no las mete todas) |
-| 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de casa | Footing en grupo dando la vuelta a los dos parques |
+| 🏀 | **Jose** | Pista de baloncesto más cercana a Río Júcar, 44 | Tiros en suspensión y entradas a canasta (no las mete todas) |
+| 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de Río Júcar, 44 | Footing en grupo dando la vuelta a los dos parques |
 
 Todos salen en el minimapa con su icono.
 
@@ -188,7 +192,7 @@ queda libre para buscar el encuadre.
 
 | | Minijuego | Dónde | Objetivo |
 | --- | --- | --- | --- |
-| 🏁 | Gran Premio de Cobeña | Delante de casa | Vuelta al barrio de los ríos contrarreloj |
+| 🏁 | Gran Premio de Cobeña | Calle Río Júcar, delante del 44 | Vuelta al barrio de los ríos contrarreloj |
 | 🛹 | Rey del Skatepark | Skatepark nuevo | 75 segundos encadenando trucos |
 | 🎳 | Bolos Gigantes | Recinto Ferial | Tú eres la bola: 10 bolos en dos tiradas |
 | 🍕 | Pizza Exprés | Plaza de la Villa | Repartir 5 pizzas antes de que se enfríen |
@@ -218,7 +222,8 @@ se guarda en el navegador.
   entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo y rayo),
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
-  `characters.js` define los personajes elegibles y sus estadísticas. `photo.js` es el modo foto:
+  `characters.js` define los personajes elegibles y sus estadísticas (sus casas y puntos de salida
+  van en el callejero, en `places.homes`). `photo.js` es el modo foto:
   cámara libre, filtros (van en la pasada final de `main.js`) y la captura a mayor resolución.
 - `src/core/` — entrada (teclado, mando, táctil), audio sintetizado con WebAudio y utilidades.
   `install.js` registra el service worker y pone el botón de instalar.
