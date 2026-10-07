@@ -123,6 +123,54 @@ export function createEScooter(color = C.yellow) {
   return { group, steer, rear, front, kind: 'scooter', electric: true, wheelR: WHEEL_R, steerZ: STEER_Z, seatY: DECK_Y, seatZ: -0.5, cargo: [0, 1.5, -2.2], tail: 2.8, lean: 0.9 };
 }
 
+// Patinete de calle, de los de toda la vida: tabla baja y estrecha con su lija, dos ruedas pequeñas,
+// el freno de pisar sobre la de atrás, columna de aluminio y manillar en T con puños de goma.
+export function createKickScooter(color = C.lime) {
+  const group = new THREE.Group();
+  const R = 0.55;
+  const DECK = 0.64; // la tabla va más baja que la del patinete de Jose Manuel, y el manillar con ella
+  const BAR = BAR_Y - (DECK_Y - DECK);
+  const WZ_R = -2.3;
+  const WZ_F = STEER_Z + 0.45;
+  const b = new Builder();
+  b.box(1.0, 0.16, 3.2, 0, DECK - 0.08, -0.3, color, { r: 0.06 });
+  b.box(0.86, 0.03, 2.8, 0, DECK + 0.01, -0.3, C.black);
+  for (const sx of [-1, 1]) b.box(0.08, 0.3, 1.1, sx * 0.3, R + 0.02, WZ_R + 0.3, color, { r: 0.03 });
+  // Freno de pisar
+  b.box(0.46, 0.06, 1.0, 0, R * 2 + 0.12, WZ_R - 0.05, C.lgray, { r: 0.02, rx: 0.22 });
+  // Cuello que sube de la tabla a la pipa de la dirección
+  b.box(0.3, 0.26, 1.1, 0, DECK + 0.36, STEER_Z - 0.42, color, { r: 0.08, rx: -0.75 });
+  b.cyl(0.21, 0.7, 0, 1.5, STEER_Z, color, { seg: 12 });
+  group.add(b.mesh(plastic));
+
+  const steer = new THREE.Group();
+  steer.position.set(0, 0, STEER_Z);
+  const s = new Builder();
+  for (const sx of [-1, 1]) s.box(0.08, 1.0, 0.16, sx * 0.3, 0.92, 0.24, C.lgray, { r: 0.03, rx: 0.42 });
+  s.box(0.68, 0.14, 0.3, 0, 1.2, 0.05, C.lgray, { r: 0.05 });
+  s.cyl(0.13, BAR - 1.1, 0, (BAR + 1.1) / 2, 0, C.lgray, { seg: 12 });
+  s.cyl(0.18, 0.34, 0, 2.0, 0, C.black, { seg: 12 });
+  s.cyl(0.1, 2.5, 0, BAR, 0, C.lgray, { axis: 'x', seg: 10 });
+  for (const sx of [-1, 1]) s.cyl(0.15, 0.62, sx * 1.0, BAR, 0, C.black, { axis: 'x', seg: 12 });
+  steer.add(s.mesh(plastic));
+  group.add(steer);
+
+  const wheel = () => {
+    const w = new Builder();
+    w.cyl(R, 0.26, 0, 0, 0, C.black, { axis: 'x', seg: 24 });
+    w.cyl(R * 0.68, 0.28, 0, 0, 0, color, { axis: 'x', seg: 20 });
+    w.cyl(0.13, 0.3, 0, 0, 0, C.lgray, { axis: 'x', seg: 10 });
+    for (let i = 0; i < 3; i++) w.box(0.3, R * 1.2, 0.09, 0, 0, 0, C.white, { rx: (i / 3) * Math.PI });
+    return w.mesh(plastic);
+  };
+  const rear = wheel();
+  rear.position.set(0, R, WZ_R);
+  const front = wheel();
+  front.position.set(0, R, WZ_F);
+  group.add(rear, front);
+  return { group, steer, rear, front, kind: 'scooter', wheelR: R, steerZ: STEER_Z, seatY: DECK, seatZ: -0.5, cargo: [0, 1.2, -2.0], tail: 2.7, lean: 1 };
+}
+
 // Monopatín: tabla con las puntas levantadas, lija negra, ejes y cuatro ruedecitas.
 // La tabla va en un grupo aparte para poder voltearla en los kickflips.
 export function createSkateboard(color = C.red) {

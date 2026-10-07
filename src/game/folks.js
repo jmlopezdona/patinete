@@ -8,6 +8,7 @@ import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
 import { characterById, COLORS } from './characters.js';
 import { DATA } from '../world/cobena.js';
+import { frame } from '../world/city.js';
 import { angDiff, damp, clamp } from '../core/rng.js';
 
 const TAU = Math.PI * 2;
@@ -29,8 +30,8 @@ const shadows = (o) =>
 
 // Vecinos con nombre propio: Yago y su monociclo en el skatepark, Adrián, el pequeño batería heavy
 // de la plaza, Jose y su hijo Jose Manuel en la canasta, Ana, Cintia y Bea haciendo footing
-// por los parques, Emma, de visita, haciéndose selfies en El Palmeral, e Iker, que no para de dar
-// vueltas por el pueblo con su patinete eléctrico.
+// por los parques, Emma, de visita, haciéndose selfies en El Palmeral, Iker, que no para de dar
+// vueltas por el pueblo con su patinete eléctrico, y Leo, de blanco, que pelotea en la pista de tenis.
 export class Folks {
   constructor(game) {
     this.game = game;
@@ -42,6 +43,7 @@ export class Folks {
     this.buildJoggers();
     this.buildEmma();
     this.buildIker();
+    this.buildLeo();
   }
 
   // El personaje que lleva el jugador no puede estar a la vez en su sitio de siempre
@@ -71,6 +73,11 @@ export class Folks {
       K.marker.hidden = id === 'iker';
       if (id === 'iker') K.root.visible = K.tag.visible = false;
     }
+    const L = this.leo;
+    if (L) {
+      L.marker.hidden = id === 'leo';
+      if (id === 'leo') L.fig.group.visible = L.machine.visible = L.ball.visible = L.tag.visible = false;
+    }
   }
 
   update(dt, p, time, live) {
@@ -80,6 +87,136 @@ export class Folks {
     if (this.joggers) this.updateJoggers(dt, p, time, live);
     if (this.emma && this.away !== 'emma') this.updateEmma(dt, p, time, live);
     if (this.iker && this.away !== 'iker') this.updateIker(dt, p, time, live);
+    if (this.leo && this.away !== 'leo') this.updateLeo(dt, p, time, live);
+  }
+
+  // ---------- Leo, de blanco, peloteando en la pista de tenis contra la máquina lanzapelotas ----------
+  buildLeo() {
+    const P = this.game.world.places.tennis;
+    if (!P) return;
+    const F = frame(P.x, P.z, P.rot); // X local: a lo largo de la pista; la red, en X = 0
+    const ch = characterById('leo');
+    const fig = createMinifig(ch.look);
+    fig.group.scale.setScalar(ch.scale);
+    // La raqueta, en la mano derecha
+    const rb = new Builder();
+    rb.cyl(0.09, 1.0, 0, 0.5, 0, C.black, { seg: 8 });
+    rb.add(new THREE.TorusGeometry(0.56, 0.07, 6, 20), C.red, 0, 1.6, 0);
+    for (let i = -2; i <= 2; i++) {
+      rb.box(0.025, Math.sqrt(0.3 - i * i * 0.04) * 2, 0.025, i * 0.2, 1.6, 0, C.white);
+      rb.box(Math.sqrt(0.3 - i * i * 0.04) * 2, 0.025, 0.025, 0, 1.6 + i * 0.2, 0, C.white);
+    }
+    const racket = rb.mesh(plastic);
+    racket.scale.y = 1.15;
+    racket.position.set(0, -1.5, 0.15);
+    racket.rotation.x = 2.1;
+    fig.armR.add(racket);
+    shadows(fig.group);
+    // La máquina: un cajón con ruedas, el cañón apuntando por encima de la red y el cesto de pelotas
+    const BALL = 0xd8f23a;
+    const mb = new Builder();
+    mb.box(1.9, 1.5, 2.3, 0, 1.25, 0, C.azure, { r: 0.16 });
+    mb.box(1.5, 0.5, 0.08, 0, 1.3, 1.17, C.white, { r: 0.04 });
+    mb.box(1.6, 0.9, 1.7, 0, 2.45, -0.15, C.dgray, { r: 0.1 });
+    mb.box(1.36, 0.06, 1.46, 0, 2.9, -0.15, C.black);
+    mb.cyl(0.36, 1.5, 0, 2.0, 1.25, C.black, { rx: 1.15, seg: 14 });
+    mb.cyl(0.4, 0.14, 0, 2.3, 1.92, C.lgray, { rx: 1.15, seg: 14 });
+    for (const sx of [-1, 1]) {
+      mb.cyl(0.5, 0.26, sx * 1.05, 0.5, -0.5, C.black, { axis: 'x', seg: 16 });
+      mb.cyl(0.2, 0.3, sx * 1.05, 0.5, -0.5, C.lgray, { axis: 'x', seg: 10 });
+      mb.box(0.12, 1.3, 0.12, sx * 0.6, 0.6, 0.85, C.lgray, { rx: 0.25 });
+    }
+    mb.box(0.1, 1.7, 0.1, 0, 2.6, -1.25, C.lgray, { rx: -0.35 });
+    mb.cyl(0.07, 1.3, 0, 3.4, -1.55, C.black, { axis: 'x', seg: 8 });
+    for (const [bx, bz] of [[-0.4, -0.5], [0.1, -0.6], [0.45, -0.2], [-0.3, 0.1], [0.2, 0.3], [-0.05, -0.15]]) mb.sphere(0.24, bx, 2.98, bz, BALL, { seg: 8, seg2: 6 });
+    const machine = mb.mesh(plastic);
+    const [mx, mz] = F.p(...P.machine);
+    machine.position.set(mx, 0.16, mz);
+    machine.rotation.y = Math.atan2(F.c, -F.s);
+    shadows(machine);
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 8), new THREE.MeshStandardMaterial({ color: BALL, roughness: 0.6 }));
+    ball.castShadow = true;
+    ball.visible = false;
+    const tag = nameTag(ch.name, '#ffffff');
+    this.game.scene.add(fig.group, machine, ball, tag);
+    const marker = { x: P.x, z: P.z, icon: '🎾' };
+    this.markers.push(marker);
+    this.leo = { P, F, fig, machine, ball, tag, marker, heading: Math.atan2(-F.c, F.s), lx: P.w / 2 - 7, lz: 0, x: P.x, z: P.z, phase: 0, t: 0, hit: 9, run: 0, from: [0, 0, 0], to: [0, 0, 0], H: 0, T: 1, cd: 0 };
+  }
+
+  updateLeo(dt, p, time, live) {
+    const L = this.leo;
+    const { P, F } = L;
+    const vis = Math.hypot(p.pos.x - P.x, p.pos.z - P.z) < SEE;
+    L.fig.group.visible = L.machine.visible = L.tag.visible = vis;
+    if (!vis) {
+      L.ball.visible = false;
+      return;
+    }
+    const FLOOR = 0.16;
+    const MOUTH = [P.machine[0] + 2, FLOOR + 2.4, P.machine[1]];
+    // La pelota va por tramos: de la máquina al bote, del bote a la raqueta, la devolución y su bote
+    const leg = (from, to, H, T) => Object.assign(L, { from, to, H, T, t: 0 });
+    L.t += dt;
+    L.hit += dt;
+    if (L.t >= L.T) {
+      L.phase = (L.phase + 1) % 5;
+      if (L.phase === 0) leg(MOUTH, MOUTH, 0, 0.9); // la máquina recarga
+      else if (L.phase === 1) leg(MOUTH, [L.lx - 6, FLOOR + 0.26, (Math.random() * 2 - 1) * (P.d / 2 - 6)], 3, 0.9);
+      else if (L.phase === 2) leg(L.to, [L.lx - 0.9, FLOOR + 2.5, L.to[2]], 1.1, 0.42);
+      else if (L.phase === 3) {
+        // Casi todas pasan la red; alguna se le queda en ella
+        L.hit = 0;
+        L.net = Math.random() < 0.15;
+        leg(L.to, L.net ? [0.5, FLOOR + 1.1, L.to[2] * 0.8] : [-P.w / 2 + 6 + Math.random() * 9, FLOOR + 0.26, (Math.random() * 2 - 1) * (P.d / 2 - 5)], L.net ? 0.5 : 2.6, L.net ? 0.5 : 1);
+      } else {
+        const [ax, , az] = L.from;
+        const [bx, , bz] = L.to;
+        leg(L.to, L.net ? [bx, FLOOR + 0.26, bz] : [bx + (bx - ax) * 0.4, FLOOR + 0.26, bz + (bz - az) * 0.4], L.net ? 0 : 1.3, 0.6);
+      }
+    }
+    const k = Math.min(1, L.t / L.T);
+    const bl = [0, 1, 2].map((i) => L.from[i] + (L.to[i] - L.from[i]) * k);
+    const [wx, wz] = F.p(bl[0], bl[2]);
+    L.ball.visible = L.phase > 0;
+    L.ball.position.set(wx, bl[1] + 4 * L.H * k * (1 - k), wz);
+    L.machine.rotation.x = L.phase === 1 ? -0.1 * Math.max(0, 1 - L.t * 5) : 0; // el culatazo del disparo
+    // Leo corre a ponerse de lado a la pelota, que le llegue por la derecha, y luego vuelve al centro
+    const want = L.phase === 1 || L.phase === 2 ? L.to[2] + 1.3 : L.lz * 0.5;
+    const step = clamp(want - L.lz, -13 * dt, 13 * dt) * (L.phase === 1 || L.phase === 2 ? 1 : 0.35);
+    L.lz += step;
+    L.run = damp(L.run, Math.min(1, Math.abs(step) / dt / 6), 10, dt);
+    const [x, z] = F.p(L.lx, L.lz);
+    L.x = L.marker.x = x;
+    L.z = L.marker.z = z;
+    const f = L.fig;
+    const w = time * 13;
+    const sw = Math.sin(w) * L.run;
+    f.legL.rotation.x = sw * 0.8;
+    f.legR.rotation.x = -sw * 0.8;
+    f.armL.rotation.x = -0.5 - sw * 0.5;
+    // El golpe de derecha: arma el brazo atrás mientras llega la pelota y lo suelta hacia delante
+    const back = L.phase === 2 ? Math.min(1, L.t / 0.25) : L.phase === 1 ? 0.3 : 0;
+    const swing = L.hit < 0.5 ? Math.sin(Math.min(1, L.hit / 0.22) * Math.PI * 0.5) * (1 - Math.max(0, L.hit - 0.3) / 0.2) : 0;
+    f.armR.rotation.x = -0.4 + back * 1.5 - swing * 2.3;
+    f.armR.rotation.z = -(back + swing) * 0.5;
+    f.head.rotation.y = clamp((bl[2] - L.lz) * 0.08, -0.6, 0.6) * (L.phase ? 1 : 0);
+    f.group.position.set(x, FLOOR + Math.abs(Math.cos(w)) * 0.22 * L.run, z);
+    f.group.rotation.set(0.1, L.heading - back * 0.6 + swing * 0.7, 0);
+    L.tag.position.set(x, FLOOR + 6.6, z);
+    // Si se le echan encima, aparta al que viene
+    L.cd -= dt;
+    const dx = p.pos.x - x;
+    const dz = p.pos.z - z;
+    const d2 = dx * dx + dz * dz;
+    if (live && p.crashT <= 0 && d2 < 5 && p.pos.y < 3.5) {
+      const d = Math.sqrt(d2) || 1;
+      p.bump(dx / d, dz / d, 0.25, 0.8);
+      if (L.cd <= 0) {
+        L.cd = 1.2;
+        this.game.sfx.bump();
+      }
+    }
   }
 
   // ---------- Iker, dando vueltas por el pueblo en su patinete eléctrico ----------

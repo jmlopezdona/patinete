@@ -62,4 +62,5 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 - [x] **Rayo abductor.** Machacando `Espacio` te sueltas; si no, te suelta en otra punta del pueblo.
 - [x] **Oleadas** cada vez mayores, con premio y amanecer al rechazarlas.
 - [x] **Vecinos con nombre:** Yago y su monociclo, Teo de portero, Adrián a la batería, Jose en la
-  canasta, Ana, Cintia y Bea de footing e Iker dando vueltas en su patinete eléctrico.
+  canasta, Ana, Cintia y Bea de footing, Iker dando vueltas en su patinete eléctrico y Leo
+  peloteando contra la máquina en la pista de tenis.

@@ -581,6 +581,23 @@ export function createMinifig(o = {}) {
       const h = 0.36 + (i % 2) * 0.06 + (i === 3 ? 0.05 : 0);
       hb.box(0.19, h, 0.16, 0.66 * Math.sin(a), 1.2 - h / 2, 0.66 * Math.cos(a), hairColor, { r: 0.05, ry: a, rx: -0.12 });
     }
+  } else if (hairType === 'swept') {
+    // Mata de pelo revuelto, con volumen, y el flequillo largo peinado de lado: los mechones cruzan la frente en diagonal
+    const tips = o.hairTips ?? hairColor;
+    hb.add(new THREE.SphereGeometry(0.72, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.8, 0);
+    shortSides(hairColor, 0.42, 0.86);
+    for (const [x, y, z, r] of [[-0.34, 1.22, 0.26, 0.4], [0.26, 1.28, 0.24, 0.42], [0, 1.34, -0.02, 0.42], [-0.4, 1.12, -0.22, 0.38], [0.42, 1.12, -0.24, 0.38], [0, 1.16, -0.44, 0.4]]) {
+      hb.sphere(r, x, y, z, hairColor, { seg: 12, seg2: 10, sy: 0.58 });
+    }
+    // Cada mechón: de qué ángulo de la frente sale y hasta qué altura baja, siempre hacia el mismo lado
+    for (const [a, low] of [[-1.3, 1.0], [-0.96, 0.95], [-0.62, 0.9], [-0.3, 0.85], [0.02, 0.82], [0.34, 0.86], [0.66, 0.95]]) {
+      for (let i = 0; i < 6; i++) {
+        const t = i / 5;
+        const b = a + 0.44 * t;
+        const R = 0.67 - 0.03 * t;
+        hb.sphere(0.18 - 0.06 * t, R * Math.sin(b), 1.26 + (low - 1.26) * t, R * Math.cos(b), i % 2 ? tips : hairColor, { seg: 8, seg2: 6 });
+      }
+    }
   } else if (hairType === 'bowl') {
     // Corte a tazón: flequillo recto y desfilado, que se va aclarando hacia las puntas, y rapado por debajo en un tono intermedio
     const tips = o.hairTips ?? hairColor;

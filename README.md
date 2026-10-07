@@ -77,12 +77,13 @@ sale de su casa, lleva su vehículo y se conduce distinto:
 
 | | Personaje | Su casa | Vehículo | Cómo va | Su truco (`F` en el aire) |
 | --- | --- | --- | --- | --- | --- |
-| 🛴 | **Jose Manuel** | Calle Río Júcar, 44 | Patinete | El de siempre: equilibrado | Tailwhip |
+| 🏀 | **Jose Manuel** | Calle Río Júcar, 44 | Patinete | El de siempre: equilibrado | Tailwhip |
 | 🥁 | **Adrián** | Calle Libertad, 17 | Monopatín | Gira fino y tiene buen ollie. Se impulsa con el pie y luego va de lado | Kickflip |
 | 🤹 | **Yago** | Calle Río Guadiana, 17 | Monociclo | Gira sobre una moneda y salta más que nadie, pero corre menos | Pirueta |
 | 🧤 | **Teo** | Avenida Río Guadalquivir, 39 | Bicicleta | Más velocidad punta y buenos saltos | Tailwhip |
 | 🤳 | **Emma** | No vive en Cobeña: la puerta del parque El Palmeral | Patines | Arranca y gira como nadie; con turbo se agacha con las manos a la espalda | Espagat |
 | ⚡ | **Iker** | No para en casa: una calle cualquiera, distinta cada vez | Patinete eléctrico | El que más corre, sin dar una patada; a cambio pesa, y salta y gira peor | Tailwhip |
+| 🎾 | **Leo** | La puerta del centro de salud (el consultorio local) | Patinete | De blanco de arriba abajo. Un patinete de calle de los de toda la vida (tabla baja, ruedas pequeñas y manillar en T), más ligero que el de Jose Manuel: arranca antes y salta más, con algo menos de punta | Tailwhip |
 
 Al elegirlo en el menú, el personaje aparece en la puerta de su casa; en la pausa se cambia sobre
 la marcha, sin moverse del sitio. «Volver a casa» y el castigo de la abuela llevan a la casa del
@@ -97,9 +98,13 @@ Iker no sale de ninguna casa: al elegirlo en el menú aparece en un punto al aza
 mitad de una calle y por su carril, y ese punto hace de «casa» hasta que se le vuelve a elegir o se
 pulsa «Volver a casa», que lo manda a otra calle.
 
+Leo sale de la puerta del centro de salud, de espaldas a la fachada del cartel, y allí vuelve con
+«Volver a casa».
+
 Mientras llevas a un personaje, su doble desaparece del pueblo: Yago deja libre la pista de circo,
 la batería de Adrián se queda sola y callada, a Teo lo sustituye otro portero, Emma deja de
-hacerse selfies en el parque, Iker ya no se cruza contigo por las calles y Jose se queda tirando
+hacerse selfies en el parque, Iker ya no se cruza contigo por las calles, la pista de tenis se queda vacía, sin Leo ni su
+máquina, y Jose se queda tirando
 solo a canasta, sin Jose Manuel. El color de
 cada vehículo se cambia con `V` y se guarda por separado.
 
@@ -176,6 +181,7 @@ peatones también cuenta) y aparece la primera estrella bajo el minimapa:
 | 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de Río Júcar, 44 | Footing en grupo dando la vuelta a los dos parques |
 | 🤳 | **Emma** | Parque El Palmeral, pasada la puerta | Selfies sin parar, con sus patines: posa, dispara, mira la foto y cambia de ángulo, rodeada de corazones. Si te acercas, se gira para sacarte de fondo |
 | ⚡ | **Iker** | Por todo el pueblo, sin parar | Da vueltas por las calles con su patinete eléctrico, por su carril y eligiendo camino en cada cruce. Corre más que los coches; si te tiene delante, frena y toca el timbre |
+| 🎾 | **Leo** | Pista de tenis | De blanco y con su raqueta, pelotea contra una máquina lanzapelotas: corre a por cada bola, la devuelve de derecha por encima de la red… y alguna se le queda en ella |
 
 Todos salen en el minimapa con su icono.
 
@@ -241,7 +247,8 @@ se guarda en el navegador.
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
   `characters.js` define los personajes elegibles y sus estadísticas (sus casas y puntos de salida
   van en el callejero, en `places.homes`; la puerta del parque de Emma la pone `landmarks.js` y el
-  punto al azar de Iker sale de `world/streets.js`, el grafo de calles por el que también circula), y
+  punto al azar de Iker sale de `world/streets.js`, el grafo de calles por el que también circula; la
+  puerta del centro de salud de Leo y su pista de tenis las pone también `landmarks.js`), y
   `dropoff.js` es el coche que la trae. `photo.js` es el modo foto:
   cámara libre, filtros (van en la pasada final de `main.js`) y la captura a mayor resolución.
 - `src/core/` — entrada (teclado, mando, táctil), audio sintetizado con WebAudio y utilidades.
