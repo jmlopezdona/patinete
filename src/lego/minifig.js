@@ -152,6 +152,12 @@ function faceTexture(kind, skin = C.skin, glasses = null, brows = null) {
     g.fill();
     g.fillStyle = '#fff';
     g.fillRect(256 - 22, 153, 44, 9);
+  } else if (kind === 'serious') {
+    // Boca recta, de no hacerle ni pizca de gracia la foto
+    g.beginPath();
+    g.moveTo(256 - 22, 168);
+    g.lineTo(256 + 22, 168);
+    g.stroke();
   } else if (kind === 'smirk') {
     // Media sonrisa de lado
     g.beginPath();
@@ -544,6 +550,23 @@ export function createMinifig(o = {}) {
       const a = i * 2.4;
       const r = 0.2 + ((i * 7) % 5) * 0.015;
       hb.sphere(r, 0.6 * Math.sin(pol) * Math.cos(a), 1 + 0.42 * Math.cos(pol), 0.04 + 0.62 * Math.sin(pol) * Math.sin(a), i % 3 ? hairColor : curl, { seg: 8, seg2: 6 });
+    }
+  } else if (hairType === 'wavy') {
+    // Ondas con volumen arriba, los lados cortos y un flequillo de mechones revueltos que cae hasta las cejas
+    const tips = o.hairTips ?? hairColor;
+    hb.add(new THREE.SphereGeometry(0.7, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.8, 0);
+    shortSides(hairColor, 0.4, 0.86);
+    for (const [x, y, z, r] of [[-0.3, 1.2, 0.3, 0.36], [0.28, 1.24, 0.26, 0.38], [0.02, 1.3, 0.02, 0.4], [-0.38, 1.12, -0.2, 0.36], [0.4, 1.1, -0.24, 0.36], [0.02, 1.14, -0.42, 0.38]]) {
+      hb.sphere(r, x, y, z, hairColor, { seg: 12, seg2: 10, sy: 0.62 });
+    }
+    // Cada mechón: ángulo sobre la frente, altura hasta la que baja y cuánto se riza por el camino
+    for (const [a, low, wave] of [[-1.0, 1.06, 0.2], [-0.62, 0.96, 0.24], [-0.3, 0.86, 0.2], [-0.04, 0.77, 0.12], [0.3, 0.9, -0.22], [0.66, 1.0, -0.24], [1.02, 1.08, -0.16]]) {
+      for (let i = 0; i < 5; i++) {
+        const t = i / 4;
+        const b = a + wave * Math.sin(t * Math.PI);
+        const R = 0.66 - 0.04 * t;
+        hb.sphere(0.17 - 0.06 * t, R * Math.sin(b), 1.24 + (low - 1.24) * t, R * Math.cos(b), i % 2 ? tips : hairColor, { seg: 8, seg2: 6 });
+      }
     }
   } else if (hairType === 'bowl') {
     // Corte a tazón: flequillo recto y desfilado, que se va aclarando hacia las puntas, y rapado por debajo en un tono intermedio
