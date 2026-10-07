@@ -301,6 +301,24 @@ await log('personajes', () => {
   return out;
 });
 await shot('s_personajes');
+await log('foto', async () => {
+  const g = window.__game; const P = g.photo; const c = g.camera3; const U = g.final.uniforms;
+  const t = g.time; const antes = c.cam.position.clone();
+  P.open();
+  P.turn(160, -40); P.dolly(0.6); P.roll = 0.2; P.filter = 3;
+  for (let i = 0; i < 60; i++) P.update(1 / 60);
+  const out = { congelado: g.paused && g.time === t, sinHud: document.getElementById('hud').classList.contains('hidden'), camara: +c.cam.position.distanceTo(antes).toFixed(1), sepia: U.uSat.value === 0 };
+  P.shoot();
+  await new Promise((r) => { const id = setInterval(() => { if (P.preview) { clearInterval(id); r(); } }, 30); });
+  const bmp = await createImageBitmap(P.shot);
+  out.foto = `${bmp.width}×${bmp.height} ${Math.round(P.shot.size / 1024)} kB`;
+  out.fichero = document.getElementById('ph-save').download;
+  P.close();
+  // La prueba lleva el juego en pausa: el modo foto vuelve a ella y hay que quitar su panel
+  document.getElementById('pause').classList.add('hidden');
+  out.restaurado = c.cam.position.distanceTo(antes) < 0.01 && c.roll === 0 && U.uSat.value === 1.14 && !P.on && !P.preview;
+  return out;
+});
 await log('estado', () => { const g = window.__game; return { studs: g.save.studs, stars: g.save.stars, calls: g.renderer.info.render.calls, tris: g.renderer.info.render.triangles, programs: g.renderer.info.programs.length, geos: g.renderer.info.memory.geometries, tex: g.renderer.info.memory.textures }; });
 if (errors.length) console.log('\nERRORES:\n' + [...new Set(errors)].slice(0, 20).join('\n'));
 else console.log('\nSin errores de consola.');

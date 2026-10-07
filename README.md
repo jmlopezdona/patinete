@@ -63,6 +63,7 @@ se registra en la versión compilada (`npm run build` y `npm run preview`), no c
 | Esquivar al municipal y la zapatilla | `Espacio` justo a tiempo | A |
 | Cámara cerca / lejos | `C` | Select |
 | Color del vehículo | `V` | — |
+| Modo foto | `T` | — |
 | Recolocarse | `R` | — |
 | Sonido | `M` | — |
 | Pausa | `Esc` | Start |
@@ -157,6 +158,32 @@ peatones también cuenta) y aparece la primera estrella bajo el minimapa:
 
 Todos salen en el minimapa con su icono.
 
+### Modo foto
+
+Pulsa `T` (o «📷 Modo foto» en la pausa) y **el tiempo se para**: en pleno backflip, con los
+ladrillos de un castañazo en el aire o con la zapatilla de la abuela a medio vuelo. La cámara
+queda libre para buscar el encuadre.
+
+| Qué | Ratón y teclado | Táctil |
+| --- | --- | --- |
+| Girar alrededor del personaje | arrastrar | un dedo |
+| Acercar y alejar | rueda | pellizco |
+| Desplazar el encuadre | botón derecho (o `Mayús` + arrastrar), `W` `A` `S` `D` | dos dedos |
+| Subir y bajar | `E` / `Q` | dos dedos |
+| Esconder los controles | `H` (cualquier clic los devuelve) | «Ocultar» (un toque los devuelve) |
+| Volver al encuadre inicial | `R` | «Restablecer» |
+| Hacer la foto | `Espacio` | «📸 Hacer foto» |
+| Salir | `Esc` o `T` | «Salir» |
+
+- **Ajustes**: zoom, inclinación del horizonte, desenfoque de maqueta, viñeta y cinco **filtros**
+  (normal, vivo, blanco y negro, sepia y retro). También se puede hacer de noche (`N`), quitar al
+  piloto y su vehículo para fotografiar solo el pueblo, y quitar el sello.
+- La foto se pinta **más grande que la pantalla** (2560 px de lado largo; 1920 en el móvil) y lleva
+  un **sello** con el logo y el nombre de la calle. Sale una vista previa con «Guardar» (JPG) y, donde el
+  navegador lo permite, «Compartir». En el móvil también se guarda con una pulsación larga.
+- La cámara no se aleja más de unas calles del personaje ni se mete bajo tierra. Al salir, la
+  partida sigue exactamente donde estaba; si entraste desde la pausa, vuelves a la pausa.
+
 ### Minijuegos (acércate al icono y pulsa `E`)
 
 | | Minijuego | Dónde | Objetivo |
@@ -191,7 +218,8 @@ se guarda en el navegador.
   entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo y rayo),
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
-  `characters.js` define los personajes elegibles y sus estadísticas.
+  `characters.js` define los personajes elegibles y sus estadísticas. `photo.js` es el modo foto:
+  cámara libre, filtros (van en la pasada final de `main.js`) y la captura a mayor resolución.
 - `src/core/` — entrada (teclado, mando, táctil), audio sintetizado con WebAudio y utilidades.
   `install.js` registra el service worker y pone el botón de instalar.
 - `public/` — `manifest.webmanifest` (nombre, iconos, pantalla completa y horizontal) y `sw.js`,
@@ -200,7 +228,7 @@ se guarda en el navegador.
 - `tools/` — utilidades de desarrollo que abren el juego en Chrome sin cabeza para simular la
   física, recorrer los minijuegos y sacar capturas (necesitan `npm run dev` en marcha y Google
   Chrome instalado en la ruta habitual de macOS). `npm run test:misiones` también prueba la invasión,
-  a los vecinos y el nivel de búsqueda, y `node tools/probe.mjs '<js>' [captura.png]` evalúa una
+  a los vecinos, el nivel de búsqueda y el modo foto, y `node tools/probe.mjs '<js>' [captura.png]` evalúa una
   expresión dentro del juego (o un guion entero con `node tools/probe.mjs @guion.js`).
 
 ### Regenerar el callejero y el relieve

@@ -13,6 +13,7 @@ export class ChaseCamera {
     this.snap = true;
     this.mode = 0;
     this.shake = 0;
+    this.roll = 0; // horizonte torcido: solo lo usa el modo foto
     this.look = new THREE.Vector3();
     this.dist = 13;
   }

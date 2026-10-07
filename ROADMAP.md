@@ -38,6 +38,11 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
 
+## Ya hecho (rama `modo-foto`)
+
+- [x] **Modo foto.** `T` para el tiempo: cámara libre, zoom, horizonte torcido, filtros y foto
+  guardada a más resolución que la pantalla, con el sello del juego y el nombre de la calle.
+
 ## Ya hecho (rama `busqueda`)
 
 - [x] **Nivel de búsqueda.** Si rompes mucho mobiliario te persigue el policía municipal, y con

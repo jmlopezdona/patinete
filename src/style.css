@@ -861,6 +861,164 @@ kbd {
   padding: 10px 18px 13px;
 }
 
+/* ---------- Modo foto ---------- */
+#photo {
+  position: fixed;
+  inset: 0;
+}
+#ph-pad {
+  position: absolute;
+  inset: 0;
+  cursor: grab;
+}
+#ph-pad:active {
+  cursor: grabbing;
+}
+#ph-panel {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(14px, env(safe-area-inset-right));
+  width: 264px;
+  max-height: calc(100% - max(14px, env(safe-area-inset-top)) - max(14px, env(safe-area-inset-bottom)));
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(14, 26, 40, 0.86);
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+  overflow-y: auto;
+  touch-action: pan-y; /* en el móvil apaisado no cabe entero: que se pueda deslizar */
+}
+#ph-panel h3 {
+  font-size: 19px;
+  color: var(--yellow);
+}
+#ph-panel label {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+#ph-panel input[type='range'] {
+  width: 100%;
+  height: 22px;
+  accent-color: var(--yellow);
+  cursor: pointer;
+  touch-action: none;
+}
+.ph-chips {
+  display: flex;
+  gap: 6px;
+}
+.ph-chip {
+  flex: 1;
+  padding: 7px 4px 9px;
+  font: 600 13px var(--font);
+  color: #fff;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.14);
+  border: 0;
+  border-radius: 10px;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.ph-chip:hover {
+  filter: brightness(1.25);
+}
+.ph-chip.on {
+  background: var(--blue);
+}
+#ph-panel .brick-btn.primary {
+  flex: none;
+  font-size: 21px;
+  padding: 10px 16px 14px;
+}
+#ph-help {
+  position: absolute;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  max-width: calc(100% - 28px);
+  padding: 6px 16px 7px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.7;
+  text-align: center;
+  background: var(--panel);
+  border-radius: 14px;
+  pointer-events: none;
+}
+.ph-touch,
+body.touch .ph-keys {
+  display: none;
+}
+body.touch .ph-touch {
+  display: inline;
+}
+#photo.bare #ph-panel,
+#photo.bare #ph-help {
+  display: none;
+}
+#ph-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+#ph-flash.go {
+  animation: flash 0.45s ease-out;
+}
+@keyframes flash {
+  from {
+    opacity: 0.85;
+  }
+}
+#ph-preview {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: rgba(8, 16, 26, 0.6);
+  animation: fade 0.3s;
+}
+#ph-preview .card {
+  /* tan ancha como la foto, que a su vez tiene que caber de alto (--ar: su proporción) */
+  width: min(760px, 100%, (100vh - 130px) * var(--ar, 1.78));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  animation: drop 0.45s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+#ph-img {
+  display: block;
+  width: 100%;
+  border: 5px solid #fff;
+  border-radius: 10px;
+  /* para guardarla también con una pulsación larga */
+  -webkit-user-select: auto;
+  user-select: auto;
+  -webkit-touch-callout: default;
+}
+.ph-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.ph-actions .brick-btn {
+  flex: 1;
+  width: auto;
+  font-size: 18px;
+  padding: 9px 14px 12px;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 /* ---------- Táctil ---------- */
 #touch {
   display: none;
@@ -957,6 +1115,13 @@ body.touch #speedo .num {
 }
 
 @media (max-width: 900px) {
+  /* En pantallas estrechas la ayuda del modo foto se queda a la izquierda de sus controles */
+  #ph-help {
+    left: max(14px, env(safe-area-inset-left));
+    right: calc(max(14px, env(safe-area-inset-right)) + 278px);
+    max-width: none;
+    transform: none;
+  }
   body.touch #speedo {
     right: calc(max(16px, env(safe-area-inset-right)) + 150px);
   }
