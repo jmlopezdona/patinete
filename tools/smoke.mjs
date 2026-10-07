@@ -315,6 +315,40 @@ await log('marcianos: cohete', () => {
   p.invuln = 0;
   return { sale, cogido, lanzado, frenando, apagado: !p.rocket && !p.boosting && !I.rocket.visible && !I.fx };
 });
+await log('marcianos: baba verde', () => {
+  const g = window.__game; const A = g.aliens; const S = g.slime; const p = g.player; const u = A.u;
+  const sp = g.world.places.spawn; const fx = Math.sin(sp.heading); const fz = Math.cos(sp.heading);
+  const vivos = () => S.list.filter((s) => s.t > 0).length;
+  for (const o of A.aliens) o.cd = 99;
+  for (const s of S.list) { s.t = 0; s.mesh.visible = false; }
+  u.x = sp.x - fx * 150; u.z = sp.z - fz * 150; A.setUfo('rest');
+  // Rodando por encima se derrapa: ni el freno ni el manillar mandan hasta que se pasa
+  const c = S.splat(sp.x + fx * 14, sp.z + fz * 14);
+  p.place(sp.x, sp.z, sp.heading); p.invuln = 99; p.v = 25;
+  window.sim(0.45);
+  const h0 = p.heading; const v0 = p.v;
+  window.sim(0.5, () => ({ throttle: -1, steer: 1 }));
+  const derrape = { resbala: p.slip > 0, frenoSinEfecto: +(v0 - p.v).toFixed(1), rumbo: +(p.heading - h0).toFixed(2) };
+  window.sim(1.6, () => ({ throttle: -1 }));
+  derrape.luegoFrena = !(p.slip > 0) && p.v < 1;
+  // Cayendo encima se rebota, cada vez más alto, y al tercer bote el charco se deshace
+  p.place(c.x, c.z, sp.heading); c.t = 26;
+  let alto = 0; window.sim(7, (t) => { alto = Math.max(alto, p.pos.y); return { jumpPressed: t < 0.02 }; });
+  const rebote = { alto: +alto.toFixed(1), salto: +((p.stats.jump ** 2) / 84).toFixed(1), seDeshace: c.t <= 0 && p.grounded };
+  // Un marciano que corre por encima resbala; al reventar deja otro charco
+  const c2 = S.splat(sp.x + fx * 14, sp.z + fz * 14);
+  p.place(sp.x, sp.z, sp.heading);
+  const a = A.aliens[0];
+  a.state = 'chase'; a.t = 9; a.slick = 0; a.y = 0; a.fig.group.visible = true; a.fig.group.scale.setScalar(1);
+  a.x = sp.x + fx * 32; a.z = sp.z + fz * 32; a.heading = sp.heading + Math.PI;
+  let tonto = false; window.sim(1.6, () => { tonto = tonto || a.state === 'dazed'; });
+  c2.t = 0; const n0 = vivos();
+  A.pop(a, 0, 10);
+  const alReventar = vivos() - n0;
+  // Al irse los marcianos se secan todos
+  S.clear(); window.sim(1.2);
+  return { puesto: !!c, derrape, rebote, marcianoResbala: tonto, alReventar, secos: vivos() === 0 };
+});
 await log('marcianos: robo del platillo', () => {
   const g = window.__game; const A = g.aliens; const p = g.player; const u = A.u;
   const cow = g.cows.list[0];

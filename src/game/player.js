@@ -18,6 +18,10 @@ const TAU = Math.PI * 2;
 const HILL = 0.6;
 const HILL_SLOW = 2.5;
 const HILL_MAX = 0.18;
+const SLIP_TIME = 1.1; // lo que dura el derrape después de pisar baba
+const BOUNCE_V = 9; // cayendo más despacio la baba no hace de cama elástica
+// Sobre la baba el manillar no manda: lo que «pulsa» el patinete mientras derrapa
+const SLIP = { steer: 0, throttle: 0, boost: false };
 
 
 export class Player {
@@ -50,6 +54,8 @@ export class Player {
     this.boosting = false;
     this.rocket = false; // con el cohete encendido el turbo entra solo y no se gasta
     this.foil = false; // con el gorro de aluminio el rayo abductor no lo detecta
+    this.slip = 0; // segundos de derrape que quedan tras pisar baba
+    this.slipDir = 1;
     this.crashT = 0;
     this.sunk = false;
     this.invuln = 0;
@@ -162,6 +168,7 @@ export class Player {
     this.grind = null;
     this.spin = this.flip = this.visYaw = this.visFlip = 0;
     this.crashT = 0;
+    this.slip = 0;
     this.sunk = false;
     this.held = false;
     this.hidden = false;
@@ -204,6 +211,7 @@ export class Player {
     this.boost = Math.min(1, this.boost + dt * 0.035);
     this.jumpReq = inp.jumpPressed;
     if (this.whipT > 0) this.whipT -= dt;
+    if (this.slip > 0) this.slip -= dt;
     if (inp.trickPressed && !this.grounded && !this.grind && this.airTime > 0.08 && this.whipT <= 0) {
       this.whipT = 0.45;
       this.whips++;
@@ -302,6 +310,12 @@ export class Player {
     this.free.x = x;
     this.free.z = z;
 
+    // Derrapando en la baba ni se acelera ni se frena ni se gira: el patinete se va de lado él solo
+    const slipping = this.slip > 0;
+    if (slipping) {
+      SLIP.steer = this.slipDir * 0.18 + Math.sin(this.time * 13) * 0.5;
+      inp = SLIP;
+    }
     // Acelerador, freno y turbo
     // Agotado, el turbo no vuelve a entrar hasta que se recarga un poco: si no, con la tecla
     // pulsada entraría y saldría a cada instante, petardeando
@@ -322,7 +336,7 @@ export class Player {
     } else if (inp.throttle < 0) {
       if (this.v > 0.5) this.v = Math.max(0, this.v - BRAKE * h);
       else this.v = Math.max(-V_REV, this.v - 12 * h);
-    } else {
+    } else if (!slipping) {
       const f = (2.0 + Math.abs(this.v) * 0.1) * h;
       this.v = Math.abs(this.v) <= f ? 0 : this.v - Math.sign(this.v) * f;
       if (this.grade < 0 && this.v > S.vmax) this.v -= (this.v - S.vmax) * 1.2 * h; // cuesta abajo, sin desbocarse
@@ -544,7 +558,12 @@ export class Player {
         } else this.pos.y = ny;
       } else {
         this.pos.set(nx, hn, nz);
-        this.land();
+        // Caer sobre un charco de baba es rebotar como en una cama elástica, cada vez más alto
+        const goo = this.vel.y < -BOUNCE_V && this.game.slime.at(nx, nz, hn);
+        if (goo) {
+          this.vel.y = clamp(6 - this.vel.y * 0.9, 20, 34);
+          this.game.slime.boing(this, goo);
+        } else this.land();
       }
     } else {
       this.pos.set(nx, ny, nz);
@@ -681,6 +700,17 @@ export class Player {
     if (!this.grind) this.game.sfx.grindStop();
   }
 
+  // Pisar baba rodando: un trompo y un rato sin mandar en el manillar. Devuelve si empieza ahora
+  skid() {
+    const fresh = this.slip <= 0;
+    if (fresh) {
+      this.slipDir = Math.random() < 0.5 ? -1 : 1;
+      this.visYaw += this.slipDir * TAU;
+    }
+    this.slip = SLIP_TIME;
+    return fresh;
+  }
+
   // Empujón externo (coches, peatones...)
   bump(nx, nz, push, slow = 0.5) {
     this.pos.x += nx * push;
@@ -739,6 +769,7 @@ export class Player {
     this.gvy = 0;
     this.vel.set(0, 0, 0);
     this.spin = this.flip = this.visYaw = this.visFlip = 0;
+    this.slip = 0;
     this.sunk = false;
     this.model.visible = true;
     this.invuln = 1.6;

@@ -348,6 +348,15 @@ export class Sfx {
     this.tone(90, 1.0, 'sawtooth', 0.1, 4);
     this.tone(1400, 0.35, 'sine', 0.05, 0.3);
   }
+  // Baba marciana: chof al pisarla y muelle al rebotar, más agudo a cada bote
+  squelch(vol = 1) {
+    this.noise(0.24, 0.3 * vol, 380, 2.5, 'bandpass', 0, 3);
+    this.tone(210, 0.2, 'sine', 0.14 * vol, 0.45);
+  }
+  boing(n = 0) {
+    this.tone(150 + n * 45, 0.42, 'sine', 0.3, 2.6);
+    this.tone(300 + n * 90, 0.3, 'triangle', 0.1, 2.2, 0.03);
+  }
   // Coscorrón al platillo: suena a cacerola
   ufoHit() {
     this.tone(260, 0.5, 'triangle', 0.3, 0.6);

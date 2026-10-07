@@ -175,6 +175,12 @@ campanario y empieza a soltar marcianos de ladrillo por las calles.
   minijuego). Al encenderlo, el turbo entra solo durante 10 segundos sin gastar la barra y un poco
   más rápido de lo normal; solo se para frenando. De noche vale por un superculetazo detrás de
   otro.
+- **Baba verde** 🟢: los marcianos dejan un charco donde caen del platillo y otro donde revientan.
+  Si lo pisas rodando, **derrapas**: trompo y un segundo largo sin freno ni manillar (saltar sí se
+  puede, y es la forma de librarse). Si caes encima de un salto, **rebotas** como en una cama
+  elástica, cada vez más alto; al tercer bote el charco se deshace. A los marcianos que corren por
+  encima también les hace resbalar: se quedan un momento tontos y el culetazo vale por cualquier
+  lado. Se secan solos en medio minuto, y todos a la vez al amanecer.
 - Los objetos van saliendo por turnos (timbre, gorro, cohete), uno cada vez, y mientras dura el
   efecto de uno no aparece el siguiente: el hueco del HUD enseña la cuenta atrás.
 - Cada noche hay que echar a una **oleada** (8 marcianos la primera, 4 más cada vez). Al
@@ -276,7 +282,8 @@ se guarda en el navegador.
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
   entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo, rayo,
   rescates y el robo del platillo), `items.js`, los objetos que se recogen por la calle y se gastan
-  con `Q` (el timbre sónico, el gorro de aluminio y el cohete), `cows.js`, las vacas que pastan junto al Mega Salto,
+  con `Q` (el timbre sónico, el gorro de aluminio y el cohete), `slime.js`, los charcos de baba
+  verde, `cows.js`, las vacas que pastan junto al Mega Salto,
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
   `characters.js` define los personajes elegibles y sus estadísticas (sus casas y puntos de salida

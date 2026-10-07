@@ -27,6 +27,7 @@ const RIDE_TIME = 40; // segundos que dura el paseo en el platillo robado
 const RIDE_H = 17;
 const RIG = { dist: 36, height: 17 };
 const DAZE = 5.5; // lo que dura el aturdimiento del timbre sónico
+const SLIDE = 2.5; // y lo que dura el de resbalar en su propia baba
 const AFOOT = new Set(['wander', 'alert', 'chase', 'tired', 'flee', 'laugh', 'dazed']);
 const CAR_NAMES = { car: 'un coche', taxi: 'un taxi', bus: 'el autobús', police: 'el coche patrulla', truck: 'un camión', icecream: 'el camión de los helados' };
 
@@ -99,7 +100,7 @@ export class Aliens {
     fig.group.rotation.order = 'YXZ';
     fig.group.visible = false;
     this.game.scene.add(fig.group);
-    return { fig, i, state: 'off', x: 0, y: 0, z: 0, gy: 0, heading: 0, vx: 0, vy: 0, vz: 0, spin: 0, rot: 0, t: 0, cd: 0, far: 0, walk: i * 1.7, stuck: 0, detour: 0, detourDir: 0, dirT: 0, fx: 0, blip: { x: 0, z: 0 } };
+    return { fig, i, state: 'off', x: 0, y: 0, z: 0, gy: 0, heading: 0, vx: 0, vy: 0, vz: 0, spin: 0, rot: 0, t: 0, cd: 0, far: 0, walk: i * 1.7, stuck: 0, detour: 0, detourDir: 0, dirT: 0, fx: 0, slick: 0, blip: { x: 0, z: 0 } };
   }
 
   buildUfo() {
@@ -168,6 +169,7 @@ export class Aliens {
       [7, '💨 Con el <b>turbo</b> se asustan y salen huyendo: ¡es el momento de darles en el culo!'],
       [14, '🔦 No te quedes bajo el <b>rayo del platillo</b>. Si te atrapa, machaca <b>Espacio</b> para soltarte.'],
       [22, '🛸 Cuando el platillo se queda <b>atontado</b> (al soltarte del rayo o al rescatar a alguien) baja mucho: <b>salta</b> y dale un coscorrón. ¡Al tercero es tuyo!'],
+      [30, '🟢 Ojo con la <b>baba verde</b> que dejan los marcianos: rodando por encima <b>derrapas</b>, pero si caes encima de un salto, <b>rebotas</b>. A ellos también les hace resbalar.'],
     ];
   }
 
@@ -935,7 +937,7 @@ export class Aliens {
       a.heading = Math.random() * TAU;
       a.state = 'drop';
       a.cd = 0;
-      a.far = a.stuck = a.detour = 0;
+      a.far = a.stuck = a.detour = a.slick = 0;
       a.fig.group.scale.setScalar(1);
       a.fig.group.visible = true;
       return true;
@@ -1051,6 +1053,8 @@ export class Aliens {
           a.dirT = a.heading;
           for (let k = 0; k < 8; k++) g.bits.spawn(a.x, a.y + 0.4, a.z, (Math.random() - 0.5) * 10, 3 + Math.random() * 4, (Math.random() - 0.5) * 10, 0xb6ff5a, 0.3, 0.5, a.y);
           if (d < 80) g.sfx.alienLand();
+          // Donde aterriza queda un charco de baba
+          g.slime.splat(a.x, a.z, 2.6);
         }
         grp.position.set(a.x, a.y, a.z);
         grp.rotation.set(0, a.heading, 0);
@@ -1167,6 +1171,16 @@ export class Aliens {
           a.detour = 0.8;
           a.detourDir = a.heading + (Math.random() < 0.5 ? 1.7 : -1.7);
         }
+      }
+
+      // Corriendo sobre la baba resbalan y se quedan un momento tontos: culetazo por cualquier lado
+      a.slick -= dt;
+      if (speed > 10 && a.slick <= 0 && g.slime.at(a.x, a.z, a.y)) {
+        a.state = 'dazed';
+        a.t = SLIDE;
+        a.fx = 0;
+        a.slick = SLIDE + 3;
+        g.slime.slipped(a, d);
       }
 
       // Animación
@@ -1292,9 +1306,10 @@ export class Aliens {
     this.score(p, time, label || (turbo ? '¡Superculetazo!' : null), turbo && !label ? base + 300 : base);
   }
 
-  // Revienta en ladrillos y suelta studs
+  // Revienta en ladrillos, suelta studs y deja el suelo perdido de baba
   pop(a, floor, dist) {
     const g = this.game;
+    g.slime.splat(a.x, a.z);
     g.bits.burst(a.x, floor + 1.5, a.z, [...BIT_COLORS, a.fig.colors[1]], 20, 11, floor);
     g.studs.burst(a.x, floor + 1, a.z, 4, 0, floor, 8);
     g.studs.burst(a.x, floor + 1, a.z, 1, 1, floor, 8);
