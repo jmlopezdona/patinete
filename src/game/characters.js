@@ -17,7 +17,7 @@ export const CHARACTERS = [
   },
   {
     id: 'adrian', name: 'Adrián', icon: '🥁', vehicle: 'Monopatín', blurb: 'Surfea el asfalto: gira fino, buen ollie y kickflips de escándalo.',
-    look: { torso: 0x111835, arms: 0x111835, legs: C.dgray, hair: 'bowl', hairColor: 0x2b1c14, hairTips: 0xbf9f68, face: 'rock', shirt: { front: 'psicopato' } },
+    look: { torso: 0x111835, arms: 0x111835, legs: C.dgray, hair: 'bowl', hairColor: 0x1a110c, hairTips: 0x7d5f3c, face: 'rock', shirt: { front: 'psicopato' } },
     scale: 0.85, color: 1, trick: 'Kickflip', alienTrick: '¡Kickflip marciano!',
     build: (color) => createSkateboard(color),
     stats: { acc: 21, vmax: 30, vboost: 46, jump: 16.5, turn: 3.4, spin: 8.6 },
