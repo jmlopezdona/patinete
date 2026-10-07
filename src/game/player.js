@@ -163,6 +163,7 @@ export class Player {
     this.sunk = false;
     this.held = false;
     this.hidden = false;
+    this.dropped = false;
     this.respawnAt = null;
     this.model.visible = true;
     this.visY = this.pos.y;

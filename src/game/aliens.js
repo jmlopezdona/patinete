@@ -21,6 +21,13 @@ const KICK_NAMES = ['¡Culetazo!', '¡Doble culetazo!', '¡Triple culetazo!', '�
 const BEAM_COLD = new THREE.Color(0x7dff9a);
 const BEAM_HOT = new THREE.Color(0xff5ad1);
 const SNATCH_EVERY = 24; // segundos entre un intento de llevarse a un vecino y el siguiente
+const LOW = 8; // atontado, el platillo baja hasta aquí: se le llega de un salto
+const UFO_HITS = 3; // coscorrones para quitárselo al piloto
+const RIDE_TIME = 40; // segundos que dura el paseo en el platillo robado
+const RIDE_H = 17;
+const RIG = { dist: 36, height: 17 };
+const DAZE = 5.5; // lo que dura el aturdimiento del timbre sónico
+const AFOOT = new Set(['wander', 'alert', 'chase', 'tired', 'flee', 'laugh', 'dazed']);
 const CAR_NAMES = { car: 'un coche', taxi: 'un taxi', bus: 'el autobús', police: 'el coche patrulla', truck: 'un camión', icecream: 'el camión de los helados' };
 
 const _v = new THREE.Vector3();
@@ -33,6 +40,8 @@ function glowMaterial(color, opacity) {
 // Los marcianos te persiguen de frente, pero por la espalda (o asustados por el turbo)
 // se van de un culetazo. El rayo del platillo te abduce si te quedas debajo, y cuando no va
 // a por ti se lleva a un vecino, un coche o una vaca: se les suelta cruzando el rayo de un salto.
+// Cuando el platillo se queda atontado baja mucho: con tres coscorrones el piloto sale por los
+// aires y el platillo es tuyo un rato, con su rayo y todo.
 export class Aliens {
   constructor(game) {
     this.game = game;
@@ -51,6 +60,8 @@ export class Aliens {
     this.vic = null; // a quién se está llevando el platillo
     this.falling = null; // el que cae tras soltarlo
     this.lost = []; // los que ya tiene dentro
+    this.ride = null; // el paseo en el platillo robado
+    this.mate = null; // tu doble a los mandos
     this.snatchCd = 0;
     this.hints = [];
     this.blips = [];
@@ -105,7 +116,7 @@ export class Aliens {
       new THREE.MeshStandardMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.4, roughness: 0.08, metalness: 0.1 })
     );
     dome.position.y = 1.7;
-    const pilot = createMinifig({ skin: SKIN, face: 'alien', hair: 'antenna', hairColor: C.red, torso: C.black, legs: C.black, print: 'star', printColor: '#f7d117' });
+    const pilot = (this.pilot = createMinifig({ skin: SKIN, face: 'alien', hair: 'antenna', hairColor: C.red, torso: C.black, legs: C.black, print: 'star', printColor: '#f7d117' }));
     pilot.group.scale.setScalar(0.75);
     pilot.group.position.y = -0.3;
     pilot.armL.rotation.x = pilot.armR.rotation.x = -1.2;
@@ -141,7 +152,7 @@ export class Aliens {
       m.frustumCulled = false;
       scene.add(m);
     }
-    this.u = { state: 'gone', x: 0, y: 0, z: 0, vx: 0, vz: 0, t: 0, dur: 6, sx: 1, sz: 0, beam: 0, meter: 0, blip: { x: 0, z: 0, icon: '🛸' } };
+    this.u = { state: 'gone', x: 0, y: 0, z: 0, vx: 0, vz: 0, t: 0, dur: 6, sx: 1, sz: 0, beam: 0, meter: 0, hits: 0, heading: 0, blip: { x: 0, z: 0, icon: '🛸' } };
   }
 
   // ---------- Oleadas ----------
@@ -156,6 +167,7 @@ export class Aliens {
       [0.3, `🛸 ¡Los marcianos invaden Cobeña! Oleada <b>${level + 1}</b>: échalos a <b>culetazos</b>, embistiéndolos por la espalda.`],
       [7, '💨 Con el <b>turbo</b> se asustan y salen huyendo: ¡es el momento de darles en el culo!'],
       [14, '🔦 No te quedes bajo el <b>rayo del platillo</b>. Si te atrapa, machaca <b>Espacio</b> para soltarte.'],
+      [22, '🛸 Cuando el platillo se queda <b>atontado</b> (al soltarte del rayo o al rescatar a alguien) baja mucho: <b>salta</b> y dale un coscorrón. ¡Al tercero es tuyo!'],
     ];
   }
 
@@ -172,21 +184,24 @@ export class Aliens {
     u.z = p.pos.z + dz * k;
     u.y = HOVER + 110;
     u.vx = u.vz = 0;
-    u.meter = 0;
+    u.meter = u.hits = 0;
     this.setUfo('arrive');
     this.ufo.visible = true;
     this.spawnT = 1.5;
     this.snatchCd = 14;
     g.hud.setAliens(this.wave.count, this.wave.goal);
+    g.hud.setUfo(0, UFO_HITS);
   }
 
   retreat(p) {
     const g = this.game;
+    this.endRide();
     this.release(p);
     for (const a of this.aliens) this.beamUp(a);
     if (this.u.state !== 'gone' && this.u.state !== 'leave') this.setUfo('leave');
     this.giveBack();
     g.hud.setAliens(null);
+    g.hud.setUfo(null);
     g.hud.abduct(null);
     g.hud.beam(0);
   }
@@ -219,7 +234,7 @@ export class Aliens {
   }
 
   // ---------- Bucle ----------
-  update(dt, p, time) {
+  update(dt, p, time, inp) {
     const g = this.game;
     const night = g.env.target > 0.5;
     if (!night) {
@@ -243,7 +258,7 @@ export class Aliens {
       if (this.hints[0][0] <= 0) g.hud.toast(this.hints.shift()[1]);
     }
     this.grabCd -= dt;
-    this.updateUfo(dt, p, time);
+    this.updateUfo(dt, p, time, inp);
     this.updateRescue(dt, p, time);
     this.updateAliens(dt, p, time);
 
@@ -259,7 +274,7 @@ export class Aliens {
       this.u.blip.z = this.u.z;
       this.blips.push(this.u.blip);
     }
-    if (this.vic) {
+    if (this.vic && !this.ride) {
       this.vic.blip.x = this.vic.x;
       this.vic.blip.z = this.vic.z;
       this.blips.push(this.vic.blip);
@@ -267,7 +282,7 @@ export class Aliens {
   }
 
   // ---------- Platillo ----------
-  updateUfo(dt, p, time) {
+  updateUfo(dt, p, time, inp) {
     const u = this.u;
     const g = this.game;
     if (u.state === 'gone') return;
@@ -311,8 +326,29 @@ export class Aliens {
         beamOn = this.vic.lifting || Math.hypot(tx - u.x, tz - u.z) < 25;
         break;
       case 'stun':
-        yT = HOVER + 4;
-        if (u.t > 4.5) this.setUfo('rest');
+        // Atontado pierde altura y se tambalea hacia ti: es el momento de saltar y darle
+        tx = p.pos.x;
+        tz = p.pos.z;
+        vmax = 7;
+        if (u.t > 6) this.setUfo('rest');
+        break;
+      case 'board':
+        // Sin piloto: su propio rayo te sube a los mandos
+        beamOn = true;
+        if (!p.held) {
+          this.endRide();
+          this.setUfo('rest');
+          break;
+        }
+        p.pos.x = damp(p.pos.x, u.x, 6, dt);
+        p.pos.z = damp(p.pos.z, u.z, 6, dt);
+        p.pos.y = Math.min(u.y - 3.5, p.pos.y + 7 * dt);
+        p.heading += dt * 9;
+        if (u.t > 1.1) this.takeSeat(p);
+        break;
+      case 'ride':
+        yT = RIDE_H;
+        beamOn = this.updateRide(dt, p, time, inp);
         break;
       case 'abduct':
         beamOn = true;
@@ -336,7 +372,7 @@ export class Aliens {
         return;
       }
     }
-    if (u.state !== 'carry') {
+    if (u.state !== 'carry' && u.state !== 'ride') {
       const ex = tx - u.x;
       const ez = tz - u.z;
       const ed = Math.hypot(ex, ez) || 1;
@@ -347,7 +383,10 @@ export class Aliens {
       u.z += u.vz * dt;
     }
     const roof = this.T.height(u.x, u.z);
-    if (u.state !== 'leave') u.y = damp(u.y, Math.max(yT, roof + 9), 1.6, dt);
+    const low = u.state === 'stun' || u.state === 'board';
+    if (u.state !== 'leave') u.y = damp(u.y, low ? roof + LOW : Math.max(yT, roof + 9), low ? 2.6 : 1.6, dt);
+    // Coscorrón: hay que darle saltando desde abajo, no vale caerle encima al soltarse del rayo
+    if (u.state === 'stun' && u.t > 0.4 && !p.grounded && !p.held && !p.dropped && p.crashT <= 0 && p.vel.y > 0 && d < 7 && p.pos.y > u.y - 7.2 && p.pos.y < u.y) this.hitUfo(p);
 
     // ¿Tiene al patinete bajo el rayo?
     if (u.state === 'hunt') {
@@ -503,6 +542,200 @@ export class Aliens {
     p.invuln = 2.2;
   }
 
+  // ---------- Robarle el platillo ----------
+  // Timbre sónico: deja tontos a los marcianos de alrededor, y al platillo si anda cerca
+  sonic(x, z, r) {
+    const u = this.u;
+    let n = 0;
+    for (const a of this.aliens) {
+      if (!AFOOT.has(a.state) || Math.hypot(a.x - x, a.z - z) > r) continue;
+      a.state = 'dazed';
+      a.t = DAZE;
+      a.cd = a.fx = 0;
+      n++;
+    }
+    const ufo = (u.state === 'hunt' || u.state === 'rest' || u.state === 'snatch') && Math.hypot(u.x - x, u.z - z) < r * 1.4;
+    if (ufo) this.setUfo('stun');
+    return { n, ufo };
+  }
+
+  hitUfo(p) {
+    const g = this.game;
+    const u = this.u;
+    u.hits++;
+    p.vel.y = -5;
+    g.bits.burst(u.x, u.y - 2.4, u.z, [0xfff27a, 0xffffff, 0xd9dde0], 16, 12, this.T.height(u.x, u.z), 0.45);
+    g.camera3.addShake(0.5);
+    g.sfx.ufoHit();
+    g.hud.trick('¡Coscorrón al platillo!', 1000 * u.hits, 1);
+    g.addStuds(100 * u.hits);
+    g.hud.setUfo(u.hits, UFO_HITS);
+    if (u.hits >= UFO_HITS) {
+      this.steal(p);
+      return;
+    }
+    g.hud.big(u.hits === UFO_HITS - 1 ? '¡Uno más y es tuyo!' : '¡Coscorrón!', '#ffd23a', 1.1, true);
+    u.y += 2;
+    this.setUfo('rest');
+    u.dur = 5;
+  }
+
+  // Al tercer coscorrón el piloto sale por los aires y el rayo te sube a ti
+  steal(p) {
+    const g = this.game;
+    const u = this.u;
+    this.pilot.group.visible = false;
+    const a = this.aliens.find((o) => o.state === 'off');
+    if (a) {
+      const ang = Math.random() * TAU;
+      a.x = u.x;
+      a.z = u.z;
+      a.y = u.y + 2;
+      a.state = 'fly';
+      a.t = a.rot = a.fx = 0;
+      a.vx = Math.sin(ang) * 16;
+      a.vz = Math.cos(ang) * 16;
+      a.vy = 24;
+      a.spin = 14;
+      a.heading = ang;
+      a.fig.group.scale.setScalar(1);
+      a.fig.group.visible = true;
+    }
+    p.held = true;
+    p.grounded = false;
+    p.grind = null;
+    p.boosting = false;
+    p.v = 0;
+    p.vel.set(0, 0, 0);
+    this.ride = { t: RIDE_TIME };
+    this.setUfo('board');
+    g.hud.big('¡El platillo es tuyo!', '#ffd23a', 2.2);
+    g.sfx.fanfare();
+    g.confetti(u.x, u.y, u.z);
+  }
+
+  takeSeat(p) {
+    const g = this.game;
+    const u = this.u;
+    p.hidden = true;
+    p.flip = 0;
+    u.heading = p.heading;
+    const m = (this.mate = createMinifig(p.char.look));
+    m.group.scale.setScalar(0.75);
+    m.group.position.y = -0.3;
+    m.armL.rotation.x = m.armR.rotation.x = -1.2;
+    this.ufo.add(m.group);
+    g.camera3.rig = RIG;
+    g.save.ufos = (g.save.ufos || 0) + 1;
+    g.dirty = true;
+    this.giveBack();
+    this.setUfo('ride');
+    g.hud.setUfo(null);
+    g.hud.ride(1);
+    g.hud.toast('🛸 ¡Has robado el platillo! Se conduce igual que el patinete. Mantén <b>Espacio</b> para encender el rayo y pasa por encima de los marcianos.');
+  }
+
+  // A los mandos: devuelve si el rayo va encendido
+  updateRide(dt, p, time, inp) {
+    const g = this.game;
+    const u = this.u;
+    const r = this.ride;
+    if (!p.held) {
+      // Lo han recolocado desde fuera (pausa, misión...)
+      this.endRide();
+      this.setUfo('rest');
+      return false;
+    }
+    r.t -= dt;
+    if (r.t <= 0) {
+      this.endRide();
+      this.release(p);
+      this.setUfo('rest');
+      u.dur = 10;
+      g.sfx.escape();
+      g.hud.toast('🛸 Se acabó el paseo: otro marciano se ha colado en el platillo y te ha echado. Con otros tres coscorrones vuelve a ser tuyo.');
+      return false;
+    }
+    u.heading -= inp.steer * 2.3 * dt;
+    const sp = inp.throttle > 0 ? (inp.boost ? 54 : 38) : inp.throttle * 20;
+    u.vx = damp(u.vx, Math.sin(u.heading) * sp, 2.6, dt);
+    u.vz = damp(u.vz, Math.cos(u.heading) * sp, 2.6, dt);
+    u.x = clamp(u.x + u.vx * dt, BOUNDS.x0 + 16, BOUNDS.x1 - 16);
+    u.z = clamp(u.z + u.vz * dt, BOUNDS.z0 + 16, BOUNDS.z1 - 16);
+    p.pos.set(u.x, u.y - 3, u.z);
+    p.vel.set(u.vx, 0, u.vz);
+    p.heading = u.heading;
+    this.mate.group.rotation.y = u.heading;
+    this.mate.armL.rotation.x = -1.2 + inp.steer * 0.4;
+    this.mate.armR.rotation.x = -1.2 - inp.steer * 0.4;
+    g.hud.ride(r.t / RIDE_TIME);
+    if (inp.jump && u.beam > 0.5) this.suck();
+    else if (!inp.jump && this.vic) {
+      // Apagar el rayo deja caer lo que estuviera subiendo
+      this.vic.vy = 0;
+      this.falling = this.vic;
+      this.vic = null;
+    }
+    return inp.jump;
+  }
+
+  // El rayo, en tus manos: se lleva a los marcianos que pilla debajo y, de paso, lo que haya
+  suck() {
+    const g = this.game;
+    const u = this.u;
+    for (const a of this.aliens) {
+      if (!AFOOT.has(a.state) || Math.hypot(a.x - u.x, a.z - u.z) > BEAM_R + 0.5) continue;
+      a.state = 'sucked';
+      a.t = 0;
+    }
+    if (this.vic || this.falling) return;
+    const under = (o, r) => !o.taken && Math.hypot(o.x - u.x, o.z - u.z) < r;
+    let kind = 'cow';
+    let ref = g.cows.list.find((o) => under(o, BEAM_R));
+    if (!ref) {
+      kind = 'car';
+      ref = g.traffic.cars.find((o) => under(o, BEAM_R + 1));
+    }
+    if (!ref) {
+      kind = 'ped';
+      ref = g.traffic.peds.find((o) => under(o, BEAM_R) && o.fly <= 0);
+    }
+    if (!ref) return;
+    this.vic = this.victim(kind, ref, 10);
+    this.lift(this.vic);
+    g.sfx.beamGrab();
+  }
+
+  // Lo que sube por tu rayo se queda a bordo hasta que se acaba el paseo
+  gulp(v) {
+    const g = this.game;
+    this.vic = null;
+    v.obj.visible = false;
+    this.lost.push(v);
+    g.sfx.slurp();
+    if (v.kind === 'cow') g.cows.moo(0);
+    g.hud.trick(v.kind === 'cow' ? '¡Vaca a bordo!' : v.kind === 'car' ? '¡Coche a bordo!' : '¡Vecino a bordo!', 300, 1);
+    g.addStuds(30);
+  }
+
+  // Se acabó el paseo (o no llegó a empezar): el platillo vuelve a tener piloto
+  endRide() {
+    const g = this.game;
+    if (!this.ride) return;
+    this.ride = null;
+    if (this.mate) {
+      this.ufo.remove(this.mate.group);
+      this.mate.group.traverse((o) => o.isMesh && o.geometry.dispose());
+      this.mate = null;
+    }
+    this.pilot.group.visible = true;
+    this.u.hits = 0;
+    g.camera3.rig = null;
+    g.hud.ride(null);
+    if (this.active) g.hud.setUfo(0, UFO_HITS);
+    this.giveBack();
+  }
+
   // ---------- Rescate de vecinos ----------
   // Elige a quién llevarse: alguien a quien te dé tiempo a llegar. Las vacas le pierden.
   pickVictim(p) {
@@ -523,11 +756,7 @@ export class Aliens {
     if (!from.length) return false;
     const ref = from[Math.floor(Math.random() * from.length)];
     const lvl = this.wave ? this.wave.level : 0;
-    this.vic = {
-      kind, ref, obj: kind === 'ped' ? ref.fig.group : kind === 'car' ? ref.mesh : ref.group,
-      name: kind === 'ped' ? 'un vecino' : kind === 'car' ? CAR_NAMES[ref.kind] : 'una vaca',
-      x: ref.x, z: ref.z, gy: 0, h: 0, vy: 0, k: 0, heading: 0, spin: 0, lifting: false, rise: Math.min(3.4, 2.3 + lvl * 0.15), blip: { x: ref.x, z: ref.z, icon: '🆘' },
-    };
+    this.vic = this.victim(kind, ref, Math.min(3.4, 2.3 + lvl * 0.15));
     this.snatchCd = SNATCH_EVERY;
     g.sfx.sos();
     g.hud.toast(g.save.rescues
@@ -536,12 +765,28 @@ export class Aliens {
     return true;
   }
 
+  victim(kind, ref, rise) {
+    return {
+      kind, ref, obj: kind === 'ped' ? ref.fig.group : kind === 'car' ? ref.mesh : ref.group,
+      name: kind === 'ped' ? 'un vecino' : kind === 'car' ? CAR_NAMES[ref.kind] : 'una vaca',
+      x: ref.x, z: ref.z, gy: 0, h: 0, vy: 0, k: 0, heading: 0, spin: 0, lifting: false, rise, blip: { x: ref.x, z: ref.z, icon: '🆘' },
+    };
+  }
+
+  // El rayo lo despega del suelo
+  lift(v) {
+    v.ref.taken = true;
+    v.lifting = true;
+    v.gy = v.kind === 'ped' ? this.T.height(v.x, v.z) : 0;
+    v.heading = v.obj.rotation.y;
+  }
+
   updateRescue(dt, p, time) {
     const g = this.game;
     const u = this.u;
     const v = this.vic;
     this.snatchCd -= dt;
-    if (v && u.state !== 'snatch') {
+    if (v && u.state !== 'snatch' && u.state !== 'ride') {
       // El platillo se va (amanece, empieza un minijuego...): lo que tuviera en el rayo, al suelo
       this.vic = null;
       if (v.lifting) this.falling = v;
@@ -553,10 +798,7 @@ export class Aliens {
         this.vic = null;
         this.setUfo('hunt');
       } else if (Math.hypot(u.x - v.x, u.z - v.z) < (v.kind === 'car' ? 5 : 3)) {
-        r.taken = true;
-        v.lifting = true;
-        v.gy = v.kind === 'ped' ? this.T.height(v.x, v.z) : 0;
-        v.heading = v.obj.rotation.y;
+        this.lift(v);
         g.hud.big('¡Socorro!', '#ffd23a', 1.1, true);
         if (Math.hypot(p.pos.x - v.x, p.pos.z - v.z) < 150) g.sfx.beamGrab();
       }
@@ -574,6 +816,7 @@ export class Aliens {
       // Mientras sube a otro el rayo no te coge: cruzarlo por el aire lo corta
       const d = Math.hypot(p.pos.x - u.x, p.pos.z - u.z);
       if (!p.grounded && !p.held && p.crashT <= 0 && d < BEAM_R && p.pos.y > v.gy + 1 && p.pos.y < u.y - 2) this.rescue(p, v);
+      else if (v.k >= 1 && this.ride) this.gulp(v);
       else if (v.k >= 1) this.swallow(v);
     }
 
@@ -689,7 +932,7 @@ export class Aliens {
   }
 
   beamUp(a) {
-    if (a.state === 'off' || a.state === 'fly' || a.state === 'beamup') return;
+    if (a.state === 'off' || a.state === 'fly' || a.state === 'beamup' || a.state === 'sucked') return;
     a.state = 'beamup';
     a.t = 0;
   }
@@ -699,8 +942,11 @@ export class Aliens {
     const T = this.T;
     const W = this.wave;
     const lvl = W ? W.level : 0;
+    const u = this.u;
+    const riding = u.state === 'ride';
     const pAlive = p.crashT <= 0 && !p.held;
-    this.scareT = p.boosting && pAlive ? 1.3 : this.scareT - dt;
+    // Les asusta el turbo... y ver su platillo en tus manos
+    this.scareT = (p.boosting && pAlive) || riding ? 1.3 : this.scareT - dt;
     const scared = this.scareT > 0;
     let walking = 0;
     for (const a of this.aliens) {
@@ -759,6 +1005,27 @@ export class Aliens {
         grp.scale.setScalar(Math.max(0.05, 1 - a.t / 0.7));
         grp.position.set(a.x, a.y, a.z);
         grp.rotation.set(0, a.heading + a.t * 14, 0);
+        continue;
+      }
+      if (a.state === 'sucked') {
+        // Por el rayo arriba, al platillo que ahora llevas tú
+        a.t += dt;
+        a.x = damp(a.x, u.x, 6, dt);
+        a.z = damp(a.z, u.z, 6, dt);
+        a.y += 26 * dt;
+        if (a.y > u.y - 3 || a.t > 1.6) {
+          a.state = 'off';
+          grp.visible = false;
+          g.sfx.slurp();
+          this.score(p, time, '¡Marciano abducido!', 600);
+          continue;
+        }
+        f.armL.rotation.x = f.armR.rotation.x = -2.8;
+        f.legL.rotation.x = Math.sin(time * 16) * 0.6;
+        f.legR.rotation.x = -f.legL.rotation.x;
+        grp.scale.setScalar(lerp(1, 0.3, clamp(1 - (u.y - 3 - a.y) / 5, 0, 1)));
+        grp.position.set(a.x, a.y, a.z);
+        grp.rotation.set(Math.sin(time * 3) * 0.25, a.heading + a.t * 9, 0);
         continue;
       }
       walking++;
@@ -852,6 +1119,23 @@ export class Aliens {
             a.t = 5 + Math.random() * 3;
           }
           break;
+        case 'dazed':
+          // Tonto perdido por el timbrazo: da vueltas sobre sí mismo viendo las estrellas
+          dir = a.heading + 1.2;
+          turn = 2.5;
+          tilt = Math.sin(time * 6 + a.i) * 0.22;
+          a.fx -= dt;
+          if (a.fx <= 0) {
+            a.fx = 0.16;
+            const s = time * 7 + a.i;
+            g.bits.spawn(a.x + Math.sin(s) * 0.9, a.y + 4.7, a.z + Math.cos(s) * 0.9, Math.cos(s) * 2, 1.5, -Math.sin(s) * 2, 0xfff27a, 0.26, 0.45, a.y);
+          }
+          a.t -= dt;
+          if (a.t <= 0) {
+            a.state = 'chase';
+            a.t = 6;
+          }
+          break;
         case 'laugh':
           dir = toP;
           hop = Math.abs(Math.sin(a.t * 9)) * 0.9;
@@ -889,11 +1173,14 @@ export class Aliens {
       } else if (st === 'tired') {
         f.armL.rotation.x = f.armR.rotation.x = 0.35;
         tilt += Math.sin(time * 7 + a.i) * 0.06;
+      } else if (st === 'dazed') {
+        f.armL.rotation.x = Math.sin(time * 5 + a.i) * 0.6;
+        f.armR.rotation.x = -f.armL.rotation.x;
       } else {
         f.armL.rotation.x = -sw * 0.5;
         f.armR.rotation.x = sw * 0.5;
       }
-      f.head.rotation.y = st === 'wander' ? Math.sin(time * 1.3 + a.i) * 0.6 : 0;
+      f.head.rotation.y = st === 'wander' ? Math.sin(time * 1.3 + a.i) * 0.6 : st === 'dazed' ? Math.sin(time * 8 + a.i) * 0.9 : 0;
       grp.position.set(a.x, a.y + hop, a.z);
       grp.rotation.set(tilt, a.heading, 0);
 
@@ -917,7 +1204,8 @@ export class Aliens {
       const sp = Math.hypot(_v.x, _v.z);
       const coming = _v.x * dx + _v.z * dz < 0;
       const behind = Math.cos(toP - a.heading) < 0.15;
-      if (sp > 8 && coming && (behind || st === 'flee')) {
+      const dazed = st === 'dazed';
+      if (sp > (dazed ? 3 : 8) && coming && (behind || dazed || st === 'flee')) {
         this.kick(a, p, time, null, 500);
       } else if (st === 'chase' && p.invuln <= 0 && this.grabCd <= 0) {
         this.grab(a, p);
@@ -936,10 +1224,10 @@ export class Aliens {
     // Que no se amontonen
     for (let i = 0; i < POOL; i++) {
       const a = this.aliens[i];
-      if (a.state === 'off' || a.state === 'fly' || a.state === 'beamup' || a.state === 'drop') continue;
+      if (!AFOOT.has(a.state)) continue;
       for (let j = i + 1; j < POOL; j++) {
         const b = this.aliens[j];
-        if (b.state === 'off' || b.state === 'fly' || b.state === 'beamup' || b.state === 'drop') continue;
+        if (!AFOOT.has(b.state)) continue;
         const ex = b.x - a.x;
         const ez = b.z - a.z;
         const e = Math.hypot(ex, ez);
@@ -960,7 +1248,7 @@ export class Aliens {
     if (this.active && W) {
       this.spawnT -= dt;
       const want = Math.min(POOL, 4 + lvl);
-      if (this.spawnT <= 0 && walking < want && W.count + walking < W.goal && pAlive) {
+      if (this.spawnT <= 0 && walking < want && W.count + walking < W.goal && (pAlive || riding)) {
         const a = this.aliens.find((o) => o.state === 'off');
         if (a && this.spawn(a, p)) this.spawnT = 0.9;
       }

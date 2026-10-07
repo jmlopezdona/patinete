@@ -291,6 +291,68 @@ kbd {
   border-bottom: 4px solid #8dff6a;
   backdrop-filter: blur(6px);
 }
+#ride {
+  position: absolute;
+  left: 50%;
+  top: max(14px, env(safe-area-inset-top));
+  transform: translateX(-50%);
+  min-width: 300px;
+  padding: 8px 22px 10px;
+  text-align: center;
+  background: var(--panel);
+  border-radius: 18px;
+  border-bottom: 4px solid var(--yellow);
+  backdrop-filter: blur(6px);
+}
+#ride .a-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--yellow);
+}
+#ride .a-bar {
+  height: 12px;
+  margin: 6px 0;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+#ridefill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff7a1a, var(--yellow));
+  border-radius: 999px;
+  transform-origin: left;
+}
+#ride .a-hint {
+  font-size: 14px;
+  font-weight: 600;
+}
+#ufobox {
+  border-left: 4px solid var(--yellow);
+}
+/* El objeto que se lleva encima, encima del velocímetro */
+#itembox {
+  position: absolute;
+  right: max(22px, env(safe-area-inset-right));
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 124px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 10px;
+  font-size: 17px;
+  font-weight: 700;
+  background: var(--panel);
+  border-right: 4px solid var(--yellow);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+#itembox.pop {
+  animation: pop 0.25s ease-out;
+}
+#itembox i {
+  font-size: 22px;
+  font-style: normal;
+  text-shadow: none;
+}
 #abduct .a-title {
   font-size: 24px;
   font-weight: 700;
@@ -1084,6 +1146,8 @@ body.touch #touch {
   display: block;
 }
 body.touch #keys,
+body.touch #itembox,
+body.touch #ride .a-hint kbd,
 body.touch #speedo label {
   display: none;
 }
@@ -1169,6 +1233,14 @@ body.touch #speedo .num {
   margin-left: -22px;
   background: rgba(14, 26, 40, 0.7);
   font-size: 14px;
+}
+
+#tb-item {
+  position: absolute;
+  left: max(26px, env(safe-area-inset-left));
+  bottom: calc(max(26px, env(safe-area-inset-bottom)) + 154px);
+  background: #b8860b;
+  font-size: 26px;
 }
 
 @media (max-width: 900px) {

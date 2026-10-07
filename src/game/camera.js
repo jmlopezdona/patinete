@@ -14,6 +14,7 @@ export class ChaseCamera {
     this.mode = 0;
     this.shake = 0;
     this.roll = 0; // horizonte torcido: solo lo usa el modo foto
+    this.rig = null; // a los mandos del platillo robado se mira desde más lejos y más arriba: { dist, height }
     this.look = new THREE.Vector3();
     this.dist = 13;
   }
@@ -28,8 +29,9 @@ export class ChaseCamera {
     const T = g.terrain;
     const sp = p.speed;
     // Dirección objetivo: la de marcha (en el aire, la de la velocidad)
+    const rig = this.rig;
     let ty = p.heading;
-    if (!p.grounded && !p.grind) {
+    if (!rig && !p.grounded && !p.grind) {
       const vh = Math.hypot(p.vel.x, p.vel.z);
       ty = vh > 6 && !p.vertAir ? Math.atan2(p.vel.x, p.vel.z) : this.yaw;
     }
@@ -39,8 +41,8 @@ export class ChaseCamera {
     const far = this.mode === 1;
     const k = clamp(sp / p.stats.vboost, 0, 1);
     const big = p.char.cam; // los vehículos grandes se ven desde un poco más lejos
-    const distT = ((far ? 22 : 13.5) + k * 3.5) * big;
-    const height = ((far ? 11 : 6.2) + k * 0.6) * (0.6 + 0.4 * big);
+    const distT = rig ? rig.dist * (far ? 1.35 : 1) : ((far ? 22 : 13.5) + k * 3.5) * big;
+    const height = rig ? rig.height * (far ? 1.35 : 1) : ((far ? 11 : 6.2) + k * 0.6) * (0.6 + 0.4 * big);
     this.dist = damp(this.dist, distT, 4, dt);
     const fx = Math.sin(this.yaw);
     const fz = Math.cos(this.yaw);
@@ -56,7 +58,7 @@ export class ChaseCamera {
       const z = pz - fz * this.dist * t;
       const y = py + 2.6 + (height - 2.6) * t;
       if (T.height(x, z) > y - 0.6) {
-        s = Math.max(0.22, (i - 1) / 10);
+        s = Math.max(rig ? 0.6 : 0.22, (i - 1) / 10);
         break;
       }
     }

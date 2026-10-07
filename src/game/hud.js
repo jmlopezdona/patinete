@@ -9,7 +9,9 @@ export class Hud {
       trick: $('trick'), results: $('results'), zone: $('zone'), studBox: $('studbox'),
       alienBox: $('alienbox'), aliens: $('aliens'), abduct: $('abduct'), abductFill: $('abductfill'), beam: $('beamwarn'),
       wantedBox: $('wantedbox'), wanted: $('wanted'), cop: $('copwarn'),
+      ufoBox: $('ufobox'), ufoHits: $('ufohits'), ride: $('ride'), rideFill: $('ridefill'), itemBox: $('itembox'), itemIcon: $('itemicon'), itemName: $('itemname'), itemBtn: $('tb-item'),
     };
+    this.lastRide = null;
     this.lastWanted = 0;
     this.lastEvading = false;
     this.lastCop = 0;
@@ -54,6 +56,38 @@ export class Hud {
     b.classList.remove('pop');
     void b.offsetWidth;
     b.classList.add('pop');
+  }
+
+  // Coscorrones que lleva el platillo, de los que hacen falta para quitárselo al piloto (null lo esconde)
+  setUfo(n, total) {
+    const b = this.el.ufoBox;
+    b.classList.toggle('hidden', n == null);
+    if (n == null) return;
+    this.el.ufoHits.textContent = `${n}/${total}`;
+    b.classList.remove('pop');
+    void b.offsetWidth;
+    b.classList.add('pop');
+  }
+
+  // Lo que le queda al paseo en el platillo robado (null esconde la barra)
+  ride(k) {
+    if (k != null) k = Math.round(k * 200) / 200;
+    if (k === this.lastRide) return;
+    this.lastRide = k;
+    this.el.ride.classList.toggle('hidden', k == null);
+    if (k != null) this.el.rideFill.style.transform = `scaleX(${k})`;
+  }
+
+  // El objeto que se lleva encima (null vacía el hueco)
+  setItem(kind) {
+    this.el.itemBox.classList.toggle('hidden', !kind);
+    this.el.itemBtn.classList.toggle('hidden', !kind);
+    if (!kind) return;
+    this.el.itemIcon.textContent = this.el.itemBtn.textContent = kind.icon;
+    this.el.itemName.textContent = kind.name;
+    this.el.itemBox.classList.remove('pop');
+    void this.el.itemBox.offsetWidth;
+    this.el.itemBox.classList.add('pop');
   }
 
   // Barra para soltarse del rayo abductor (null la esconde)

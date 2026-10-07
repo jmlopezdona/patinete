@@ -65,6 +65,8 @@ se registra en la versión compilada (`npm run build` y `npm run preview`), no c
 | Empezar minijuego | `E` | Y |
 | Día / noche (de noche: ¡marcianos!) | `N` | — |
 | Soltarse del rayo abductor | machacar `Espacio` | A |
+| Usar el objeto que llevas (timbre sónico) | `Q` | RB |
+| Rayo del platillo robado | mantener `Espacio` | A |
 | Esquivar al municipal y la zapatilla | `Espacio` justo a tiempo | A |
 | Cámara cerca / lejos | `C` | Select |
 | Color del vehículo | `V` | — |
@@ -155,6 +157,17 @@ campanario y empieza a soltar marcianos de ladrillo por las calles.
   coge: **salta y crúzalo por el aire** para cortarlo. El platillo se queda aturdido, tú con el
   turbo lleno y, al echar la oleada, cada rescate suma premio. Si llegas tarde, se lo queda dentro
   hasta que se marche.
+- **Róbale el platillo**: cuando se queda atontado (al soltarte del rayo, al rescatar a alguien o
+  con un timbrazo) baja casi hasta el suelo. Ponte debajo, **salta** y dale un coscorrón en la
+  panza; el contador 🛸 lleva la cuenta. Al tercero el piloto sale por los aires y el rayo te sube
+  a ti a los mandos: durante 40 segundos se conduce igual que el patinete y, con `Espacio`
+  pulsado, el rayo se traga a los marcianos que pilla debajo (cuentan para la oleada) y, de paso,
+  a los vecinos, los coches y las vacas, que vuelven a su sitio al acabar el paseo. Los marcianos
+  huyen del platillo en cuanto lo ven en tus manos.
+- **Timbre sónico** 🔔: durante la invasión aparece uno en alguna calle cercana (sale en el
+  minimapa). Se recoge pasando por encima, se lleva encima y se gasta con `Q`: los marcianos de
+  alrededor se quedan unos segundos tontos perdidos, dando vueltas y viendo las estrellas, y
+  entonces el culetazo vale por cualquier lado. Si el platillo anda cerca, también se atonta.
 - Cada noche hay que echar a una **oleada** (8 marcianos la primera, 4 más cada vez). Al
   conseguirlo el platillo huye, amanece y te llevas el premio. No hay «game over».
 - Los puntos verdes del minimapa son marcianos; el 🛸, el platillo. Durante los minijuegos se esconden.
@@ -252,8 +265,9 @@ se guarda en el navegador.
   pendiente. Donde hay rampas, pistas o porterías el terreno se allana, así los minijuegos y el
   skatepark funcionan igual que en llano.
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
-  entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo, rayo y
-  rescates), `cows.js`, las vacas que pastan junto al Mega Salto,
+  entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo, rayo,
+  rescates y el robo del platillo), `items.js`, los objetos que se recogen por la calle y se gastan
+  con `Q` (de momento, el timbre sónico), `cows.js`, las vacas que pastan junto al Mega Salto,
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
   `characters.js` define los personajes elegibles y sus estadísticas (sus casas y puntos de salida
