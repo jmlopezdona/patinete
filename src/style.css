@@ -824,9 +824,12 @@ kbd {
 }
 .menu-foot {
   position: absolute;
-  right: 18px;
+  right: max(18px, env(safe-area-inset-right));
   bottom: 10px;
+  /* Solo ocupa el hueco que queda a la derecha de la columna del menú, para no pisarla */
+  max-width: calc(100% - max(4vw, 20px) - 600px - 42px);
   font-size: 11px;
+  text-align: right;
   opacity: 0.55;
 }
 
@@ -987,6 +990,12 @@ body.touch #speedo .num {
   }
   .menu-cards .card:nth-child(n + 2) {
     display: none;
+  }
+  .menu-foot {
+    position: static;
+    max-width: none;
+    margin-top: 2.4vh;
+    text-align: left;
   }
 }
 @media (max-height: 620px) {
