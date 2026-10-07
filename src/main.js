@@ -32,6 +32,7 @@ import { Hud } from './game/hud.js';
 import { Minimap } from './game/minimap.js';
 import { Aliens } from './game/aliens.js';
 import { Folks } from './game/folks.js';
+import { Dropoff } from './game/dropoff.js';
 import { Wanted } from './game/wanted.js';
 import { Photo } from './game/photo.js';
 
@@ -46,9 +47,9 @@ const TIPS = [
   '🛹 El <b>skatepark</b> está al final de la calle Río Júcar, junto a la rotonda.',
   '🚀 Detrás del skatepark, en el campo, te espera el <b>Mega Salto</b> sobre la charca.',
   '⛲ Sube hasta la <b>Plaza de la Villa</b>: allí están la fuente, la iglesia y el ayuntamiento.',
-  '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> en la canasta, las corredoras del parque y <b>Adrián</b>, el batería de la calle Libertad.',
+  '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> en la canasta, las corredoras del parque, <b>Emma</b> y sus selfies en El Palmeral y <b>Adrián</b>, el batería de la calle Libertad.',
   '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar tu vehículo.',
-  '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monopatín, monociclo o bici.',
+  '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monopatín, monociclo, bici o patines.',
   '📷 Pulsa <b>T</b> en pleno salto: el <b>modo foto</b> para el tiempo y te deja mover la cámara para sacar la foto.',
 ];
 const params = new URLSearchParams(location.search);
@@ -166,6 +167,7 @@ class Game {
     this.env = new Environment(this, this.world.lamps);
     this.aliens = new Aliens(this);
     this.folks = new Folks(this);
+    this.dropoff = new Dropoff(this);
     this.wanted = new Wanted(this);
     this.photo = new Photo(this);
     this.blips = [];
@@ -353,6 +355,9 @@ class Game {
     const sp = this.home.spawn;
     this.player.place(sp.x, sp.z, sp.heading);
     this.camera3.snap = true;
+    // A quien no vive en Cobeña lo traen en coche: en el menú se le ve llegar y bajarse
+    this.dropoff.cancel();
+    if (this.state === 'menu' && this.home.drop) this.dropoff.arrive();
   }
 
   // Elige quién sale a la calle: cambia piloto y vehículo, y su doble desaparece del pueblo
@@ -375,7 +380,7 @@ class Game {
     this.saveGame();
     this.sfx.init();
     this.sfx.ui();
-    if (this.state === 'play') this.hud.toast(`${ch.icon} Ahora llevas a <b>${ch.name}</b> con su <b>${ch.vehicle.toLowerCase()}</b>. ${ch.blurb}`);
+    if (this.state === 'play') this.hud.toast(`${ch.icon} Ahora llevas a <b>${ch.name}</b> con ${ch.plural ? 'sus' : 'su'} <b>${ch.vehicle.toLowerCase()}</b>. ${ch.blurb}`);
   }
 
   start() {
@@ -385,7 +390,8 @@ class Game {
     this.camera3.snap = true;
     document.getElementById('menu').classList.add('out');
     this.hud.show(true);
-    this.hud.toast(`¡Bienvenido a <b>Cobeña</b>! Sales de casa, en ${this.home.name}. Busca los iconos del mapa para jugar.`);
+    this.dropoff.leave();
+    this.hud.toast(`¡Bienvenido a <b>Cobeña</b>! ${this.home.drop ? 'Tu padre te deja en' : 'Sales de casa, en'} ${this.home.name}. Busca los iconos del mapa para jugar.`);
     if (this.env.target > 0.5) this.tipI = Math.max(this.tipI, 2);
     setTimeout(() => document.getElementById('keys').classList.add('fade'), 14000);
   }
@@ -560,7 +566,7 @@ class Game {
       for (let i = 0; i < 24; i++) {
         const a = (i / 24) * Math.PI * 2;
         // Mejor de tres cuartos por delante, y con sitio para balancearse a los lados
-        const d = Math.abs(((a - p.heading - 0.7 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+        const d = Math.abs(((a - p.heading - (this.home.view ?? 0.7) + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
         const sc = Math.min(clear(a), clear(a - 0.3), clear(a + 0.3)) - d * 2.5;
         if (sc > best) {
           best = sc;
@@ -598,6 +604,7 @@ class Game {
       this.player.updateVisual(dt, this.input.neutral);
       this.traffic.update(dt, this.player, this.time);
       this.folks.update(dt, this.player, this.time, false);
+      this.dropoff.update(dt, false);
       this.studs.update(dt, this.player);
       this.missions.update(dt, this.time);
     }
@@ -670,6 +677,7 @@ class Game {
     this.aliens.update(dt, p, this.time);
     this.wanted.update(dt, p, this.time);
     this.folks.update(dt, p, this.time, true);
+    this.dropoff.update(dt, true);
     const inBowl = this.missions.active && this.missions.def && this.missions.def.id === 'bowling';
     this.pins.update(dt, p, inBowl);
     this.ball.update(dt, p, this.time, (side) => this.missions.goal(side));

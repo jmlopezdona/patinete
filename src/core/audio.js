@@ -342,6 +342,12 @@ export class Sfx {
     this.tone(620, 0.16, 'square', 0.07 * vol, 0.9);
     this.tone(930, 0.2, 'triangle', 0.06 * vol, 0.95);
   }
+  // El clic del móvil de Emma y el tintineo de la foto que le gusta
+  selfie(vol = 1) {
+    this.noise(0.03, 0.3 * vol, 3200, 1.2);
+    this.noise(0.05, 0.22 * vol, 1500, 1, 'bandpass', 0.07);
+    this.tone(1568, 0.14, 'sine', 0.07 * vol, 1.5, 0.12);
+  }
   ole() {
     [660, 880, 1100].forEach((f, i) => this.tone(f, 0.12, 'triangle', 0.1, 1.2, i * 0.07));
   }

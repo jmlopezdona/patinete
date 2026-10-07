@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { createMinifig, nameTag } from '../lego/minifig.js';
-import { createUnicycle } from '../lego/vehicles.js';
+import { createUnicycle, createSkates } from '../lego/vehicles.js';
 import { Builder } from '../lego/builder.js';
 import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
-import { characterById } from './characters.js';
+import { characterById, COLORS } from './characters.js';
 import { DATA } from '../world/cobena.js';
 import { angDiff, damp, clamp } from '../core/rng.js';
 
@@ -19,7 +19,8 @@ const shadows = (o) =>
   });
 
 // Vecinos con nombre propio: Yago y su monociclo en el skatepark, Adrián, el pequeño batería heavy
-// de la calle Libertad, Jose en la canasta y Ana, Cintia y Bea haciendo footing por los parques.
+// de la calle Libertad, Jose en la canasta, Ana, Cintia y Bea haciendo footing por los parques
+// y Emma, de visita, haciéndose selfies en El Palmeral.
 export class Folks {
   constructor(game) {
     this.game = game;
@@ -29,6 +30,7 @@ export class Folks {
     this.buildDrummer();
     this.buildJose();
     this.buildJoggers();
+    this.buildEmma();
   }
 
   // El personaje que lleva el jugador no puede estar a la vez en su sitio de siempre
@@ -41,6 +43,11 @@ export class Folks {
     }
     const D = this.drummer;
     if (D) D.fig.group.visible = D.tag.visible = id !== 'adrian';
+    const E = this.emma;
+    if (E) {
+      E.marker.hidden = id === 'emma';
+      if (id === 'emma') E.fig.group.visible = E.tag.visible = E.fx.visible = false;
+    }
   }
 
   update(dt, p, time, live) {
@@ -48,6 +55,7 @@ export class Folks {
     if (this.drummer) this.updateDrummer(dt, p, time, live);
     if (this.jose) this.updateJose(dt, p, time, live);
     if (this.joggers) this.updateJoggers(dt, p, time, live);
+    if (this.emma && this.away !== 'emma') this.updateEmma(dt, p, time, live);
   }
 
   // ---------- Yago, el del monociclo ----------
@@ -737,5 +745,187 @@ export class Folks {
         }
       }
     }
+  }
+
+  // ---------- Emma, de visita: selfies y corazones en el parque El Palmeral ----------
+  buildEmma() {
+    const g = this.game;
+    const T = this.T;
+    const gate = g.world.places.homes.emma;
+    if (!gate) return;
+    // Pasada la puerta, en un claro del parque por el que no pasen las corredoras
+    const ux = -Math.sin(gate.spawn.heading);
+    const uz = -Math.cos(gate.spawn.heading);
+    const R = this.joggers;
+    const crowded = (x, z) => {
+      if (!R) return false;
+      for (let i = 1; i < R.pts.length; i++) {
+        const [ax, az] = R.pts[i - 1];
+        const dx = R.pts[i][0] - ax;
+        const dz = R.pts[i][1] - az;
+        const k = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1);
+        if (Math.hypot(x - ax - dx * k, z - az - dz * k) < 8) return true;
+      }
+      return false;
+    };
+    const clear = (x, z) => {
+      for (let a = 0; a < 8; a++) {
+        const h = T.height(x + Math.cos(a * 0.8) * (a ? 3 : 0), z + Math.sin(a * 0.8) * (a ? 3 : 0));
+        if (h > 0.3 || h < -0.3) return false;
+      }
+      return !crowded(x, z);
+    };
+    let spot = null;
+    for (const dist of [24, 30, 18, 38, 46]) {
+      for (const side of [0, 8, -8, 16, -16]) {
+        const x = gate.x + ux * dist + uz * side;
+        const z = gate.z + uz * dist - ux * side;
+        if (!spot && clear(x, z)) spot = { x, z };
+      }
+    }
+    if (!spot) return;
+    const ch = characterById('emma');
+    const fig = createMinifig(ch.look);
+    fig.group.scale.setScalar(ch.scale);
+    const skates = createSkates(COLORS[ch.color]);
+    skates.wear(fig);
+    // El móvil, en la mano derecha: queda derecho cuando levanta el brazo para la foto
+    const pb = new Builder();
+    pb.box(0.52, 0.9, 0.1, 0, 0.28, 0, 0xff5fa2, { r: 0.04 });
+    pb.box(0.42, 0.78, 0.03, 0, 0.28, -0.06, 0x9fd8f2);
+    pb.cyl(0.07, 0.04, 0.13, 0.56, 0.06, C.black, { axis: 'z', seg: 8 });
+    const phone = pb.mesh(plastic);
+    phone.position.set(-0.2, -1.56, 0.2);
+    phone.rotation.x = 1.9;
+    const flash = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    flash.position.set(0, 0.3, 0);
+    flash.visible = false;
+    phone.add(flash);
+    fig.armR.add(phone);
+    shadows(fig.group);
+    // Corazones de plástico que suben a su alrededor
+    const sh = new THREE.Shape();
+    sh.moveTo(0, -0.5);
+    sh.bezierCurveTo(-1.0, 0.1, -0.55, 0.8, 0, 0.3);
+    sh.bezierCurveTo(0.55, 0.8, 1.0, 0.1, 0, -0.5);
+    const hgeo = new THREE.ExtrudeGeometry(sh, { depth: 0.2, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 2, curveSegments: 8 });
+    hgeo.translate(0, 0, -0.1);
+    const mats = [[0xff2f5f, 0x7a0c26], [0xff7ab8, 0x7a2450], [0xe3000b, 0x5c0005]].map(([color, emissive]) => new THREE.MeshStandardMaterial({ color, emissive, roughness: 0.3 }));
+    const fx = new THREE.Group();
+    const hearts = Array.from({ length: 14 }, (_, i) => {
+      const m = new THREE.Mesh(hgeo, mats[i % mats.length]);
+      m.visible = false;
+      fx.add(m);
+      return { m, t: 0, life: 1, vx: 0, vy: 0, vz: 0, s: 1, w: 0 };
+    });
+    const y = T.height(spot.x, spot.z);
+    fig.group.position.set(spot.x, y + skates.seatY * ch.scale, spot.z);
+    fx.position.set(spot.x, y, spot.z);
+    const tag = nameTag('Emma', '#ff5fa2');
+    tag.position.set(spot.x, y + 7.2, spot.z);
+    g.scene.add(fig.group, fx, tag);
+    const marker = { x: spot.x, z: spot.z, icon: '🤳' };
+    this.markers.push(marker);
+    // Empieza de espaldas a la puerta, que salga de fondo en la primera foto
+    const heading = Math.atan2(ux, uz);
+    this.emma = { ...spot, y, fig, phone, flash, fx, hearts, tag, marker, heading, want: heading, t: 0, phase: 0, n: 0, heart: 0, pop: 0, cursor: 0 };
+  }
+
+  // Un corazón nuevo alrededor de Emma (o varios de golpe con cada foto)
+  heart(E, n = 1) {
+    for (let i = 0; i < n; i++) {
+      const h = E.hearts[E.cursor++ % E.hearts.length];
+      const a = Math.random() * TAU;
+      const r = 1.7 + Math.random() * 1.5;
+      h.m.position.set(Math.cos(a) * r, 2.4 + Math.random() * 2.8, Math.sin(a) * r);
+      h.vx = Math.cos(a) * 0.5;
+      h.vz = Math.sin(a) * 0.5;
+      h.vy = 1.5 + Math.random() * 1.4;
+      h.s = 0.36 + Math.random() * 0.34;
+      h.w = (Math.random() - 0.5) * 5;
+      h.t = h.life = 1.5 + Math.random() * 0.8;
+      h.m.rotation.y = a;
+    }
+  }
+
+  updateEmma(dt, p, time, live) {
+    const E = this.emma;
+    const g = this.game;
+    const f = E.fig;
+    const dx = p.pos.x - E.x;
+    const dz = p.pos.z - E.z;
+    const d = Math.hypot(dx, dz);
+    const vis = d < SEE;
+    f.group.visible = E.tag.visible = E.fx.visible = vis;
+    if (!vis) return;
+    const near = live && d < 13 && Math.abs(p.pos.y - E.y) < 4 && !p.hidden;
+    // Sesión de fotos en bucle: apunta, posa, dispara, mira cómo ha quedado y cambia de ángulo
+    const POSES = [
+      { arm: [-2.75, 0.5], tilt: 0.28, leg: 0 }, // victoria
+      { arm: [0.25, 0.85], tilt: -0.26, leg: -0.6 }, // brazo suelto y un patín adelante
+      { arm: [-1.5, 1.3], tilt: 0.2, leg: 0 }, // brazo en cruz
+    ];
+    const DUR = [0.5, 1.3, 0.4, 1.5, 0.8];
+    const pose = POSES[E.n % POSES.length];
+    E.t += dt;
+    if (E.t >= DUR[E.phase]) {
+      E.t = 0;
+      E.phase = (E.phase + 1) % DUR.length;
+      if (E.phase === 2) {
+        // ¡Foto!
+        E.pop = 1;
+        this.heart(E, 5);
+        const vol = live ? clamp(1 - d / 45, 0, 1) : 0;
+        if (vol > 0.05) g.sfx.selfie(vol);
+      } else if (E.phase === 4) {
+        E.n++;
+        E.want += (0.7 + Math.random() * 0.9) * (E.n % 2 ? 1 : -1);
+      }
+    }
+    // Si te acercas, se gira para sacarte de fondo en la foto
+    if (near) E.want = Math.atan2(-dx, -dz);
+    E.heading += angDiff(E.heading, E.want) * Math.min(1, (E.phase === 4 || near ? 5 : 0) * dt);
+    const posing = E.phase < 3;
+    const k = Math.min(1, 12 * dt);
+    const to = (o, key, v) => {
+      o.rotation[key] += (v - o.rotation[key]) * k;
+    };
+    const sway = Math.sin(time * 2.4) * 0.05;
+    to(f.armR, 'x', posing ? -1.9 + sway : E.phase === 3 ? -1.1 : -0.6);
+    to(f.armR, 'z', posing ? -0.4 : -0.1);
+    to(f.armL, 'x', posing ? pose.arm[0] : 0.1);
+    to(f.armL, 'z', posing ? pose.arm[1] + sway : 0.15);
+    to(f.head, 'x', posing ? -0.12 : E.phase === 3 ? 0.5 : 0);
+    to(f.head, 'y', posing ? -0.32 : E.phase === 3 ? -0.15 : 0);
+    to(f.head, 'z', posing ? pose.tilt : 0);
+    to(f.legL, 'x', posing ? pose.leg : 0);
+    to(f.group, 'x', posing ? -0.08 : 0);
+    // Saltito de alegría cuando la foto ha quedado bien
+    const hop = E.phase === 3 && E.t > 0.55 ? Math.abs(Math.sin((E.t - 0.55) * 7)) * Math.max(0, 1 - (E.t - 0.55) / 0.9) * 0.55 : 0;
+    f.group.position.y = E.y + f.group.scale.y * 0.48 + hop;
+    f.group.rotation.y = E.heading;
+    E.pop = Math.max(0, E.pop - dt * 7);
+    E.flash.visible = E.pop > 0.02;
+    E.flash.scale.setScalar(0.4 + E.pop * 3.2);
+
+    E.heart -= dt;
+    if (E.heart <= 0) {
+      E.heart = (posing ? 0.3 : 0.55) * (near ? 0.5 : 1);
+      this.heart(E);
+    }
+    for (const h of E.hearts) {
+      if (h.t <= 0) continue;
+      h.t -= dt;
+      const m = h.m;
+      m.visible = h.t > 0;
+      const age = h.life - h.t;
+      m.position.x += (h.vx + Math.sin(time * 3 + h.w) * 0.35) * dt;
+      m.position.y += h.vy * dt;
+      m.position.z += h.vz * dt;
+      m.rotation.y += h.w * dt;
+      m.scale.setScalar(h.s * Math.min(1, age / 0.18) * Math.min(1, h.t / 0.4));
+    }
+    // El patinete no la atraviesa
+    if (live && d < 2.3 && Math.abs(p.pos.y - E.y) < 4 && p.crashT <= 0) p.bump(dx / (d || 1), dz / (d || 1), 0.25, 0.8);
   }
 }

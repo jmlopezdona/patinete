@@ -413,7 +413,7 @@ export class Aliens {
     const g = this.game;
     const u = this.u;
     const sp = g.home.spawn;
-    const drops = [...this.drops, { name: 'la puerta de casa', x: sp.x, z: sp.z }];
+    const drops = [...this.drops, { name: g.home.drop ? g.home.name : 'la puerta de casa', x: sp.x, z: sp.z }];
     let cands = drops.filter((d) => Math.hypot(d.x - p.pos.x, d.z - p.pos.z) > 130);
     if (!cands.length) cands = drops;
     const dest = cands[Math.floor(Math.random() * cands.length)];

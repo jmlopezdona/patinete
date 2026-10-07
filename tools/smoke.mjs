@@ -288,7 +288,7 @@ await log('casas', () => {
   const g = window.__game; const p = g.player; const out = {};
   const lejos = () => { const sp = g.home.spawn; return +Math.hypot(p.pos.x - sp.x, p.pos.z - sp.z).toFixed(1); };
   g.state = 'menu';
-  for (const id of ['yago', 'teo', 'adrian', 'josemanuel']) { g.setCharacter(id); out[id] = `${g.home.name} a ${lejos()}`; }
+  for (const id of ['yago', 'teo', 'adrian', 'emma', 'josemanuel']) { g.setCharacter(id); out[id] = `${g.home.name} a ${lejos()}`; }
   g.state = 'play';
   g.setCharacter('teo');
   out.enLaPausaSeQueda = lejos() > 100;
@@ -300,7 +300,7 @@ await log('casas', () => {
 await log('personajes', () => {
   const g = window.__game; const p = g.player; const F = g.folks; const sp = g.world.places.spawn;
   const out = {};
-  for (const id of ['yago', 'teo', 'adrian', 'josemanuel']) {
+  for (const id of ['yago', 'teo', 'adrian', 'emma', 'josemanuel']) {
     g.setCharacter(id);
     p.place(sp.x, sp.z, sp.heading);
     let vm = 0; let ym = 0;
@@ -308,12 +308,42 @@ await log('personajes', () => {
     window.sim(1 / 60, () => ({ jumpPressed: true }));
     window.sim(1.6, (t) => { ym = Math.max(ym, p.pos.y); return { throttle: 1, trickPressed: t > 0.1 && t < 0.13 }; });
     out[id] = [p.veh.kind, +vm.toFixed(0), +ym.toFixed(1), document.getElementById('trick').textContent.split('+')[0]].join(' ');
-    out[id + 'Doble'] = id === 'yago' ? F.yago.root.visible : id === 'teo' ? g.ball.keeperName : id === 'adrian' ? F.drummer.fig.group.visible : 'no tiene';
+    out[id + 'Doble'] = id === 'yago' ? F.yago.root.visible : id === 'teo' ? g.ball.keeperName : id === 'adrian' ? F.drummer.fig.group.visible : id === 'emma' ? F.emma.fig.group.visible : 'no tiene';
   }
   out.guardado = g.save.character;
   return out;
 });
 await shot('s_personajes');
+// Emma: en el menú la trae su padre en coche y se baja; de vecina, selfies y corazones en El Palmeral
+await log('emma', () => {
+  const g = window.__game; const p = g.player; const D = g.dropoff; const E = g.folks.emma; const out = {};
+  const menu = (secs) => { for (let i = 0; i < secs * 60; i++) D.update(1 / 60, false); };
+  g.state = 'menu';
+  g.setCharacter('emma');
+  out.llega = [D.state, D.van.group.visible, p.hidden].join(' ');
+  menu(4.6);
+  out.puerta = D.state;
+  menu(1.5);
+  out.seBaja = [D.state, p.hidden, !D.kid].join(' ');
+  out.cocheA = +Math.hypot(D.x - p.pos.x, D.z - p.pos.z).toFixed(1);
+  g.start();
+  out.adios = D.state;
+  window.sim(22);
+  out.seVa = [D.state, D.van.group.visible].join(' ');
+  g.state = 'menu';
+  g.setCharacter('josemanuel');
+  g.setCharacter('emma');
+  g.setCharacter('josemanuel');
+  out.cambioEnElMenu = [D.state, p.hidden].join(' ');
+  g.state = 'play';
+  out.parque = g.zoneName(E.x, E.z);
+  p.place(E.x + 9, E.z + 4, 0);
+  window.sim(6);
+  out.selfies = [E.fig.group.visible, E.n > 0, E.hearts.filter((h) => h.t > 0).length > 2].join(' ');
+  out.teSacaDeFondo = Math.abs(Math.atan2(Math.sin(E.heading - Math.atan2(E.x - p.pos.x, E.z - p.pos.z)), 1)) < 0.2;
+  return out;
+});
+await shot('s_emma');
 await log('foto', async () => {
   const g = window.__game; const P = g.photo; const c = g.camera3; const U = g.final.uniforms;
   const t = g.time; const antes = c.cam.position.clone();

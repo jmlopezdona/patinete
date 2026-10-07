@@ -122,6 +122,10 @@ export class Player {
 
   buildVehicle() {
     if (this.veh) {
+      for (const b of this.veh.boots || []) {
+        b.removeFromParent();
+        b.geometry.dispose();
+      }
       this.scooterPivot.remove(this.veh.group);
       this.veh.group.traverse((o) => {
         if (!o.isMesh) return;
@@ -137,6 +141,7 @@ export class Player {
     this.scooterPivot.rotation.y = 0;
     v.group.position.z = -v.steerZ + (v.shift || 0);
     this.scooterPivot.add(v.group);
+    if (v.wear) v.wear(this.rider);
     this.pizza.position.set(...v.cargo);
   }
 
@@ -806,6 +811,33 @@ export class Player {
       r.armR.rotation.z = -(0.85 + up * 0.5) * st + Math.sin(this.time * 6) * 0.06;
       r.head.rotation.x = -0.1;
       r.head.rotation.y = 1.1 * st - inp.steer * 0.3;
+    } else if (kind === 'skates') {
+      // Zancadas de patinadora: la pierna que empuja se abre hacia fuera y los brazos van cruzados.
+      // Con turbo o dejándose llevar se agacha con las manos a la espalda; el truco es un espagat.
+      // El cuerpo se echa adelante desde la cadera: las piernas siguen a plomo y los patines, planos
+      const moving = Math.min(1, this.speed / 6);
+      const striding = driving && inp.throttle > 0 && this.v > -1 && !this.boosting;
+      this.kick = striding ? this.kick + dt * (5.5 + this.v * 0.16) : damp(this.kick, Math.round(this.kick / Math.PI) * Math.PI, 8, dt);
+      this.stance = damp(this.stance, striding ? 1 : 0, 7, dt);
+      const st = this.stance;
+      const s = Math.sin(this.kick);
+      const flying = air && !this.grind;
+      const split = whip ? Math.sin((whip / TAU) * Math.PI) : 0;
+      const tuck = (1 - st) * moving * (this.boosting ? 1 : 0.45);
+      const braking = this.grounded && inp.throttle < 0 && this.v > 2 ? 1 : 0;
+      const lean = 0.06 + 0.2 * st + 0.42 * tuck - braking * 0.28 + this.squash * 0.15;
+      r.group.position.set(s * 0.12 * st, (v.seatY + 1.75 * (1 - Math.cos(lean))) * k - this.squash * 0.2, v.seatZ);
+      r.group.rotation.x = lean;
+      r.group.rotation.z += s * 0.09 * st;
+      r.legL.rotation.x = (flying ? -0.55 - split * 0.95 : s * 0.5 * st - 0.14 * tuck) - lean;
+      r.legR.rotation.x = (flying ? -0.2 + split * 1.5 : -s * 0.5 * st + 0.2 * tuck + braking * 0.45) - lean;
+      r.legL.rotation.z = Math.max(0, -s) * 0.3 * st;
+      r.legR.rotation.z = -Math.max(0, s) * 0.3 * st;
+      r.armL.rotation.x = flying ? -2.5 : -s * 0.85 * st + 0.95 * tuck - braking * 0.6;
+      r.armR.rotation.x = flying ? -2.5 : s * 0.85 * st + 0.95 * tuck - braking * 0.6;
+      r.armL.rotation.z += (flying ? 0.5 + split * 0.6 : 0.12) + braking * 0.5;
+      r.armR.rotation.z -= (flying ? 0.5 + split * 0.6 : 0.12) + braking * 0.5;
+      r.head.rotation.x = -0.12 - 0.3 * tuck;
     } else if (kind === 'unicycle') {
       // Sentado en el sillín, pedaleando con la rueda y los brazos en cruz
       v.wheel.rotation.x += roll;
