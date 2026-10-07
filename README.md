@@ -11,6 +11,10 @@ El callejero es el real: calles, casas, vallas, parques, piscinas y pistas salen
 empieza en casa, en la **calle Río Júcar, 44**, y el skatepark está donde lo están construyendo de
 verdad: en la parcela de al lado de la rotonda de la M-103, al final de la calle.
 
+Las cuestas también son las de verdad: el relieve sale del modelo digital del terreno del
+[IGN](https://www.ign.es) (LiDAR), a la misma escala. Entre el arroyo y los cerros hay unos 100 m
+de desnivel, y calles como las del Olivar o Dalia se notan en las piernas.
+
 ## Cómo jugar
 
 ```bash
@@ -82,6 +86,8 @@ portero. El color de cada vehículo se cambia con `V` y se guarda por separado.
 - Tráfico por las calles principales, peatones, vallas que se pueden saltar, mobiliario que revienta
   en ladrillos, studs de plata, oro y azules, y **12 ladrillos dorados** escondidos.
 - El indicador de zona muestra el nombre de la calle por la que vas.
+- **Cuestas**: cuesta abajo el patinete coge velocidad sin empujar (y pasa de su punta), cuesta
+  arriba le cuesta más y corre menos; el turbo ayuda. Parado no se va solo: se aguanta con el pie.
 
 ### La noche de los marcianos
 
@@ -137,6 +143,13 @@ se guarda en el navegador.
 - `src/world/` — `cobena-data.js` (callejero ya procesado), `cobena.js` (suelo por capas, calles,
   casas, vallas y mobiliario), `landmarks.js` (skatepark y demás lugares especiales) y `terrain.js`
   (terreno analítico: rampas, quarter pipes, bowls… que usa la física).
+- `src/world/relief.js` — el relieve (`cobena-relieve.js` son las cotas ya procesadas). El juego
+  sigue razonando en plano, con las alturas medidas desde el suelo, y el relieve se suma al
+  dibujar: `lift(x, z)` da la cota del terreno. El suelo se tiende sobre él, cada edificio se
+  asienta a la cota de su fachada con un zócalo, las vallas bajan a escalones y, justo antes de
+  pintar, cada objeto y la cámara suben a su cota (`Game.render`). El patinete solo lo nota como
+  pendiente. Donde hay rampas, pistas o porterías el terreno se allana, así los minijuegos y el
+  skatepark funcionan igual que en llano.
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
   entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo y rayo) y
   `folks.js`, los vecinos con nombre.
@@ -147,16 +160,23 @@ se guarda en el navegador.
   Chrome instalado en la ruta habitual de macOS). `npm run test:misiones` también prueba la invasión y
   a los vecinos, y `node tools/probe.mjs '<js>' [captura.png]` evalúa una expresión dentro del juego.
 
-### Regenerar el callejero
+### Regenerar el callejero y el relieve
 
 ```bash
-npm run datos                 # reprocesa la descarga guardada en tools/.cache
-npm run datos -- --descargar  # vuelve a pedir los datos a OpenStreetMap (Overpass)
+npm run datos                   # reprocesa la descarga guardada en tools/.cache
+npm run datos -- --descargar    # vuelve a pedir los datos a OpenStreetMap (Overpass)
+npm run relieve                 # reprocesa el relieve guardado en tools/.cache
+npm run relieve -- --descargar  # vuelve a pedir el modelo del terreno al IGN
 ```
 
 `tools/osm-cobena.mjs` convierte los datos en bruto en `src/world/cobena-data.js`: ajusta cada
 edificio a un rectángulo, estrecha las calles según el hueco real entre fachadas, quita las vallas
 que cortarían el paso y calcula los circuitos de los coches, los paseos de los peatones y la carrera.
 
+`tools/relieve-cobena.mjs` descarga el MDT05 (una cota cada 5 m) del servicio WCS del IGN, lo
+suaviza y lo deja en `src/world/cobena-relieve.js` como una rejilla de cotas cada 20 m, con el
+cero en la puerta de casa. Si cambian los límites del mapa en el callejero, hay que regenerarlo.
+
 Datos del mapa © colaboradores de OpenStreetMap, bajo licencia ODbL.
+Relieve: MDT05 2015-2021 CC-BY 4.0 [scne.es](https://www.scne.es).
 Juego de fans sin relación con ninguna marca de juguetes.

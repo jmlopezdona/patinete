@@ -26,6 +26,14 @@ export class BrickBatch {
     this.sm = [];
     this.sc = [];
     this.sn = 0;
+    // Cota del terreno bajo cada pieza: por defecto la de su centro; con level fijo, todo lo
+    // que se construya (un edificio entero) queda a la misma
+    this.lift = null;
+    this.level = null;
+  }
+
+  _lift(x, z) {
+    return this.level ?? (this.lift ? this.lift(x, z) : 0);
   }
 
   _chunk(x, z) {
@@ -41,7 +49,7 @@ export class BrickBatch {
     const c = Math.cos(rot);
     const s = Math.sin(rot);
     const k = this._chunk(x, z);
-    k.mats.push(c * w, 0, -s * w, 0, 0, h, 0, 0, s * d, 0, c * d, 0, x, y + h / 2, z, 1);
+    k.mats.push(c * w, 0, -s * w, 0, 0, h, 0, 0, s * d, 0, c * d, 0, x, y + h / 2 + this._lift(x, z), z, 1);
     const l = lin(color);
     k.cols.push(l[0], l[1], l[2]);
     k.flags.push(flags);
@@ -50,7 +58,7 @@ export class BrickBatch {
   // Caja con una matriz arbitraria (toldos inclinados, etc.)
   boxM(m, color, flags = 0) {
     const k = this._chunk(m.elements[12], m.elements[14]);
-    for (let i = 0; i < 16; i++) k.mats.push(m.elements[i]);
+    for (let i = 0; i < 16; i++) k.mats.push(m.elements[i] + (i === 13 ? this._lift(m.elements[12], m.elements[14]) : 0));
     const l = lin(color);
     k.cols.push(l[0], l[1], l[2]);
     k.flags.push(flags);
@@ -63,6 +71,7 @@ export class BrickBatch {
     const c = Math.cos(rot);
     const s = Math.sin(rot);
     const l = lin(color);
+    yTop += this._lift(x, z);
     for (let i = 0; i < nx; i++) {
       for (let j = 0; j < nz; j++) {
         const lx = -nx / 2 + 0.5 + i;

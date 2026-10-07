@@ -14,13 +14,14 @@ const _col = new THREE.Color();
 export class Builder {
   constructor() {
     this.parts = [];
+    this.lift = null; // cota del terreno bajo cada pieza (solo en el mundo; los modelos van sin ella)
   }
 
   add(geo, color, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
     const g = geo.index ? geo.toNonIndexed() : geo.clone();
     _e.set(rx, ry, rz);
     _q.setFromEuler(_e);
-    _m.compose(_p.set(x, y, z), _q, _s);
+    _m.compose(_p.set(x, this.lift ? y + this.lift(x, z) : y, z), _q, _s);
     g.applyMatrix4(_m);
     const n = g.attributes.position.count;
     const arr = new Float32Array(n * 3);

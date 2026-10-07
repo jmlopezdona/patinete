@@ -5,6 +5,7 @@ import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
 import { DATA } from '../world/cobena.js';
 import { angDiff, damp } from '../core/rng.js';
+import { lift, grade } from '../world/relief.js';
 
 const KINDS = [
   ['car', C.red], ['taxi', C.yellow], ['bus', C.red], ['car', C.medAzure], ['police', C.white], ['truck', C.orange],
@@ -35,6 +36,7 @@ export class Traffic {
       const model = carModel(kind, color);
       const mesh = new THREE.Mesh(model.geo, plastic);
       mesh.castShadow = true;
+      mesh.rotation.order = 'YXZ';
       const idx = Math.floor((at + rng() * 0.3) * path.length) % path.length;
       const car = { mesh, path, idx, x: path[idx][0], z: path[idx][1], heading: 0, speed: 0, cruise: kind === 'bus' || kind === 'truck' ? 11 : rng.range(13, 17), hl: model.len / 2, hw: model.width / 2, honk: 0 };
       const nx = path[(idx + 1) % path.length];
@@ -127,6 +129,9 @@ export class Traffic {
       c.heading += angDiff(c.heading, th) * Math.min(1, 6 * dt);
       c.mesh.position.set(c.x, 0, c.z);
       c.mesh.rotation.y = c.heading;
+      // Morro arriba o abajo según la cuesta
+      lift(c.x, c.z);
+      c.mesh.rotation.x = -Math.atan(grade.x * fx + grade.z * fz);
       const far = Math.abs(dxp) + Math.abs(dzp) > 420;
       c.mesh.visible = !far;
       // Choque con el patinete

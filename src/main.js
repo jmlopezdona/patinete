@@ -16,6 +16,7 @@ import { createScooter } from './lego/scooter.js';
 import { Terrain } from './world/terrain.js';
 import { buildTown, zoneAt, BOUNDS } from './world/cobena.js';
 import { buildLandmarks } from './world/landmarks.js';
+import { lift } from './world/relief.js';
 import { Player } from './game/player.js';
 import { CHARACTERS, characterById } from './game/characters.js';
 import { ChaseCamera } from './game/camera.js';
@@ -86,6 +87,7 @@ class Game {
     this.paused = false;
     this.time = 0;
     this.tmpV = new THREE.Vector3();
+    this.lifted = [];
     this.rng = makeRng(20261007);
     this.save = this.loadSave();
     this.input = new Input();
@@ -184,19 +186,24 @@ class Game {
       places: { hoops: [] }, map: { blocks: [], buildings: [], circles: [], pitches: [] },
     });
     this.terrain = W.terrain;
+    W.batch.lift = W.geo.lift = lift;
     buildTown(W);
     buildLandmarks(W);
-    this.scene.add(W.ground.build());
+    // El pueblo ya se construye sobre el relieve: no hay que subirlo al pintar
+    const town = new THREE.Group();
+    town.userData.fixed = true;
+    this.scene.add(town);
+    town.add(W.ground.build());
     this.brickMat = createBrickMaterial();
     const studMat = new THREE.MeshStandardMaterial({ roughness: 0.4 });
-    this.scene.add(W.batch.build(this.brickMat, studMat));
-    this.scene.add(W.geo.mesh(plasticDouble));
+    town.add(W.batch.build(this.brickMat, studMat));
+    town.add(W.geo.mesh(plasticDouble));
     // Carteles
     for (const s of W.signs) {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(s.w, s.h), new THREE.MeshBasicMaterial({ map: textTexture(s.text, { bg: s.bg, fg: s.fg, w: 512, h: Math.round((512 * s.h) / s.w) }) }));
       m.position.set(s.x, s.y, s.z);
       m.rotation.y = s.rot;
-      this.scene.add(m);
+      town.add(m);
     }
     // Estatua dorada del patinete en la plaza
     for (const e of W.extras) {
@@ -533,7 +540,7 @@ class Game {
     const sz = Math.cos(a);
     const off = c.aspect > 1.25 ? R * 0.34 : 0;
     c.position.set(pp.x + sx * R, pp.y + 4.6 + (want - R) * 0.5, pp.z + sz * R);
-    c.lookAt(pp.x - sz * off, pp.y + 2.6, pp.z + sx * off);
+    this.camera3.look.set(pp.x - sz * off, pp.y + 2.6, pp.z + sx * off);
     c.fov = 50;
     c.updateProjectionMatrix();
   }
@@ -558,8 +565,7 @@ class Game {
     }
     if (this.statue) this.statue.rotation.y += dt * 0.35;
     this.env.update(dt, this.player.pos, this.camera3.cam);
-    if (this.quality > 0) this.composer.render(dt);
-    else this.renderer.render(this.scene, this.camera3.cam);
+    this.render(dt);
     this.input.endFrame();
 
     // Calidad automática si el equipo va justo
@@ -576,6 +582,22 @@ class Game {
         }
       }
     }
+  }
+
+  // El juego calcula en plano, con las alturas medidas desde el suelo. Solo para pintar,
+  // cada objeto (y la cámara) sube a la cota del terreno que tiene debajo.
+  render(dt) {
+    const L = this.lifted;
+    const cam = this.camera3.cam;
+    L.length = 0;
+    L.push(cam, cam.position.y);
+    for (const o of this.scene.children) if (!o.isInstancedMesh && !o.isLight && !o.userData.fixed) L.push(o, o.position.y);
+    for (let i = 0; i < L.length; i += 2) L[i].position.y += lift(L[i].position.x, L[i].position.z);
+    const look = this.camera3.look;
+    cam.lookAt(look.x, look.y + lift(look.x, look.z), look.z);
+    if (this.quality > 0) this.composer.render(dt);
+    else this.renderer.render(this.scene, cam);
+    for (let i = 0; i < L.length; i += 2) L[i].position.y = L[i + 1];
   }
 
   update(dt, inp) {

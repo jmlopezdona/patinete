@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { bitGeometry } from '../lego/models.js';
+import { lift } from '../world/relief.js';
 
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -102,7 +103,7 @@ export class Bits {
       const k = Math.min(1, d[o + 12] / 0.35) * d[o + 14];
       _e.set(d[o + 6], d[o + 7], d[o + 8]);
       _q.setFromEuler(_e);
-      _m.compose(_p.set(d[o], d[o + 1], d[o + 2]), _q, _s.set(k, k, k));
+      _m.compose(_p.set(d[o], d[o + 1] + lift(d[o], d[o + 2]), d[o + 2]), _q, _s.set(k, k, k));
       this.mesh.setMatrixAt(i, _m);
     }
     if (any || this.wasAny) this.mesh.instanceMatrix.needsUpdate = true;

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { propModel } from '../lego/models.js';
 import { plastic } from '../lego/materials.js';
+import { lift } from '../world/relief.js';
 
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -35,7 +36,7 @@ export class Props {
 
   _set(it, scale) {
     _q.setFromAxisAngle(_up, it.rot);
-    _m.compose(_p.set(it.x, it.y, it.z), _q, _s.set(scale, scale, scale));
+    _m.compose(_p.set(it.x, it.y + lift(it.x, it.z), it.z), _q, _s.set(scale, scale, scale));
     it.mesh.setMatrixAt(it.idx, _m);
     it.mesh.instanceMatrix.needsUpdate = true;
   }

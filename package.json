@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "datos": "node tools/osm-cobena.mjs",
+    "relieve": "node tools/relieve-cobena.mjs",
     "test:fisica": "node tools/phys.mjs",
     "test:misiones": "node tools/smoke.mjs shots",
     "capturas": "node tools/shot.mjs shots"

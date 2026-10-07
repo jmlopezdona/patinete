@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { studGeometry, goldBrickGeometry } from '../lego/models.js';
 import { goldMetal } from '../lego/materials.js';
+import { lift } from '../world/relief.js';
 
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
@@ -145,7 +146,7 @@ export class Studs {
       }
       const bob = it.dyn ? 0 : Math.sin(this.t * 2.4 + it.ph) * 0.18;
       _q.setFromAxisAngle(_up, spin + it.ph);
-      _m.compose(_p.set(it.x, it.y + bob, it.z), _q, _s.set(scale, scale, scale));
+      _m.compose(_p.set(it.x, it.y + bob + lift(it.x, it.z), it.z), _q, _s.set(scale, scale, scale));
       this.mesh.setMatrixAt(i, _m);
     }
     this.mesh.instanceMatrix.needsUpdate = true;

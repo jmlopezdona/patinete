@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { legoUniforms } from '../lego/materials.js';
 import { damp } from '../core/rng.js';
 import { CENTER } from '../world/cobena.js';
+import { lift, grade, TOP } from '../world/relief.js';
 
 const SUN = new THREE.Vector3(0.52, 0.74, 0.42).normalize();
 const DAY = { top: new THREE.Color(0x2f86e6), hor: new THREE.Color(0xc4e6ff), sun: new THREE.Color(0xfff0d8), hemiS: new THREE.Color(0xd4ebff), hemiG: new THREE.Color(0xa09680) };
@@ -66,6 +67,7 @@ export class Environment {
     this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.12;
     this.sun.shadow.radius = 2.2;
+    this.sun.target.userData.fixed = true;
     scene.add(this.sun, this.sun.target);
     legoUniforms.uSunDir.value.set(SUN.x, SUN.z).normalize();
 
@@ -87,6 +89,7 @@ export class Environment {
       this.clouds.setMatrixAt(i, m);
     });
     this.clouds.frustumCulled = false;
+    this.clouds.position.y = TOP * 0.7; // por encima de los cerros
     scene.add(this.clouds);
 
     // Charcos de luz bajo las farolas (solo de noche)
@@ -106,8 +109,9 @@ export class Environment {
     this.poolMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     this.pools = new THREE.InstancedMesh(pg, this.poolMat, lamps.length);
     lamps.forEach((l, i) => {
-      m.makeScale(24, 1, 24);
-      m.setPosition(l.x, l.y - 7.3 + 0.08, l.z);
+      // Tumbado sobre la cuesta que haya bajo la farola
+      const y = lift(l.x, l.z);
+      m.set(24, 0, 0, l.x, 24 * grade.x, 1, 24 * grade.z, y + l.y - 7.3 + 0.08, 0, 0, 24, l.z, 0, 0, 0, 1);
       this.pools.setMatrixAt(i, m);
     });
     this.pools.frustumCulled = false;
@@ -162,8 +166,9 @@ export class Environment {
     const q = 4;
     const tx = Math.round(focus.x / q) * q;
     const tz = Math.round(focus.z / q) * q;
-    this.sun.target.position.set(tx, 0, tz);
-    this.sun.position.set(tx + SUN.x * 300, SUN.y * 300, tz + SUN.z * 300);
+    const ty = lift(tx, tz);
+    this.sun.target.position.set(tx, ty, tz);
+    this.sun.position.set(tx + SUN.x * 300, ty + SUN.y * 300, tz + SUN.z * 300);
     this.clouds.position.x = ((this.clouds.position.x + dt * 3 + 600) % 1200) - 600;
   }
 }

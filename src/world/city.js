@@ -1,5 +1,6 @@
 import { C } from '../lego/colors.js';
 import { F } from '../lego/batch.js';
+import { lift } from './relief.js';
 
 // Piezas comunes del mundo: árboles, farolas, carteles y sistemas de coordenadas locales.
 export const BASE = 0.4; // altura de las plataformas (skatepark, pistas...)
@@ -49,17 +50,21 @@ export function lamp(W, x, z, dx, dz, base = 0) {
   dx /= l;
   dz /= l;
   const rot = Math.atan2(-dz, dx);
+  const level = batch.level;
+  batch.level ??= lift(x, z); // el brazo y el farol, a la cota del poste
   batch.box(x, base, z, 0.9, 0.4, 0.9, C.dgray, 0, rot);
   batch.box(x, base, z, 0.36, 8, 0.36, C.black, 0, rot);
   batch.box(x + dx * 1.1, base + 7.8, z + dz * 1.1, 2.5, 0.3, 0.3, C.black, 0, rot);
   const lx = x + dx * 2.1;
   const lz = z + dz * 2.1;
   batch.box(lx, base + 7.3, lz, 1.1, 0.5, 1.1, 0xfff0b8, F.GLOW, rot);
+  batch.level = level;
   W.lamps.push({ x: lx, y: base + 7.3, z: lz });
 }
 
+// Cartel a la altura y sobre el terreno (o sobre el edificio que se esté construyendo)
 export function addSign(W, text, x, y, z, rot, w, h, bg = '#c91a09', fg = '#ffffff') {
-  W.signs.push({ text, x, y, z, rot, w, h, bg, fg });
+  W.signs.push({ text, x, y: y + (W.batch.level ?? lift(x, z)), z, rot, w, h, bg, fg });
 }
 
 export function palm(W, x, z, base = 0) {

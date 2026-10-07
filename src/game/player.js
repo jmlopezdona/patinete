@@ -5,12 +5,19 @@ import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
 import { clamp, damp, angDiff } from '../core/rng.js';
 import { CHARACTERS, COLORS, characterById } from './characters.js';
+import { lift, grade } from '../world/relief.js';
 
 const G = 42;
 const V_REV = 9;
 const BRAKE = 40;
 const STEP = 1.0;
 const TAU = Math.PI * 2;
+// Cuestas del pueblo: la gravedad tira un poco más de la cuenta para que se noten (HILL), cuesta
+// arriba se pierde velocidad punta (HILL_SLOW) y, por empinada que sea la calle, empuja como
+// mucho como una del 18 % (HILL_MAX), para que siempre se pueda subir
+const HILL = 0.6;
+const HILL_SLOW = 2.5;
+const HILL_MAX = 0.18;
 
 
 export class Player {
@@ -23,6 +30,8 @@ export class Player {
     this.v = 0;
     this.gvy = 0;
     this.pitch = 0;
+    this.grade = 0; // pendiente del terreno en el sentido de la marcha
+    this.ramp = 0; // pendiente de la rampa u obstáculo que se pisa
     this.grounded = true;
     this.groundPrim = null;
     this.airTime = 0;
@@ -236,7 +245,7 @@ export class Player {
     return Math.abs(hb - ha) > 0.03 + (b - a) * len * 4.5;
   }
 
-  // Pendiente a lo largo de la dirección de marcha, ignorando escalones
+  // Pendiente a lo largo de la dirección de marcha (rampas más relieve), ignorando escalones
   slopeAt(x, z, fx, fz) {
     const T = this.terrain;
     const e = 0.3;
@@ -253,7 +262,10 @@ export class Player {
       sum += (h0 - hb) / e;
       cnt++;
     }
-    return cnt ? Math.atan(sum / cnt) : 0;
+    lift(x, z);
+    this.grade = grade.x * fx + grade.z * fz;
+    this.ramp = cnt ? sum / cnt : 0;
+    return Math.atan(this.ramp + this.grade);
   }
 
   stepGround(h, inp) {
@@ -285,7 +297,7 @@ export class Player {
     if (boosting && !this.boosting) this.game.sfx.boost();
     this.boosting = boosting;
     const S = this.stats;
-    const maxV = boosting ? S.vboost : S.vmax;
+    const maxV = (boosting ? S.vboost : S.vmax) * (1 - clamp(this.grade * HILL_SLOW, 0, 0.3));
     if (boosting) this.boost = Math.max(0, this.boost - h / 3.6);
     if (inp.throttle > 0 || boosting) {
       // En rampas empinadas el empuje casi desaparece: manda la inercia
@@ -299,6 +311,7 @@ export class Player {
     } else {
       const f = (2.0 + Math.abs(this.v) * 0.1) * h;
       this.v = Math.abs(this.v) <= f ? 0 : this.v - Math.sign(this.v) * f;
+      if (this.grade < 0 && this.v > S.vmax) this.v -= (this.v - S.vmax) * 1.2 * h; // cuesta abajo, sin desbocarse
     }
     const sp = Math.abs(this.v);
     const turn = S.turn * Math.min(1, 0.3 + sp / 9) * (1 - 0.36 * Math.min(1, sp / S.vboost));
@@ -308,12 +321,14 @@ export class Player {
 
     const pitch = this.slopeAt(x, z, fx, fz);
     const cp = Math.cos(pitch);
-    const sn = Math.sin(pitch);
     this.pitch = pitch;
-    this.v -= G * sn * h;
+    const hill = clamp(this.grade, -HILL_MAX, HILL_MAX);
+    this.v -= G * (Math.sin(Math.atan(this.ramp + hill)) + HILL * hill) * h;
+    // Parado en una calle en cuesta se aguanta con el pie: no se va solo
+    if (hill !== 0 && this.ramp === 0 && inp.throttle === 0 && !boosting && Math.abs(this.v) < 0.5) this.v = 0;
 
     // Si rueda marcha atrás cuesta abajo, se da la vuelta solo
-    if (this.v < -2.5 && inp.throttle >= 0 && Math.abs(pitch) > 0.12) {
+    if (this.v < -2.5 && inp.throttle >= 0 && Math.abs(pitch) > (this.ramp === 0 ? 0.03 : 0.12)) {
       this.heading += Math.PI;
       this.visYaw -= Math.PI;
       this.v = -this.v;

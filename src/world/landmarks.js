@@ -5,6 +5,7 @@ import { profileGeo, frustumGeo } from '../lego/builder.js';
 import { addPin } from '../lego/models.js';
 import { BASE, frame, fbox, tree, lamp, palm, addSign } from './city.js';
 import { DATA, BOUNDS } from './cobena.js';
+import { lift } from './relief.js';
 
 const B = BASE;
 const RAD = Math.PI / 180;
@@ -129,13 +130,13 @@ function skatepark(W) {
   // Losa de hormigón con la forma de la parcela
   const shape = new THREE.Shape();
   for (let i = 0; i < S.poly.length; i += 2) {
-    if (i === 0) shape.moveTo(S.poly[i], S.poly[i + 1]);
-    else shape.lineTo(S.poly[i], S.poly[i + 1]);
+    if (i === 0) shape.moveTo(S.poly[i] - S.x, S.poly[i + 1] - S.z);
+    else shape.lineTo(S.poly[i] - S.x, S.poly[i + 1] - S.z);
   }
   const slab = new THREE.ExtrudeGeometry(shape, { depth: B, bevelEnabled: false });
   slab.rotateX(Math.PI / 2);
   slab.translate(0, B, 0);
-  geo.add(slab, CONCRETE);
+  geo.add(slab, CONCRETE, S.x, 0, S.z);
   terrain.poly(S.poly, B);
   for (let i = -12; i <= 12; i++) {
     for (let j = -4; j <= 4; j++) {
@@ -480,7 +481,8 @@ function drummer(W) {
   }
   if (!f) return;
   const { x, z } = f;
-  fbox(batch, f, 0, 0, 0, 9, 0.5, 7, C.black, F.STUDS);
+  batch.level = lift(x, z); // el escenario entero, a la cota de su centro
+  fbox(batch, f, 0, -1, 0, 9, 1.5, 7, C.black, F.STUDS);
   terrain.box(x, z, 9, 7, 0.5, rot);
   fbox(batch, f, 0, 0, -3.3, 9, 6.8, 0.5, C.black, F.SEAMS);
   terrain.box(...f.p(0, -3.3), 9, 0.5, 6.8, rot);
@@ -488,11 +490,12 @@ function drummer(W) {
   addSign(W, 'HEAVY METAL', q[0], 5.4, q[1], rot, 8, 1.7, '#1b1d21', '#ffd23a');
   // Torres de altavoces
   for (const sx of [-1, 1]) {
-    fbox(batch, f, sx * 5.9, 0, -1.2, 2.4, 5.6, 2.2, C.black, F.SEAMS);
+    fbox(batch, f, sx * 5.9, -1, -1.2, 2.4, 6.6, 2.2, C.black, F.SEAMS);
     for (const y of [0.5, 3.1]) fbox(batch, f, sx * 5.9, y, -0.06, 1.8, 1.9, 0.12, C.dgray, 0);
     terrain.box(...f.p(sx * 5.9, -1.2), 2.4, 2.2, 5.6, rot);
   }
   terrain.cyl(x, z, 2.6, 3.2); // la batería no se atraviesa
+  batch.level = null;
   W.places.drummer = { x, z, rot, y: 0.5 };
 }
 

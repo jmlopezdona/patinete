@@ -18,7 +18,7 @@ for (const v of views) {
     if (v.js) new Function('g', v.js)(g);
     if (v.place) g.player.place(...v.place);
     g.player.updateVisual(1 / 60, { ...g.input.neutral, steer: v.steer || 0 });
-    const c = g.camera3.cam; c.position.set(...v.cam); c.fov = v.fov || 40; c.updateProjectionMatrix(); c.lookAt(...v.look);
+    const c = g.camera3.cam; c.position.set(...v.cam); c.fov = v.fov || 40; c.updateProjectionMatrix(); g.camera3.look.set(...v.look);
     g.final.uniforms.uBlur.value = v.blur ?? 0;
   }, v);
   await new Promise((r) => setTimeout(r, 600));

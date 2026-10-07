@@ -5,6 +5,7 @@ import { F } from '../lego/batch.js';
 import { createBrickMaterial } from '../lego/materials.js';
 import { makeRng } from '../core/rng.js';
 import { frame, fbox, tree, lamp, addSign, SIDEWALK_COLOR } from './city.js';
+import { lift, drape, normal, NEAR, FAR } from './relief.js';
 
 // Cobeña (Madrid) reconstruido con ladrillos a partir del callejero de OpenStreetMap:
 // 2 unidades de juego por metro, con el origen en la calle Río Júcar, 44. El norte es -Z.
@@ -28,28 +29,41 @@ const PROPS = ['hydrant', 'bin', 'mailbox', 'cone', 'bench', 'crate', 'flowerpot
 // Capas del suelo, de abajo arriba
 const LY = { field: 0, urban: 1, green: 2, water: 3, sidewalk: 4, path: 5, road: 6, mark: 7 };
 
-// ---------- Suelo plano por capas (calles, aceras, parques...) ----------
+// ---------- Suelo por capas (calles, aceras, parques...), tendido sobre el relieve ----------
 const _col = new THREE.Color();
+const _n = [0, 1, 0];
+const SECTOR = 800;
 class Ground {
   constructor(n) {
-    this.layers = Array.from({ length: n }, () => ({ p: [], c: [], f: [] }));
+    this.layers = Array.from({ length: n }, () => new Map());
   }
 
-  tri(k, ax, az, bx, bz, cx, cz, color, flag = 0) {
-    const L = this.layers[k];
-    // Siempre mirando hacia arriba
-    if ((bz - az) * (cx - ax) - (bx - ax) * (cz - az) < 0) L.p.push(ax, 0, az, cx, 0, cz, bx, 0, bz);
-    else L.p.push(ax, 0, az, bx, 0, bz, cx, 0, cz);
+  // Cada capa va troceada en sectores del mapa, para pintar solo los que quedan a la vista
+  _sector(k, x, z) {
+    const key = (Math.floor(x / SECTOR) + 64) * 128 + Math.floor(z / SECTOR) + 64;
+    let L = this.layers[k].get(key);
+    if (!L) this.layers[k].set(key, (L = { p: [], n: [], c: [], f: [] }));
+    return L;
+  }
+
+  // far: triángulo de los campos de fuera de NEAR, donde el relieve va a celdas grandes
+  tri(k, ax, az, bx, bz, cx, cz, color, flag = 0, far = false) {
+    const L = this._sector(k, (ax + bx + cx) / 3, (az + bz + cz) / 3);
     _col.setHex(color);
-    for (let i = 0; i < 3; i++) {
+    // Siempre mirando hacia arriba
+    const up = (bz - az) * (cx - ax) - (bx - ax) * (cz - az) >= 0;
+    drape(up ? [ax, az, bx, bz, cx, cz] : [ax, az, cx, cz, bx, bz], (x, z) => {
+      L.p.push(x, lift(x, z), z);
+      normal(x, z, _n);
+      L.n.push(_n[0], _n[1], _n[2]);
       L.c.push(_col.r, _col.g, _col.b);
       L.f.push(flag);
-    }
+    }, far ? FAR : 1);
   }
 
-  quad(k, ax, az, bx, bz, cx, cz, dx, dz, color, flag = 0) {
-    this.tri(k, ax, az, bx, bz, cx, cz, color, flag);
-    this.tri(k, ax, az, cx, cz, dx, dz, color, flag);
+  quad(k, ax, az, bx, bz, cx, cz, dx, dz, color, flag = 0, far = false) {
+    this.tri(k, ax, az, bx, bz, cx, cz, color, flag, far);
+    this.tri(k, ax, az, cx, cz, dx, dz, color, flag, far);
   }
 
   disc(k, x, z, r, color, flag = 0, n = 10) {
@@ -127,26 +141,23 @@ class Ground {
     }
   }
 
-  // Una malla por capa; el polygonOffset evita el parpadeo entre capas casi coplanares
+  // Una malla por capa y sector. Todas las capas van exactamente a la misma cota y se ordenan solo
+  // con el polygonOffset: si se separasen en altura, en las crestas asomaría la de debajo.
   build() {
     const group = new THREE.Group();
-    this.layers.forEach((L, k) => {
-      if (!L.p.length) return;
-      const geo = new THREE.BufferGeometry();
-      const n = L.p.length / 3;
-      const nor = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) nor[i * 3 + 1] = 1;
-      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(L.p), 3));
-      geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-      geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(L.c), 3));
-      geo.setAttribute('aFlags', new THREE.BufferAttribute(new Float32Array(L.f), 1));
+    this.layers.forEach((sectors, k) => {
       const mat = createBrickMaterial({ vertexColors: true, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -(k + 1) * 0.5, polygonOffsetUnits: -(k + 1) * 2 });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.y = 0.004 * (k + 1);
-      mesh.receiveShadow = true;
-      mesh.frustumCulled = false;
-      mesh.renderOrder = -5 + k;
-      group.add(mesh);
+      for (const L of sectors.values()) {
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(L.p), 3));
+        geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(L.n), 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(L.c), 3));
+        geo.setAttribute('aFlags', new THREE.BufferAttribute(new Float32Array(L.f), 1));
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.receiveShadow = true;
+        mesh.renderOrder = -5 + k;
+        group.add(mesh);
+      }
     });
     this.layers = null;
     return group;
@@ -374,7 +385,7 @@ function shed(W, b, rnd) {
 function canopy(W, b, rnd) {
   const f = frame(b.x, b.z, b.rot);
   const H = b.w * b.d > 500 ? 9 : 5.2;
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) fbox(W.batch, f, sx * (b.w / 2 - 0.6), 0, sz * (b.d / 2 - 0.6), 0.6, H, 0.6, C.lgray, 0);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) fbox(W.batch, f, sx * (b.w / 2 - 0.6), -b.drop, sz * (b.d / 2 - 0.6), 0.6, H + b.drop, 0.6, C.lgray, 0);
   fbox(W.batch, f, 0, H, 0, b.w, 0.7, b.d, b.w * b.d > 500 ? C.orange : rnd.pick([C.white, C.lgray, C.red]), F.STUDS);
 }
 
@@ -403,6 +414,7 @@ function buildings(W) {
     const b = { x: A[i], z: A[i + 1], w: A[i + 2], d: A[i + 3], rot: A[i + 4] * RAD, levels: A[i + 5], kind: A[i + 6], front: A[i + 7], label: A[i + 8], group: A[i + 9], open: A[i + 10] };
     const rnd = makeRng(b.group * 7919 + 13);
     const fam = FAMILIES[Math.abs((Math.floor(b.x / 120) * 73856093) ^ (Math.floor(b.z / 120) * 19349663)) % FAMILIES.length];
+    plot(W, b);
     switch (b.kind) {
       case 1: block(W, b, rnd, fam, false); break;
       case 2: nave(W, b, rnd); break;
@@ -416,7 +428,21 @@ function buildings(W) {
     }
     if (b.kind !== 6) W.map.buildings.push(b);
     if (i / 11 === D.home) homeDecor(W, b);
+    W.batch.level = null;
   }
+}
+
+// Cada edificio se asienta a la cota de su fachada principal, con la puerta a pie de calle,
+// y un zócalo de piedra lo calza por el lado en que el terreno cae
+function plot(W, b) {
+  const f = frame(b.x, b.z, b.rot);
+  const a = (b.front * Math.PI) / 2;
+  const half = (b.front % 2 === 0 ? b.d : b.w) / 2;
+  const level = (W.batch.level = lift(...f.p(Math.round(Math.sin(a)) * half, Math.round(Math.cos(a)) * half)));
+  let low = level;
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) low = Math.min(low, lift(...f.p((sx * b.w) / 2, (sz * b.d) / 2)));
+  b.drop = level - low + 0.3;
+  if (b.kind !== 6) fbox(W.batch, f, 0, -b.drop, 0, b.w + 0.3, b.drop, b.d + 0.3, C.stone, F.SEAMS);
 }
 
 // La casa de salida: un banderín y un buzón para reconocerla
@@ -441,19 +467,32 @@ function ground(W, G) {
   const m = D.places.mega;
   const h = (W.places.megaHole = { x0: m.x, x1: m.x + 108, z0: m.z - 27, z1: m.z + 31 });
   terrain.hole(h.x0, h.z0, h.x1, h.z1);
-  const slab = (x0, z0, x1, z1) => batch.box((x0 + x1) / 2, -3, (z0 + z1) / 2, x1 - x0, 3, z1 - z0, WHEAT, F.STUDS | F.SEAMS);
-  slab(X0, Z0, h.x0, Z1);
-  slab(h.x1, Z0, X1, Z1);
-  slab(h.x0, Z0, h.x1, h.z0);
-  slab(h.x0, h.z1, h.x1, Z1);
-  batch.box((h.x0 + h.x1) / 2, -3.4, (h.z0 + h.z1) / 2, h.x1 - h.x0, 2, h.z1 - h.z0, C.water, F.STUDS | F.WINDOW);
-  // Campos de cereal a parches
+  const cx = (h.x0 + h.x1) / 2;
+  const cz = (h.z0 + h.z1) / 2;
+  for (const s of [-1, 1]) {
+    batch.box(cx + s * ((h.x1 - h.x0) / 2 + 0.5), -3, cz, 1, 2.95, h.z1 - h.z0 + 2, WHEAT, F.SEAMS);
+    batch.box(cx, -3, cz + s * ((h.z1 - h.z0) / 2 + 0.5), h.x1 - h.x0, 2.95, 1, WHEAT, F.SEAMS);
+  }
+  batch.box(cx, -3.4, cz, h.x1 - h.x0, 2, h.z1 - h.z0, C.water, F.STUDS | F.WINDOW);
+  // Parte un rectángulo por una caja: out recibe los trozos de fuera e inn el de dentro
+  const cut = (x0, z0, x1, z1, b, out, inn) => {
+    if (x1 <= b.x0 || x0 >= b.x1 || z1 <= b.z0 || z0 >= b.z1) return out(x0, z0, x1, z1);
+    const xa = Math.max(x0, b.x0);
+    const xb = Math.min(x1, b.x1);
+    if (x0 < b.x0) out(x0, z0, b.x0, z1);
+    if (x1 > b.x1) out(b.x1, z0, x1, z1);
+    if (z0 < b.z0) out(xa, z0, xb, b.z0);
+    if (z1 > b.z1) out(xa, b.z1, xb, z1);
+    if (inn) inn(xa, Math.max(z0, b.z0), xb, Math.min(z1, b.z1));
+  };
+  // Campos de cereal a parches: lejos del pueblo van con triángulos grandes, y la charca queda hueca
   const S = 230;
   for (let x = X0; x < X1; x += S) {
     for (let z = Z0; z < Z1; z += S) {
-      const col = rng.pick(FIELDS);
-      if (col === WHEAT || (x < h.x1 + 4 && x + S > h.x0 - 4 && z < h.z1 + 4 && z + S > h.z0 - 4)) continue;
-      G.quad(LY.field, x, z, x + S, z, x + S, z + S, x, z + S, col, F.STUDS);
+      const pick = rng.pick(FIELDS);
+      const col = x < h.x1 + 4 && x + S > h.x0 - 4 && z < h.z1 + 4 && z + S > h.z0 - 4 ? WHEAT : pick;
+      const field = (far) => (x0, z0, x1, z1) => G.quad(LY.field, x0, z0, x1, z0, x1, z1, x0, z1, col, F.STUDS, far);
+      cut(x, z, x + S, z + S, NEAR, field(true), (...r) => cut(...r, h, field(false)));
     }
   }
   for (const p of D.urban) G.poly(LY.urban, p, 0xd6ccb0, F.STUDS);
@@ -529,7 +568,12 @@ function walls(W) {
       const z = (arr[i + 1] + arr[i + 3]) / 2;
       const rot = Math.atan2(-dz, dx);
       const col = sp.colors[Math.abs(Math.floor(x / 60) * 31 + Math.floor(z / 60) * 17) % sp.colors.length];
-      batch.box(x, 0, z, l + sp.t * 0.5, sp.h, sp.t, col, sp.flags, rot);
+      // En cuesta el tramo se trocea y baja a escalones, como las tapias de verdad
+      const n = Math.max(1, Math.min(Math.ceil(l / 4), Math.ceil(Math.abs(lift(arr[i], arr[i + 1]) - lift(arr[i + 2], arr[i + 3])) / 0.4)));
+      for (let k = 0; k < n; k++) {
+        const t = (k + 0.5) / n;
+        batch.box(arr[i] + dx * t, -0.4, arr[i + 1] + dz * t, l / n + sp.t * 0.5, sp.h + 0.4, sp.t, col, sp.flags, rot);
+      }
       terrain.box(x, z, l + sp.t * 0.5, sp.t + 0.2, sp.h, rot);
     }
   });
@@ -574,12 +618,13 @@ function court(W, x, z, w, d, rot, sport) {
 }
 
 function furniture(W) {
-  const { batch } = W;
   const P = D.pools;
   for (let i = 0; i < P.length; i += 5) {
-    const rot = P[i + 4] * RAD;
-    batch.box(P[i], 0, P[i + 1], P[i + 2] + 1.6, 0.07, P[i + 3] + 1.6, C.cream, F.STUDS, rot);
-    batch.box(P[i], 0, P[i + 1], P[i + 2], 0.12, P[i + 3], 0x4fb4f0, F.WINDOW, rot);
+    // Bordillo y lámina de agua, tendidos sobre el terreno como el resto del suelo
+    const f = frame(P[i], P[i + 1], P[i + 4] * RAD);
+    const rect = (k, w, d, color, flag) => W.ground.quad(k, ...f.p(-w / 2, -d / 2), ...f.p(w / 2, -d / 2), ...f.p(w / 2, d / 2), ...f.p(-w / 2, d / 2), color, flag);
+    rect(LY.sidewalk, P[i + 2] + 1.6, P[i + 3] + 1.6, C.cream, F.STUDS);
+    rect(LY.path, P[i + 2], P[i + 3], 0x4fb4f0, F.WINDOW);
     W.splash.push({ x: P[i], z: P[i + 1], r: Math.min(P[i + 2], P[i + 3]) / 2 });
   }
   for (const p of D.pitches) if (p[5] !== 4) court(W, p[0], p[1], p[2], p[3], p[4] * RAD, p[5]);
@@ -643,12 +688,11 @@ export function zoneAt(x, z) {
 
 // Suelo, calles, casas, vallas y mobiliario. Los lugares especiales los crea landmarks.js.
 export function buildTown(W) {
-  const G = new Ground(8);
+  const G = (W.ground = new Ground(8));
   ground(W, G);
   roads(W, G);
   buildings(W);
   walls(W);
   furniture(W);
   buildZones();
-  W.ground = G;
 }

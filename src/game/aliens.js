@@ -4,6 +4,7 @@ import { Builder } from '../lego/builder.js';
 import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
 import { BOUNDS } from '../world/cobena.js';
+import { lift, grade } from '../world/relief.js';
 import { angDiff, damp, clamp, lerp } from '../core/rng.js';
 
 const SKIN = 0x7ddc1f;
@@ -347,6 +348,8 @@ export class Aliens {
       this.beamMat.color.lerpColors(BEAM_COLD, BEAM_HOT, u.meter);
       this.beamMat.opacity = u.beam * (0.16 + u.meter * 0.12 + Math.sin(time * 9) * 0.025);
       this.spot.position.set(u.x, roof + 0.15, u.z);
+      lift(u.x, u.z);
+      this.spot.rotation.set(-Math.atan(grade.z), 0, Math.atan(grade.x));
       this.spotMat.color.copy(this.beamMat.color);
       this.spotMat.opacity = u.beam * (0.2 + u.meter * 0.2);
     }
