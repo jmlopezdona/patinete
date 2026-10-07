@@ -47,7 +47,7 @@ const TIPS = [
   '🛹 El <b>skatepark</b> está al final de la calle Río Júcar, junto a la rotonda.',
   '🚀 Detrás del skatepark, en el campo, te espera el <b>Mega Salto</b> sobre la charca.',
   '⛲ Sube hasta la <b>Plaza de la Villa</b>: allí están la fuente, la iglesia y el ayuntamiento.',
-  '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> en la canasta, las corredoras del parque, <b>Emma</b> y sus selfies en El Palmeral y <b>Adrián</b>, el batería de la calle Libertad.',
+  '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> y <b>Jose Manuel</b> en la canasta, las corredoras del parque, <b>Emma</b> y sus selfies en El Palmeral y <b>Adrián</b>, el batería de la calle Libertad.',
   '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar tu vehículo.',
   '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monopatín, monociclo, bici o patines.',
   '📷 Pulsa <b>T</b> en pleno salto: el <b>modo foto</b> para el tiempo y te deja mover la cámara para sacar la foto.',

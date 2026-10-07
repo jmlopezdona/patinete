@@ -12,6 +12,13 @@ const TAU = Math.PI * 2;
 const SEE = 260; // más lejos no se dibujan
 const BLOND = 0xf0d27a;
 const BPM = 168;
+// Los tiros de la canasta: lo que dura el salto y lo que sube, cuándo suelta el balón, cuántos entran
+// y el vuelo del balón hasta el aro. La entrada, además, se hace a la carrera.
+const SHOTS = {
+  tiro: { dur: 0.6, h: 1.3, rel: 0.3, pct: 0.68, T: 0.95, apex: 3.4 },
+  triple: { dur: 0.66, h: 1.5, rel: 0.32, pct: 0.5, T: 1.25, apex: 5 },
+  entrada: { dur: 0.7, h: 2.6, rel: 0.34, pct: 0.85, T: 0.5, apex: 1.1, run: 5 },
+};
 
 const shadows = (o) =>
   o.traverse((m) => {
@@ -19,8 +26,8 @@ const shadows = (o) =>
   });
 
 // Vecinos con nombre propio: Yago y su monociclo en el skatepark, Adrián, el pequeño batería heavy
-// de la calle Libertad, Jose en la canasta, Ana, Cintia y Bea haciendo footing por los parques
-// y Emma, de visita, haciéndose selfies en El Palmeral.
+// de la calle Libertad, Jose y su hijo Jose Manuel en la canasta, Ana, Cintia y Bea haciendo footing
+// por los parques y Emma, de visita, haciéndose selfies en El Palmeral.
 export class Folks {
   constructor(game) {
     this.game = game;
@@ -43,6 +50,13 @@ export class Folks {
     }
     const D = this.drummer;
     if (D) D.fig.group.visible = D.tag.visible = id !== 'adrian';
+    // Sin Jose Manuel, su padre se queda tirando solo
+    const J = this.jose;
+    if (J && J.kid.away !== (id === 'josemanuel')) {
+      J.kid.away = id === 'josemanuel';
+      J.kid.fig.group.visible = J.kid.tag.visible = false;
+      this.resetJose();
+    }
     const E = this.emma;
     if (E) {
       E.marker.hidden = id === 'emma';
@@ -280,7 +294,7 @@ export class Folks {
     }
   }
 
-  // ---------- Jose, tiros y entradas a canasta ----------
+  // ---------- Jose y Jose Manuel, padre e hijo en la canasta ----------
   buildJose() {
     const W = this.game.world;
     const home = W.places.home || W.places.spawn;
@@ -288,24 +302,27 @@ export class Folks {
     let H = null;
     for (const h of W.places.hoops) if (!H || Math.hypot(h.x - home.x, h.z - home.z) < Math.hypot(H.x - home.x, H.z - home.z)) H = h;
     if (!H) return;
-    const fig = createMinifig({ torso: C.white, arms: C.skin, legs: C.blue, hair: 'none', face: 'senor', print: '#23', printColor: '#c91a09' });
-    shadows(fig.group);
+    const baller = (name, look, scale, color) => {
+      const fig = createMinifig(look);
+      fig.group.scale.setScalar(scale);
+      shadows(fig.group);
+      const tag = nameTag(name, color);
+      this.game.scene.add(fig.group, tag);
+      return { name, fig, tag, k: scale, x: 0, z: 0, y: 0, heading: 0, walk: 0, drib: 0, thud: false, moving: false, to: null, speed: 0, look: null, bounce: false, jump: null, follow: 0, push: 0, cheer: 0, away: false };
+    };
+    const ch = characterById('josemanuel');
+    const dad = baller('Jose', { torso: C.white, arms: C.skin, legs: C.blue, hair: 'none', face: 'senor', print: '#23', printColor: '#c91a09' }, 1, '#e8731a');
+    const kid = baller(ch.name, ch.look, ch.scale, '#' + COLORS[ch.color].toString(16).padStart(6, '0'));
     const ball = new THREE.Mesh(new THREE.SphereGeometry(0.56, 16, 12), new THREE.MeshStandardMaterial({ color: 0xe8731a, roughness: 0.6 }));
     ball.castShadow = true;
-    const tag = nameTag('Jose', '#e8731a');
-    this.game.scene.add(fig.group, ball, tag);
+    this.game.scene.add(ball);
     const J = (this.jose = {
-      H, fig, ball, tag, tx: H.nz, tz: -H.nx, x: 0, z: 0, y: 0, heading: 0, state: 'go', then: 'aim', fast: false, t: 0, n: 0, walk: 0, drib: 0,
-      target: null, layup: false, released: false, thud: false, made: 0,
-      b: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, held: true, fly: null, t: 0 },
+      H, dad, kid, ball, tx: H.nz, tz: -H.nx, t: 0, n: 0, made: 0, steps: null, i: 0, play: '', bag: [], seen: {}, fetcher: null,
+      b: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, held: dad, fly: null, t: 0 },
     });
-    const s = this.spot(10, 0);
-    J.x = s.x;
-    J.z = s.z;
-    J.heading = Math.atan2(-H.nx, -H.nz);
-    J.target = this.spot(9, 3);
     J.marker = { x: H.x + H.nx * 8, z: H.z + H.nz * 8, icon: '🏀' };
     this.markers.push(J.marker);
+    this.resetJose();
   }
 
   // Punto de la pista a cierta distancia de la canasta y desplazado hacia un lado
@@ -315,159 +332,409 @@ export class Folks {
     return { x: H.x + H.nx * dist + J.tx * side, z: H.z + H.nz * dist + J.tz * side };
   }
 
+  // Saque de fondo: cada uno a su sitio y el balón a las manos de Jose. Al empezar, y cuando
+  // Jose Manuel se va de paseo o vuelve a la pista.
+  resetJose() {
+    const J = this.jose;
+    for (const [P, side] of [[J.dad, -3], [J.kid, 4]]) {
+      Object.assign(P, this.spot(10, side), { y: 0, heading: Math.atan2(-J.H.nx, -J.H.nz), to: null, look: null, bounce: false, jump: null, follow: 0, push: 0, cheer: 0 });
+    }
+    J.b.held = J.dad;
+    J.b.fly = null;
+    J.steps = null;
+  }
+
+  // La siguiente jugada: una lista de pasos, y cada paso se repite en cada fotograma hasta que
+  // devuelve true. Los pasos solo dicen adónde va cada uno, a quién mira y cuándo sale el balón.
+  nextPlay() {
+    const J = this.jose;
+    const H = J.H;
+    const b = J.b;
+    const a = b.held || J.dad; // el que tiene el balón
+    const m = J.kid.away ? null : a === J.dad ? J.kid : J.dad; // y su compañero, si lo hay
+    const team = m ? [a, m] : [a];
+    for (const P of team) P.look = H;
+    const side = Math.min(H.half - 2.5, 6);
+    const wide = H.half - 3.5;
+    const rnd = Math.random;
+    const s = rnd() < 0.5 ? -1 : 1;
+    const go = (P, pt, speed) => {
+      P.to = pt;
+      P.speed = speed;
+    };
+    const at = (P) => !P.to || Math.hypot(P.to.x - P.x, P.to.z - P.z) < 0.4;
+    const along = (P) => (P.x - H.x) * H.nx + (P.z - H.z) * H.nz;
+    const pass = (from, to, kind) => {
+      const dist = Math.hypot(to.x - from.x, to.z - from.z);
+      b.held = null;
+      b.fly = {
+        x0: b.x, y0: b.y, z0: b.z, x1: b.x, y1: b.y, z1: b.z, rcv: to, kind, t: 0,
+        T: kind === 'globo' ? 0.62 : clamp(dist / (kind === 'bote' ? 19 : 24), 0.28, 0.9),
+        apex: kind === 'globo' ? 2 : kind === 'bote' ? 0 : 0.4 + dist * 0.03,
+      };
+      from.push = 0.28;
+      from.bounce = false;
+      return true;
+    };
+    const shoot = (P, kind) => {
+      const lat = (P.x - H.x) * J.tx + (P.z - H.z) * J.tz;
+      // El mate acaba colgado del aro; si el balón viene por el aire, llega cuando está arriba
+      P.jump = { kind, t: 0, done: false, x0: P.x, z0: P.z, ...(kind === 'mate' ? this.spot(1.5, clamp(lat, -0.4, 0.4)) : null) };
+      if (b.fly && b.fly.rcv === P) b.fly.T = b.fly.t + 0.36;
+      P.to = null;
+      P.bounce = false;
+      return true;
+    };
+
+    // Tiro en suspensión, de media distancia o de lejos. El compañero espera el rebote bajo el aro.
+    const jumper = (far) => {
+      const from = far ? this.spot(Math.min(H.len / 2 - 2.5, 17) - rnd() * 2.5, (rnd() - 0.5) * 2 * side) : this.spot(8 + rnd() * 4, (rnd() - 0.5) * 2 * side);
+      const under = this.spot(3.6, s * 3.4);
+      return [
+        () => {
+          go(a, from, 6.5);
+          a.look = H;
+          if (m) {
+            go(m, under, 7.5);
+            m.look = a;
+          }
+          return at(a);
+        },
+        (t) => {
+          a.bounce = t < 0.9;
+          return t > 1.2;
+        },
+        () => shoot(a, far ? 'triple' : 'tiro'),
+        () => !a.jump,
+      ];
+    };
+    // Carrera botando hasta debajo del aro, para dejarla en bandeja o machacarla
+    const drive = (kind) => {
+      const start = this.spot(16, s * Math.min(side, 4));
+      const end = kind === 'mate' ? this.spot(3.8, (rnd() - 0.5) * 1.2) : this.spot(3, (rnd() - 0.5) * 2);
+      const wing = this.spot(9.5, -s * 7.5);
+      return [
+        () => {
+          go(a, start, 6.5);
+          if (m) {
+            go(m, wing, 7.5);
+            m.look = a;
+          }
+          return at(a);
+        },
+        () => {
+          go(a, end, 13);
+          return at(a);
+        },
+        () => shoot(a, kind),
+        () => !a.jump,
+      ];
+    };
+    // Rueda de pases, de pecho y picados, cambiando de sitio después de cada uno; el último tira
+    const passing = () => {
+      const n = 4 + Math.floor(rnd() * 2);
+      const pos = (sg) => this.spot(7 + rnd() * 7, sg * (3.5 + rnd() * (wide - 3.5)));
+      const pa = pos(s);
+      const pm = pos(-s);
+      const st = [
+        () => {
+          go(a, pa, 6.5);
+          go(m, pm, 7.5);
+          a.look = m;
+          m.look = a;
+          return at(a) && at(m);
+        },
+      ];
+      for (let i = 0; i < n; i++) {
+        const [from, to, sg] = i % 2 ? [m, a, -s] : [a, m, s];
+        st.push(
+          (t) => {
+            from.bounce = t < 0.45;
+            from.look = to;
+            to.look = from;
+            return t > 0.75 && at(to);
+          },
+          () => pass(from, to, i % 2 ? 'bote' : 'pecho'),
+          () => {
+            if (b.held !== to) return false;
+            go(from, pos(sg), 8);
+            return true;
+          }
+        );
+      }
+      const last = n % 2 ? m : a;
+      st.push(
+        (t) => {
+          last.look = H;
+          last.bounce = t < 0.5;
+          return t > 0.8;
+        },
+        () => shoot(last, along(last) > 12.5 ? 'triple' : 'tiro'),
+        () => !last.jump
+      );
+      return st;
+    };
+    // Pase y corte: la suelta al alero, corta hacia el aro y se la devuelven picada a la carrera
+    const giveAndGo = () => {
+      const top = this.spot(15.5, -s * 2);
+      const wing = this.spot(9, s * 8);
+      const rim = this.spot(3.5, -s * 1.3);
+      const kind = rnd() < 0.4 ? 'mate' : 'entrada';
+      return [
+        () => {
+          go(a, top, 6.5);
+          go(m, wing, 7.5);
+          a.look = m;
+          m.look = a;
+          return at(a) && at(m);
+        },
+        (t) => {
+          a.bounce = t < 0.4;
+          return t > 0.7;
+        },
+        () => pass(a, m, 'pecho'),
+        () => {
+          if (b.held !== m) return false;
+          go(a, rim, 13);
+          a.look = H;
+          return true;
+        },
+        () => along(a) < 9.5,
+        () => pass(m, a, 'bote'),
+        () => b.held === a && at(a),
+        () => shoot(a, kind),
+        () => !a.jump,
+      ];
+    };
+    // Alley-oop: el compañero corta desde lejos y el balón le llega por arriba, para machacarlo en el aire
+    const alleyOop = () => {
+      const wing = this.spot(10.5, s * 7.5);
+      const top = this.spot(15, -s * 4);
+      const rim = this.spot(3.9, -s * 0.8);
+      return [
+        () => {
+          go(a, wing, 6.5);
+          go(m, top, 7.5);
+          a.look = m;
+          m.look = a;
+          return at(a) && at(m);
+        },
+        (t) => {
+          a.bounce = t < 0.5;
+          return t > 0.8;
+        },
+        () => {
+          go(m, rim, 13);
+          m.look = H;
+          return along(m) < 6.5;
+        },
+        () => pass(a, m, 'globo'),
+        () => at(m),
+        () => shoot(m, 'mate'),
+        () => !m.jump,
+      ];
+    };
+
+    const book = { tiro: () => jumper(false), triple: () => jumper(true), entrada: () => drive('entrada'), mate: () => drive('mate'), pases: passing, corte: giveAndGo, alleyoop: alleyOop };
+    let name;
+    if (m) {
+      // Entre los dos van pasando por todo el repertorio, cada vez en un orden
+      if (!J.bag.length) J.bag = Object.keys(book).sort(() => rnd() - 0.5);
+      name = J.bag.pop();
+    } else name = J.n % 3 === 2 ? 'entrada' : 'tiro';
+    J.play = name;
+    J.seen[name] = (J.seen[name] || 0) + 1;
+    J.fetcher = null;
+    J.steps = book[name]();
+    // Y toda jugada acaba igual: el que queda más cerca va a por el balón
+    J.steps.push((t) => {
+      if (b.held) return true;
+      for (const P of team) P.look = b;
+      if (b.fly || b.t < (m ? 0.6 : 1.5) || team.some((P) => P.cheer > 0)) return false;
+      if (!J.fetcher) J.fetcher = team.reduce((F, P) => (Math.hypot(P.x - b.x, P.z - b.z) < Math.hypot(F.x - b.x, F.z - b.z) ? P : F));
+      const F = J.fetcher;
+      go(F, b, 8.5);
+      if (Math.hypot(b.x - F.x, b.z - F.z) < 1.3 || t > 9) {
+        b.held = F;
+        F.to = null;
+        F.drib = Math.PI / 2;
+      }
+      return false;
+    });
+    J.i = 0;
+    J.t = 0;
+  }
+
   updateJose(dt, p, time, live) {
     const J = this.jose;
     const H = J.H;
     const g = this.game;
-    const f = J.fig;
     const b = J.b;
     const FLOOR = 0.16;
     const R = 0.56;
-    const d = Math.hypot(p.pos.x - J.x, p.pos.z - J.z);
-    const vis = d < SEE;
-    f.group.visible = J.ball.visible = J.tag.visible = vis;
+    const team = J.kid.away ? [J.dad] : [J.dad, J.kid];
+    const vis = Math.hypot(p.pos.x - H.x - H.nx * 10, p.pos.z - H.z - H.nz * 10) < SEE;
+    J.dad.fig.group.visible = J.dad.tag.visible = J.ball.visible = vis;
+    J.kid.fig.group.visible = J.kid.tag.visible = vis && !J.kid.away;
     if (!vis) return;
-    const vol = live ? clamp(1 - d / 75, 0, 1) : 0;
-    const toHoop = Math.atan2(H.x - J.x, H.z - J.z);
-    const side = Math.min(H.half - 2.5, 6);
-    let moving = false;
-    let dribble = false;
+    const vol = live ? clamp(1 - Math.hypot(p.pos.x - b.x, p.pos.z - b.z) / 75, 0, 1) : 0;
+
+    // La jugada, paso a paso
+    if (!J.steps) this.nextPlay();
     J.t += dt;
-
-    const walkTo = (x, z, speed) => {
-      const dx = x - J.x;
-      const dz = z - J.z;
-      const dd = Math.hypot(dx, dz);
-      J.heading += angDiff(J.heading, Math.atan2(dx, dz)) * Math.min(1, 9 * dt);
-      const st = Math.min(dd, speed * dt);
-      if (dd > 0.01) {
-        J.x += (dx / dd) * st;
-        J.z += (dz / dd) * st;
+    if (J.steps[J.i](J.t)) {
+      J.t = 0;
+      if (++J.i >= J.steps.length) {
+        J.steps = null;
+        J.n++;
       }
-      J.walk += st * 0.75;
-      moving = true;
-      return dd < 0.35;
-    };
-
-    switch (J.state) {
-      case 'go':
-        dribble = true;
-        if (walkTo(J.target.x, J.target.z, J.fast ? 13 : 6.5)) {
-          if (J.then === 'drive') {
-            // Entrada a canasta: carrera botando hasta debajo del aro
-            J.target = this.spot(3, (Math.random() - 0.5) * 2);
-            J.fast = true;
-            J.then = 'layup';
-          } else {
-            J.layup = J.then === 'layup';
-            J.state = J.layup ? 'jump' : 'aim';
-            J.released = false;
-            J.t = 0;
-          }
-        }
-        break;
-      case 'aim':
-        dribble = J.t < 0.9;
-        J.heading += angDiff(J.heading, toHoop) * Math.min(1, 8 * dt);
-        if (J.t > 1.2) {
-          J.state = 'jump';
-          J.released = false;
-          J.t = 0;
-        }
-        break;
-      case 'jump': {
-        J.heading += angDiff(J.heading, toHoop) * Math.min(1, 12 * dt);
-        const dur = J.layup ? 0.7 : 0.6;
-        J.y = Math.sin(Math.min(1, J.t / dur) * Math.PI) * (J.layup ? 2.6 : 1.3);
-        if (J.layup) {
-          J.x += Math.sin(J.heading) * 5 * dt * Math.max(0, 1 - J.t / dur);
-          J.z += Math.cos(J.heading) * 5 * dt * Math.max(0, 1 - J.t / dur);
-        }
-        if (!J.released && J.t > (J.layup ? 0.34 : 0.3)) {
-          J.released = true;
-          b.held = false;
-          const make = Math.random() < (J.layup ? 0.85 : 0.68);
-          const miss = make ? 0 : 0.75;
-          b.fly = {
-            x0: b.x, y0: b.y, z0: b.z, x1: H.x + H.nx * miss, y1: H.y + (make ? 0.35 : 0.5), z1: H.z + H.nz * miss,
-            T: J.layup ? 0.5 : 0.95, t: 0, apex: J.layup ? 1.1 : 3.4, make,
-          };
-          b.t = 0;
-        }
-        if (J.t > dur) {
-          J.y = 0;
-          J.state = 'watch';
-          J.t = 0;
-        }
-        break;
-      }
-      case 'watch':
-        J.heading += angDiff(J.heading, toHoop) * Math.min(1, 8 * dt);
-        if (!b.fly && b.t > 1.5) {
-          J.state = 'fetch';
-          J.t = 0;
-        }
-        break;
-      case 'fetch':
-        if (walkTo(b.x, b.z, 8.5) || Math.hypot(b.x - J.x, b.z - J.z) < 1.3 || J.t > 8) {
-          b.held = true;
-          J.n++;
-          J.fast = false;
-          J.state = 'go';
-          if (J.n % 3 === 2) {
-            J.then = 'drive';
-            J.target = this.spot(16, (Math.random() < 0.5 ? -1 : 1) * Math.min(side, 4));
-          } else {
-            J.then = 'aim';
-            J.target = this.spot(8 + Math.random() * 4, (Math.random() - 0.5) * 2 * side);
-          }
-        }
-        break;
-      default:
-        break;
     }
 
-    // El patinete no le atraviesa
-    if (live && d < 2.3 && p.pos.y < 4 && p.crashT <= 0) p.bump((p.pos.x - J.x) / (d || 1), (p.pos.z - J.z) / (d || 1), 0.25, 0.8);
+    // Las piernas: cada uno corre a su sitio o salta, y parado mira adonde le toca
+    for (const P of team) {
+      const S = P.jump;
+      const toHoop = Math.atan2(H.x - P.x, H.z - P.z);
+      P.moving = false;
+      if (S) {
+        S.t += dt;
+        P.heading += angDiff(P.heading, toHoop) * Math.min(1, 12 * dt);
+        if (S.kind === 'mate') {
+          // Vuela hasta el aro, hunde el balón desde arriba y se queda colgado un momento
+          const HANG = 1.3;
+          const r = Math.min(1, S.t / 0.42);
+          const e = r * r * (3 - 2 * r);
+          P.x = S.x0 + (S.x - S.x0) * e;
+          P.z = S.z0 + (S.z - S.z0) * e;
+          P.y = S.t < 0.42 ? Math.sin((r * Math.PI) / 2) * 2.3 : S.t < 0.54 ? 2.3 - ((S.t - 0.42) / 0.12) * (2.3 - HANG) : S.t < 0.88 ? HANG : HANG * Math.max(0, 1 - (S.t - 0.88) / 0.16);
+          if (!S.done && S.t >= 0.54) {
+            S.done = true;
+            if (b.fly && b.fly.rcv === P) b.held = P;
+            if (b.held === P) {
+              b.held = b.fly = null;
+              b.t = 0;
+              b.x = H.x;
+              b.y = H.y + 0.1;
+              b.z = H.z;
+              b.vx = H.nx * 0.8;
+              b.vz = H.nz * 0.8;
+              b.vy = -11;
+              J.made++;
+              for (const Q of team) Q.cheer = Q === P ? 0.8 : 1.3;
+              if (vol > 0.05) g.sfx.dunk(vol);
+            }
+          }
+          if (S.t > 1.04) {
+            P.y = 0;
+            P.jump = null;
+          }
+        } else {
+          const q = SHOTS[S.kind];
+          P.y = Math.sin(Math.min(1, S.t / q.dur) * Math.PI) * q.h;
+          if (q.run) {
+            P.x += Math.sin(P.heading) * q.run * dt * Math.max(0, 1 - S.t / q.dur);
+            P.z += Math.cos(P.heading) * q.run * dt * Math.max(0, 1 - S.t / q.dur);
+          }
+          if (!S.done && S.t > q.rel) {
+            S.done = true;
+            b.held = null;
+            const make = Math.random() < q.pct;
+            const miss = make ? 0 : 0.75;
+            b.fly = { x0: b.x, y0: b.y, z0: b.z, x1: H.x + H.nx * miss, y1: H.y + (make ? 0.35 : 0.5), z1: H.z + H.nz * miss, T: q.T, t: 0, apex: q.apex, make, kind: S.kind };
+          }
+          if (S.t > q.dur) {
+            P.y = 0;
+            P.jump = null;
+            P.follow = 0.7;
+          }
+        }
+        continue;
+      }
+      const dx = P.to ? P.to.x - P.x : 0;
+      const dz = P.to ? P.to.z - P.z : 0;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.05) {
+        P.heading += angDiff(P.heading, Math.atan2(dx, dz)) * Math.min(1, 9 * dt);
+        const st = Math.min(dd, P.speed * dt);
+        P.x += (dx / dd) * st;
+        P.z += (dz / dd) * st;
+        P.walk += st * 0.75;
+        P.moving = dd > 0.4;
+      }
+      if (!P.moving && P.look) P.heading += angDiff(P.heading, Math.atan2(P.look.x - P.x, P.look.z - P.z)) * Math.min(1, 8 * dt);
+    }
+    // Que no se pisen
+    if (team.length > 1 && !J.dad.jump && !J.kid.jump) {
+      const dx = J.kid.x - J.dad.x;
+      const dz = J.kid.z - J.dad.z;
+      const dd = Math.hypot(dx, dz) || 1;
+      if (dd < 2.2) {
+        const k = (2.2 - dd) / 2 / dd;
+        J.kid.x += dx * k;
+        J.kid.z += dz * k;
+        J.dad.x -= dx * k;
+        J.dad.z -= dz * k;
+      }
+    }
 
-    // Balón
-    const fx = Math.sin(J.heading);
-    const fz = Math.cos(J.heading);
-    if (b.held) {
-      if (J.state === 'jump') {
-        b.x = J.x + fx * 0.5;
-        b.y = FLOOR + J.y + 6.5;
-        b.z = J.z + fz * 0.5;
-      } else if (dribble) {
-        J.drib += dt * 8.5;
-        const k = Math.abs(Math.sin(J.drib));
-        if (k < 0.12 && !J.thud) {
-          J.thud = true;
+    // Balón: en las manos, botando, por el aire o suelto por la pista
+    const hands = (P, out, key) => {
+      const fx = Math.sin(P.heading);
+      const fz = Math.cos(P.heading);
+      const up = !!P.jump;
+      out['x' + key] = P.x + fx * (up ? 0.5 : 0.9);
+      out['y' + key] = FLOOR + (up ? P.y + 6.5 * P.k : 2.9 * P.k);
+      out['z' + key] = P.z + fz * (up ? 0.5 : 0.9);
+    };
+    const P = b.held;
+    if (P) {
+      hands(P, b, '');
+      const S = P.jump;
+      if (S && S.kind === 'mate' && S.t > 0.42) {
+        // El machaque: de encima de la cabeza al aro
+        const k = Math.min(1, (S.t - 0.42) / 0.12);
+        b.x += (H.x - b.x) * k;
+        b.y += (H.y + 0.7 - b.y) * k;
+        b.z += (H.z - b.z) * k;
+      } else if (!S && (P.moving || P.bounce)) {
+        P.drib += dt * 8.5;
+        const k = Math.abs(Math.sin(P.drib));
+        if (k < 0.12 && !P.thud) {
+          P.thud = true;
           if (vol > 0.05) g.sfx.bounce(vol);
-        } else if (k > 0.5) J.thud = false;
-        b.x = J.x + fx * 0.9 - fz * 0.85;
-        b.y = FLOOR + R + k * 2.1;
-        b.z = J.z + fz * 0.9 + fx * 0.85;
-      } else {
-        b.x = J.x + fx * 0.9;
-        b.y = FLOOR + 2.9;
-        b.z = J.z + fz * 0.9;
+        } else if (k > 0.5) P.thud = false;
+        // Lo bota con la derecha, un poco apartado del cuerpo
+        b.x -= Math.cos(P.heading) * 0.85;
+        b.y = FLOOR + R + k * 2.1 * P.k;
+        b.z += Math.sin(P.heading) * 0.85;
       }
     } else if (b.fly) {
       const F = b.fly;
+      const k0 = F.t / F.T;
       F.t += dt;
       const k = Math.min(1, F.t / F.T);
+      // Un pase persigue las manos del que lo espera, aunque vaya corriendo o saltando
+      if (F.rcv) hands(F.rcv, F, '1');
       b.x = F.x0 + (F.x1 - F.x0) * k;
       b.z = F.z0 + (F.z1 - F.z0) * k;
-      b.y = F.y0 + (F.y1 - F.y0) * k + 4 * F.apex * k * (1 - k);
+      if (F.kind === 'bote') {
+        // Pase picado: toca el suelo pasada la mitad del camino
+        const KB = 0.6;
+        const u = (k - KB) / (1 - KB);
+        b.y = k < KB ? F.y0 + (FLOOR + R - F.y0) * (k / KB) : FLOOR + R + (F.y1 - FLOOR - R) * (1 - (1 - u) * (1 - u));
+        if (k0 < KB && k >= KB && vol > 0.05) g.sfx.bounce(vol);
+      } else b.y = F.y0 + (F.y1 - F.y0) * k + 4 * F.apex * k * (1 - k);
       if (k >= 1) {
         b.fly = null;
         b.t = 0;
-        if (F.make) {
+        if (F.rcv) {
+          b.held = F.rcv;
+          F.rcv.drib = Math.PI / 2;
+        } else if (F.make) {
           J.made++;
           b.vx = H.nx * 1.2;
           b.vz = H.nz * 1.2;
           b.vy = -7;
+          if (F.kind === 'triple') for (const Q of team) Q.cheer = 1.3;
           if (vol > 0.05) g.sfx.swish(vol);
         } else {
           const a = (Math.random() - 0.5) * 7;
@@ -515,26 +782,63 @@ export class Folks {
     J.ball.rotation.x += dt * 5;
 
     // Animación
-    const sw = moving ? Math.sin(J.walk) : 0;
-    f.legL.rotation.x = sw * 0.75;
-    f.legR.rotation.x = -sw * 0.75;
-    f.armL.rotation.z = f.armR.rotation.z = 0;
-    if (J.state === 'jump' || (J.state === 'watch' && J.t < 0.7)) {
-      f.armL.rotation.x = f.armR.rotation.x = -2.95;
-      f.legL.rotation.x = 0.25;
-      f.legR.rotation.x = -0.35;
-    } else if (b.held && dribble) {
-      f.armR.rotation.x = -0.75 + Math.abs(Math.sin(J.drib)) * -0.55;
-      f.armL.rotation.x = -sw * 0.5;
-    } else if (b.held) {
-      f.armL.rotation.x = f.armR.rotation.x = -1.2;
-    } else {
-      f.armL.rotation.x = -sw * 0.6;
-      f.armR.rotation.x = sw * 0.6;
+    const ka = 1 - Math.exp(-22 * dt);
+    for (const P of team) {
+      const f = P.fig;
+      const S = P.jump;
+      const has = b.held === P;
+      const sw = P.moving ? Math.sin(P.walk) : 0;
+      let legL = sw * 0.75;
+      let legR = -sw * 0.75;
+      let armL = -sw * 0.6;
+      let armR = sw * 0.6;
+      let open = 0;
+      let hop = 0;
+      P.follow -= dt;
+      P.push -= dt;
+      if (S && S.kind === 'mate') {
+        // Brazos arriba en el vuelo; colgado del aro, las piernas se le van hacia delante
+        const hang = S.t > 0.5;
+        armL = armR = hang ? -2.3 : -2.95;
+        legL = hang ? -0.5 + Math.sin(S.t * 14) * 0.2 : 0.25;
+        legR = hang ? -0.5 - Math.sin(S.t * 14) * 0.2 : -0.35;
+      } else if (S || P.follow > 0) {
+        armL = armR = -2.95;
+        if (S) {
+          legL = 0.25;
+          legR = -0.35;
+        }
+      } else if (P.cheer > 0) {
+        // Canastón: brazos al cielo y saltitos
+        P.cheer -= dt;
+        armL = armR = -2.8 + Math.sin(time * 15) * 0.22;
+        open = 0.4;
+        hop = Math.abs(Math.sin(time * 9)) * 0.5;
+      } else if (P.push > 0) armL = armR = -1.6;
+      else if (has && (P.moving || P.bounce)) {
+        armR = -0.75 - Math.abs(Math.sin(P.drib)) * 0.55;
+        armL = -sw * 0.5;
+      } else if (has) armL = armR = -1.2;
+      else if (b.fly && b.fly.rcv === P) {
+        // Manos preparadas para recibir
+        armL = armR = -1.35;
+        open = 0.2;
+      }
+      f.legL.rotation.x = legL;
+      f.legR.rotation.x = legR;
+      f.armL.rotation.x += (armL - f.armL.rotation.x) * ka;
+      f.armR.rotation.x += (armR - f.armR.rotation.x) * ka;
+      f.armL.rotation.z = open;
+      f.armR.rotation.z = -open;
+      // Sin balón, no le quita ojo
+      f.head.rotation.y = damp(f.head.rotation.y, has || S ? 0 : clamp(angDiff(P.heading, Math.atan2(b.x - P.x, b.z - P.z)), -1, 1), 8, dt);
+      f.group.position.set(P.x, FLOOR + P.y + hop, P.z);
+      f.group.rotation.y = P.heading;
+      P.tag.position.set(P.x, FLOOR + P.y + hop + 6.7 * P.k, P.z);
+      // El patinete no les atraviesa
+      const d = Math.hypot(p.pos.x - P.x, p.pos.z - P.z);
+      if (live && d < 2.3 && p.pos.y < 4 && p.crashT <= 0) p.bump((p.pos.x - P.x) / (d || 1), (p.pos.z - P.z) / (d || 1), 0.25, 0.8);
     }
-    f.group.position.set(J.x, FLOOR + J.y, J.z);
-    f.group.rotation.y = J.heading;
-    J.tag.position.set(J.x, FLOOR + J.y + 6.7, J.z);
   }
 
   // ---------- Ana, Cintia y Bea, de footing por los parques de al lado de casa ----------

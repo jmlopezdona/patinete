@@ -93,9 +93,9 @@ baja con los patines puestos y, al empezar la partida, el padre se despide con l
 Su «casa» es esa puerta.
 
 Mientras llevas a un personaje, su doble desaparece del pueblo: Yago deja libre la pista de circo,
-la batería de Adrián se queda sola y callada, a Teo lo sustituye otro portero y Emma deja de
-hacerse selfies en el parque. El color de cada
-vehículo se cambia con `V` y se guarda por separado.
+la batería de Adrián se queda sola y callada, a Teo lo sustituye otro portero, Emma deja de
+hacerse selfies en el parque y Jose se queda tirando solo a canasta, sin Jose Manuel. El color de
+cada vehículo se cambia con `V` y se guarda por separado.
 
 ## Qué hay en Cobeña
 
@@ -166,7 +166,7 @@ peatones también cuenta) y aparece la primera estrella bajo el minimapa:
 | 🤹 | **Yago** | Skatepark nuevo, en su pista de circo | Monociclo, malabares, piruetas y reverencia. Si te le echas encima, te salta con una voltereta |
 | 🧤 | **Teo** | Pista Polideportiva | El portero de «Chut a Puerta»: rizos, gafas redondas y la camiseta de Argentina con sus tres estrellas |
 | 🥁 | **Adrián** | Calle Libertad, 17 | Doble bombo y flequillo a tazón. Cuanto más te acercas, más suena |
-| 🏀 | **Jose** | Pista de baloncesto más cercana a Río Júcar, 44 | Tiros en suspensión y entradas a canasta (no las mete todas) |
+| 🏀 | **Jose** y **Jose Manuel** | Pista de baloncesto más cercana a Río Júcar, 44 | Padre e hijo echando unas canastas: rueda de pases (de pecho y picados), pase y corte, alley-oops, mates colgándose del aro, triples y entradas. No las meten todas, y los canastones se celebran. Si llevas tú a Jose Manuel, su padre se queda tirando solo |
 | 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de Río Júcar, 44 | Footing en grupo dando la vuelta a los dos parques |
 | 🤳 | **Emma** | Parque El Palmeral, pasada la puerta | Selfies sin parar, con sus patines: posa, dispara, mira la foto y cambia de ángulo, rodeada de corazones. Si te acercas, se gira para sacarte de fondo |
 
