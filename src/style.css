@@ -880,7 +880,7 @@ kbd {
   flex: none;
 }
 .menu-foot {
-  position: absolute;
+  position: fixed; /* fijo a la pantalla: con absolute se iba hacia arriba al deslizar el menú */
   right: max(18px, env(safe-area-inset-right));
   bottom: 10px;
   /* Solo ocupa el hueco que queda a la derecha de la columna del menú, para no pisarla */
