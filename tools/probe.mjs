@@ -1,6 +1,9 @@
 // Herramienta de desarrollo: evalúa una expresión dentro del juego y, si se pide, guarda una captura.
 // Uso: node tools/probe.mjs '<js que devuelve algo>' [captura.png] [query]
+// Si el guion es largo, mejor en un fichero: node tools/probe.mjs @guion.js [captura.png] [query]
 import puppeteer from 'puppeteer-core';
+import fs from 'node:fs';
+const code = process.argv[2].startsWith('@') ? fs.readFileSync(process.argv[2].slice(1), 'utf8') : process.argv[2];
 const URL = process.env.GAME_URL || 'http://localhost:5173/';
 const browser = await puppeteer.launch({
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new',
@@ -37,7 +40,7 @@ cdp.on('Debugger.paused', (e) => {
 });
 const watchdog = setTimeout(() => cdp.send('Debugger.pause').catch(() => {}), 10000);
 try {
-  console.log(JSON.stringify(await page.evaluate(`(() => { const g = window.__game; ${process.argv[2]} })()`), null, 1));
+  console.log(JSON.stringify(await page.evaluate(`(() => { const g = window.__game; ${code} })()`), null, 1));
 } catch (e) {
   console.log('EXCEPCIÓN', e.message);
 }

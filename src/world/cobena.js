@@ -295,6 +295,13 @@ function block(W, b, rnd, fam, pub) {
       }
     }
   }
+  if (label.startsWith('POLICÍA')) {
+    // La puerta del cuartelillo: de aquí sale el municipal y aquí acaban los más buscados
+    const fc = face(W, f, b.w, b.d, b.front);
+    const a = fc.at(0, 0);
+    const q = fc.at(0, 8);
+    W.places.police = { x: q[0], z: q[1], heading: Math.atan2(q[0] - a[0], q[1] - a[1]) };
+  }
   fbox(W.batch, f, 0, H, 0, b.w + 0.8, 0.5, b.d + 0.8, trim, F.STUDS);
   if (b.w > 9 && b.d > 9) {
     fbox(W.batch, f, 0, H + 0.5, 0, b.w - 2.4, 0.7, b.d - 2.4, wall, F.STUDS);

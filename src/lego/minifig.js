@@ -61,13 +61,14 @@ function faceTexture(kind, skin = C.skin) {
     eye(256 - 27, 114);
     eye(256 + 27, 114);
   }
-  if (kind === 'glasses' || kind === 'senor') {
-    // Gafas: redondas de colores para los chavales, de pasta rectangular para los señores
+  const pasta = kind === 'senor' || kind === 'abuela';
+  if (kind === 'glasses' || pasta) {
+    // Gafas: redondas de colores para los chavales, de pasta rectangular para los mayores
     g.lineWidth = 6;
-    g.strokeStyle = kind === 'senor' ? '#3a3f47' : '#c91a09';
+    g.strokeStyle = pasta ? '#3a3f47' : '#c91a09';
     for (const sx of [-1, 1]) {
       g.beginPath();
-      if (kind === 'senor') g.roundRect(256 + sx * 30 - 25, 91, 50, 42, 9);
+      if (pasta) g.roundRect(256 + sx * 30 - 25, 91, 50, 42, 9);
       else g.arc(256 + sx * 30, 113, 26, 0, Math.PI * 2);
       g.stroke();
       g.beginPath();
@@ -81,14 +82,14 @@ function faceTexture(kind, skin = C.skin) {
     g.stroke();
     g.strokeStyle = '#16181c';
   }
-  if (kind === 'senor' || kind === 'rock') {
-    // Cejas: canosas y tranquilas, o de roquero enfadado
+  if (pasta || kind === 'rock') {
+    // Cejas: canosas y tranquilas, de roquero enfadado o de abuela con muy malas pulgas
     g.lineWidth = 7;
-    g.strokeStyle = kind === 'senor' ? '#8a8f95' : '#16181c';
+    g.strokeStyle = pasta ? '#8a8f95' : '#16181c';
     for (const sx of [-1, 1]) {
       g.beginPath();
-      g.moveTo(256 + sx * 46, kind === 'senor' ? 78 : 76);
-      g.lineTo(256 + sx * 14, kind === 'senor' ? 74 : 92);
+      g.moveTo(256 + sx * 46, kind === 'senor' ? 78 : kind === 'abuela' ? 68 : 76);
+      g.lineTo(256 + sx * 14, kind === 'senor' ? 74 : kind === 'abuela' ? 86 : 92);
       g.stroke();
     }
     g.strokeStyle = '#16181c';
@@ -114,6 +115,11 @@ function faceTexture(kind, skin = C.skin) {
     g.lineWidth = 9;
     g.beginPath();
     g.ellipse(256, 138, 27, 38, 0, Math.PI * 0.18, Math.PI * 0.82);
+    g.stroke();
+  } else if (kind === 'abuela') {
+    // Boca torcida hacia abajo
+    g.beginPath();
+    g.ellipse(256, 178, 27, 24, 0, Math.PI * 1.16, Math.PI * 1.84);
     g.stroke();
   } else if (kind === 'grin' || kind === 'rock') {
     g.beginPath();
@@ -182,6 +188,17 @@ function printTexture(kind, color) {
       const r = i % 2 ? 20 : 46;
       g.lineTo(64 + Math.cos(a) * r, 60 + Math.sin(a) * r);
     }
+    g.closePath();
+    g.fill();
+  } else if (kind === 'police') {
+    // Banda de cuadros reflectantes y placa
+    for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) if ((i + j) % 2 === 0) g.fillRect(i * 16, 74 + j * 14, 16, 14);
+    g.beginPath();
+    g.moveTo(82, 16);
+    g.lineTo(108, 16);
+    g.lineTo(108, 38);
+    g.lineTo(95, 52);
+    g.lineTo(82, 38);
     g.closePath();
     g.fill();
   } else if (kind[0] === '#') {
@@ -334,6 +351,11 @@ export function createMinifig(o = {}) {
     hb.box(1.3, 0.5, 0.42, 0, 0.62, -0.5, hairColor, { r: 0.18 });
     hb.sphere(0.3, 0, 0.92, -0.86, hairColor, { seg: 10, seg2: 8 });
     hb.box(0.34, 1.05, 0.3, 0, 0.38, -1.02, hairColor, { r: 0.14, rx: 0.25 });
+  } else if (hairType === 'bun') {
+    // Moño de abuela
+    hb.add(new THREE.SphereGeometry(0.72, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.76, 0);
+    hb.box(1.3, 0.5, 0.42, 0, 0.62, -0.5, hairColor, { r: 0.18 });
+    hb.sphere(0.42, 0, 1.5, -0.22, hairColor, { seg: 12, seg2: 10 });
   } else if (hairType === 'long') {
     // Melena heavy hasta los hombros
     hb.add(new THREE.SphereGeometry(0.74, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.76, 0);

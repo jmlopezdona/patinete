@@ -32,13 +32,21 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 
 ## Locuras sin alienígenas
 
-- [ ] **Nivel de búsqueda.** Si rompes mucho mobiliario te persigue el policía municipal, y con
-  cinco estrellas, la abuela con la zapatilla.
 - [ ] **Gallinas.** Si atropellas una, te persiguen todas.
 - [ ] **Gravedad lunar.** Durante un minuto los saltos son gigantes.
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `busqueda`)
+
+- [x] **Nivel de búsqueda.** Si rompes mucho mobiliario te persigue el policía municipal, y con
+  cinco estrellas, la abuela con la zapatilla.
+- [x] **Multas y cuartelillo.** El municipal multa más cuantas más estrellas; con tres saca el
+  patinete oficial y te deja en la puerta de la Policía Local.
+- [x] **Zapatilla bumerán.** Teledirigida, se esquiva saltando o con un quiebro; si acierta, a casa
+  castigado.
+- [x] **Esquinazo.** Perderlos de vista un rato quita las estrellas y da premio; saltarlos, también.
 
 ## Ya hecho (rama `marcianos`)
 

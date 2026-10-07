@@ -142,17 +142,17 @@ export class Minimap {
         g.globalAlpha = 1;
       });
     }
-    // Marcianos (puntos verdes) y platillo
+    // Marcianos (puntos verdes) y los que llevan icono: el platillo, el municipal, la abuela
     for (const b of blips) {
       put(b.x, b.z, (x, y, out) => {
-        if (b.ufo) {
+        if (b.icon) {
           g.globalAlpha = out ? 0.8 : 1;
           g.fillStyle = '#12202e';
           g.beginPath();
           g.arc(x, y, 9, 0, Math.PI * 2);
           g.fill();
           g.font = '12px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
-          g.fillText('🛸', x, y + 1);
+          g.fillText(b.icon, x, y + 1);
           g.globalAlpha = 1;
         } else if (!out) {
           g.fillStyle = '#8dff6a';

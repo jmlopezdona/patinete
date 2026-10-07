@@ -217,6 +217,60 @@ kbd {
 #alienbox {
   border-left: 4px solid #8dff6a;
 }
+#wantedbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin: 8px auto 0;
+  padding: 3px 14px 4px 10px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  background: var(--panel);
+  border-bottom: 3px solid #5aa2ff;
+  border-radius: 999px;
+}
+#wantedbox.pop {
+  animation: pop 0.25s ease-out;
+}
+#wantedbox i {
+  font-size: 17px;
+  font-style: normal;
+  text-shadow: none;
+}
+#wanted {
+  letter-spacing: 0.04em;
+}
+#wanted b {
+  color: rgba(255, 255, 255, 0.28);
+}
+#wanted b.on {
+  color: var(--yellow);
+}
+#wantedbox.evading #wanted b.on {
+  animation: blink 0.5s steps(1) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+#copwarn {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  box-shadow: inset 0 0 90px 24px rgba(47, 125, 255, 0.7);
+  transition: opacity 0.2s;
+}
+#copwarn.on {
+  animation: copflash 0.7s steps(1) infinite;
+}
+@keyframes copflash {
+  50% {
+    box-shadow: inset 0 0 90px 24px rgba(255, 70, 70, 0.7);
+  }
+}
 #beamwarn {
   position: absolute;
   inset: 0;
@@ -892,6 +946,9 @@ body.touch #speedo .num {
   #minimap {
     width: 130px;
     height: 130px;
+  }
+  #wantedbox {
+    font-size: 16px;
   }
   .stat {
     font-size: 22px;

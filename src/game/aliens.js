@@ -5,7 +5,8 @@ import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
 import { BOUNDS } from '../world/cobena.js';
 import { lift, grade } from '../world/relief.js';
-import { angDiff, damp, clamp, lerp } from '../core/rng.js';
+import { damp, clamp, lerp } from '../core/rng.js';
+import { walk } from './walker.js';
 
 const SKIN = 0x7ddc1f;
 const POOL = 9;
@@ -134,7 +135,7 @@ export class Aliens {
       m.frustumCulled = false;
       scene.add(m);
     }
-    this.u = { state: 'gone', x: 0, y: 0, z: 0, vx: 0, vz: 0, t: 0, dur: 6, sx: 1, sz: 0, beam: 0, meter: 0, blip: { x: 0, z: 0, ufo: true } };
+    this.u = { state: 'gone', x: 0, y: 0, z: 0, vx: 0, vz: 0, t: 0, dur: 6, sx: 1, sz: 0, beam: 0, meter: 0, blip: { x: 0, z: 0, icon: '🛸' } };
   }
 
   // ---------- Oleadas ----------
@@ -508,36 +509,6 @@ export class Aliens {
     a.t = 0;
   }
 
-  // Avanza hacia una dirección esquivando paredes y agua. Devuelve false si no puede pasar.
-  move(a, dir, speed, turn, dt) {
-    const T = this.T;
-    a.heading += angDiff(a.heading, dir) * Math.min(1, turn * dt);
-    if (speed <= 0) return true;
-    const sx = Math.sin(a.heading);
-    const sz = Math.cos(a.heading);
-    const step = speed * dt;
-    const free = (x, z) => {
-      const h = T.height(x, z);
-      return h - a.y <= 1.1 && h > -0.8;
-    };
-    let nx = a.x + sx * step;
-    let nz = a.z + sz * step;
-    if (!free(a.x + sx * (step + 0.8), a.z + sz * (step + 0.8))) {
-      if (free(a.x + Math.sign(sx) * (Math.abs(sx) * step + 0.8), a.z) && Math.abs(sx) > 0.2) nz = a.z;
-      else if (free(a.x, a.z + Math.sign(sz) * (Math.abs(sz) * step + 0.8)) && Math.abs(sz) > 0.2) nx = a.x;
-      else {
-        a.stuck += dt;
-        return false;
-      }
-      a.stuck += dt * 0.5;
-    } else a.stuck = Math.max(0, a.stuck - dt);
-    a.x = nx;
-    a.z = nz;
-    a.y = T.height(nx, nz);
-    a.walk += step * 0.8;
-    return true;
-  }
-
   updateAliens(dt, p, time) {
     const g = this.game;
     const T = this.T;
@@ -708,7 +679,7 @@ export class Aliens {
         default:
           break;
       }
-      if (!this.move(a, dir, speed, turn, dt)) {
+      if (!walk(T, a, dir, speed, turn, dt)) {
         if (a.state === 'wander') a.t = 0;
         else if (a.stuck > 0.3) {
           a.stuck = 0;

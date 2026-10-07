@@ -31,6 +31,7 @@ import { Hud } from './game/hud.js';
 import { Minimap } from './game/minimap.js';
 import { Aliens } from './game/aliens.js';
 import { Folks } from './game/folks.js';
+import { Wanted } from './game/wanted.js';
 
 const SAVE_KEY = 'cobena-patinete-v1';
 const QUALITY_NAMES = ['Bajos', 'Medios', 'Altos'];
@@ -38,7 +39,7 @@ const TIPS = [
   '💨 Mantén <b>Mayús</b> para usar el turbo. Se recarga con studs y trucos.',
   '🗺️ Los iconos del minimapa son minijuegos: acércate y pulsa <b>E</b>.',
   '👽 Dicen que de noche pasan cosas muy raras en Cobeña… pulsa <b>N</b> si te atreves.',
-  '🧱 Embiste bancos, papeleras y buzones: sueltan studs.',
+  '🧱 Embiste bancos, papeleras y buzones: sueltan studs. Eso sí: si te pasas rompiendo, sale el <b>policía municipal</b>.',
   '🛹 En el aire: <b>A</b>/<b>D</b> giran, <b>F</b> hace el truco de tu personaje y <b>S</b> un backflip.',
   '🛹 El <b>skatepark</b> está al final de la calle Río Júcar, junto a la rotonda.',
   '🚀 Detrás del skatepark, en el campo, te espera el <b>Mega Salto</b> sobre la charca.',
@@ -156,6 +157,8 @@ class Game {
     this.env = new Environment(this, this.world.lamps);
     this.aliens = new Aliens(this);
     this.folks = new Folks(this);
+    this.wanted = new Wanted(this);
+    this.blips = [];
     this.minimap = new Minimap(document.getElementById('minimap'), this.world);
     this.markers = [...this.missions.defs, ...this.folks.markers];
 
@@ -305,6 +308,7 @@ class Game {
     $('p-respawn').addEventListener('click', () => {
       this.missions.abort();
       this.aliens.release(this.player);
+      this.wanted.reset(true);
       const sp = this.world.places.spawn;
       this.player.place(sp.x, sp.z, sp.heading);
       this.camera3.snap = true;
@@ -315,6 +319,7 @@ class Game {
       this.setPaused(false);
       this.sfx.ufo(0, false);
       this.sfx.drums(0);
+      this.wanted.reset(true);
       this.state = 'menu';
       this.hud.show(false);
       $('menu').classList.remove('out');
@@ -413,6 +418,7 @@ class Game {
   onSmash() {
     this.sfx.bricks(5);
     this.camera3.addShake(0.12);
+    this.wanted.add();
   }
 
   onBump(sp) {
@@ -436,6 +442,7 @@ class Game {
     this.sfx.ouch();
     this.studs.burst(x, y + 2, z, 2, 0, y, 7);
     this.camera3.addShake(0.15);
+    this.wanted.add();
   }
 
   onLand(r) {
@@ -628,6 +635,7 @@ class Game {
     this.studs.update(dt, p);
     this.traffic.update(dt, p, this.time);
     this.aliens.update(dt, p, this.time);
+    this.wanted.update(dt, p, this.time);
     this.folks.update(dt, p, this.time, true);
     const inBowl = this.missions.active && this.missions.def && this.missions.def.id === 'bowling';
     this.pins.update(dt, p, inBowl);
@@ -665,7 +673,11 @@ class Game {
     this.hud.update(dt, p.speed * 1.6, p.boost, p.boosting);
     if (this.frame % 2 === 0) {
       const m = this.missions;
-      this.minimap.draw(p.pos.x, p.pos.z, this.camera3.yaw, p.heading, m.active ? [] : this.markers, m.goalPos, this.aliens.blips);
+      const blips = this.blips;
+      blips.length = 0;
+      for (const b of this.aliens.blips) blips.push(b);
+      for (const b of this.wanted.blips) blips.push(b);
+      this.minimap.draw(p.pos.x, p.pos.z, this.camera3.yaw, p.heading, m.active ? [] : this.markers, m.goalPos, blips);
     }
     if (this.frame % 20 === 0) {
       const z = this.zoneName(p.pos.x, p.pos.z);

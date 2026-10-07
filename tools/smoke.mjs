@@ -219,6 +219,71 @@ await log('marcianos: victoria', () => {
   window.sim(6);
   return { rechazada: g.save.invasions, premio: g.save.studs - st, amanece: g.env.target === 0, platillo: A.u.state, marcianos: A.aliens.filter((a) => a.state !== 'off').length };
 });
+await log('búsqueda: multa y cuartelillo', () => {
+  const g = window.__game; const W = g.wanted; const p = g.player; const sp = g.world.places.spawn;
+  g.env.night = g.env.target = 0; g.env.apply();
+  const chase = (smashes) => {
+    g.save.studs = 3000; p.place(sp.x, sp.z, sp.heading); p.invuln = 0;
+    for (let i = 0; i < smashes; i++) g.onSmash();
+    window.sim(1 / 60);
+    const stars = W.stars; const hud = document.querySelectorAll('#wanted b.on').length;
+    let n = 0; while (W.stars && n++ < 1800) window.sim(1 / 60);
+    return `${stars}★ (${hud} en pantalla), multa ${3000 - g.save.studs}, en ${g.zoneName(p.pos.x, p.pos.z)}`;
+  };
+  const una = chase(5);
+  const a = W.cop.state;
+  window.sim(6);
+  return { unaEstrella: una, municipal: a + '→' + W.cop.state, tresEstrellas: chase(13), comisaria: !!W.station };
+});
+await log('búsqueda: esquinazo', () => {
+  const g = window.__game; const W = g.wanted; const p = g.player; const sp = g.world.places.spawn;
+  // El municipal sale por delante: se le llama mirando al revés y se huye calle adelante
+  p.place(sp.x, sp.z, sp.heading + Math.PI); p.invuln = 0;
+  for (let i = 0; i < 9; i++) g.onSmash();
+  window.sim(1.3);
+  const st = g.save.studs; let blink = false;
+  p.place(sp.x, sp.z, sp.heading);
+  let n = 0; while (W.stars && n++ < 2400) { window.sim(1 / 60, () => ({ throttle: 1 })); blink = blink || document.getElementById('wantedbox').classList.contains('evading'); }
+  return { segundos: +(n / 60).toFixed(1), parpadea: blink, premio: g.save.studs - st >= 400, estrellas: W.stars, aviso: document.getElementById('big').textContent };
+});
+await log('búsqueda: la abuela', () => {
+  const g = window.__game; const W = g.wanted; const p = g.player; const sp = g.world.places.spawn; const G = W.granny; const S = W.slip;
+  W.fine = () => {}; // aquí solo interesa la abuela (al final se restaura el método)
+  window.sim(6, () => ({ throttle: 1 }));
+  window.sim(2, () => ({ throttle: -1 }));
+  const far = Math.hypot(p.pos.x - sp.x, p.pos.z - sp.z);
+  g.save.studs = 3000;
+  for (let i = 0; i < 21; i++) g.onSmash();
+  const stars = W.stars;
+  // Primera zapatilla: se esquiva saltando. La segunda, no
+  let n = 0; let jumped = false; let dodged = false;
+  while (n++ < 1500 && !dodged && W.stars) {
+    const jump = S.state === 'fly' && Math.hypot(S.x - p.pos.x, S.z - p.pos.z) < 16 && p.grounded && !jumped;
+    jumped = jumped || jump;
+    window.sim(1 / 60, () => ({ jumpPressed: jump }));
+    dodged = jumped && S.state === 'back';
+    if (G.d < 8 && G.state === 'chase') G.x += 30;
+  }
+  const ok = dodged && W.stars === 5;
+  n = 0; while (W.stars && n++ < 1800) { window.sim(1 / 60); if (G.d < 8 && G.state === 'chase') G.x += 30; }
+  const big = document.getElementById('big').textContent;
+  window.sim(1.6);
+  delete W.fine;
+  return { estrellas: stars, esquivada: ok, aviso: big, requisado: 3000 - g.save.studs, lejos: +far.toFixed(0), aCasa: +Math.hypot(p.pos.x - sp.x, p.pos.z - sp.z).toFixed(1) };
+});
+await page.evaluate(() => {
+  const g = window.__game; const W = g.wanted; const p = g.player;
+  window.sim(4);
+  for (let i = 0; i < 21; i++) g.onSmash();
+  p.invuln = 99; window.sim(2.6);
+  // Los dos delante de la cámara para la foto
+  const fx = Math.sin(p.heading), fz = Math.cos(p.heading);
+  [[W.cop, 15, 4], [W.granny, 17, -3]].forEach(([c, f, s]) => { c.x = p.pos.x + fx * f + fz * s; c.z = p.pos.z + fz * f - fx * s; c.y = g.terrain.height(c.x, c.z); c.heading = Math.atan2(p.pos.x - c.x, p.pos.z - c.z); c.state = 'chase'; c.t = 0; c.pop = 1; c.throwCd = 9; });
+  window.sim(0.05);
+  p.invuln = 0;
+});
+await shot('s_busqueda');
+await page.evaluate(() => { window.__game.wanted.reset(true); });
 await log('personajes', () => {
   const g = window.__game; const p = g.player; const F = g.folks; const sp = g.world.places.spawn;
   const out = {};

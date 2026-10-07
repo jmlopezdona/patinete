@@ -55,6 +55,7 @@ export class Player {
     this.held = false; // en manos del rayo abductor: la posición la mueve el platillo
     this.hidden = false;
     this.dropped = false; // caída desde el platillo: no cuenta como truco
+    this.respawnAt = null; // dónde reaparecer tras el próximo castañazo (castigado a casa)
     this.safe = { x: 0, z: 0, heading: 0 };
     this.safeT = 0;
     this.free = { x: 0, z: 0 };
@@ -157,6 +158,7 @@ export class Player {
     this.sunk = false;
     this.held = false;
     this.hidden = false;
+    this.respawnAt = null;
     this.model.visible = true;
     this.visY = this.pos.y;
     this.safe = { x, z, heading };
@@ -712,7 +714,11 @@ export class Player {
     const T = this.terrain;
     let x = this.pos.x;
     let z = this.pos.z;
-    if (this.sunk || T.height(x, z) < -1) {
+    if (this.respawnAt) {
+      ({ x, z } = this.respawnAt);
+      this.heading = this.respawnAt.heading;
+      this.respawnAt = null;
+    } else if (this.sunk || T.height(x, z) < -1) {
       x = this.safe.x;
       z = this.safe.z;
       this.heading = this.safe.heading;

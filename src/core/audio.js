@@ -281,6 +281,40 @@ export class Sfx {
     [300, 400, 533, 711, 948, 1264].forEach((f, i) => this.tone(f, 0.26, 'sine', 0.13, 1.5, i * 0.11));
   }
 
+  // ---------- Nivel de búsqueda ----------
+  wanted(stars) {
+    for (let i = 0; i < stars; i++) this.tone(660 * Math.pow(2, i / 6), 0.1, 'square', 0.09, 0, i * 0.08);
+    this.tone(110, 0.5, 'sawtooth', 0.07, 0.8);
+  }
+  // El pito del municipal
+  whistle(vol = 1) {
+    if (vol < 0.05) return;
+    for (let i = 0; i < 9; i++) this.tone(i % 2 ? 2500 : 2250, 0.045, 'square', 0.06 * vol, 0, i * 0.04);
+  }
+  // Nino-nino del patinete oficial
+  siren(vol = 1) {
+    if (vol < 0.05) return;
+    this.tone(740, 0.27, 'square', 0.04 * vol);
+    this.tone(590, 0.27, 'square', 0.04 * vol, 0, 0.3);
+  }
+  fine() {
+    this.tone(1568, 0.08, 'square', 0.09);
+    this.tone(2093, 0.3, 'square', 0.09, 0, 0.08);
+    [330, 262, 196].forEach((f, i) => this.tone(f, 0.22, 'sawtooth', 0.08, 0, 0.42 + i * 0.18));
+  }
+  granny() {
+    [196, 185, 196, 147].forEach((f, i) => this.tone(f, i === 3 ? 0.7 : 0.2, 'sawtooth', 0.12, 0, i * 0.2));
+    this.tone(1200, 0.5, 'triangle', 0.07, 0.5, 0.75);
+  }
+  slipper() {
+    this.tone(420, 0.4, 'triangle', 0.12, 2.4);
+    this.noise(0.4, 0.14, 600, 1.4, 'bandpass', 0, 4);
+  }
+  slap() {
+    this.noise(0.09, 0.6, 2600, 0.8, 'highpass');
+    this.tone(170, 0.2, 'sine', 0.5, 0.4);
+  }
+
   // ---------- Vecinos ----------
   bounce(vol = 1) {
     this.tone(170, 0.09, 'sine', 0.22 * vol, 0.5);

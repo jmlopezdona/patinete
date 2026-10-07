@@ -45,6 +45,7 @@ tableta o un móvil (hay controles táctiles) con la dirección «Network» que 
 | Empezar minijuego | `E` | Y |
 | Día / noche (de noche: ¡marcianos!) | `N` | — |
 | Soltarse del rayo abductor | machacar `Espacio` | A |
+| Esquivar al municipal y la zapatilla | `Espacio` justo a tiempo | A |
 | Cámara cerca / lejos | `C` | Select |
 | Color del vehículo | `V` | — |
 | Recolocarse | `R` | — |
@@ -108,6 +109,27 @@ campanario y empieza a soltar marcianos de ladrillo por las calles.
   conseguirlo el platillo huye, amanece y te llevas el premio. No hay «game over».
 - Los puntos verdes del minimapa son marcianos; el 🛸, el platillo. Durante los minijuegos se esconden.
 
+### Nivel de búsqueda
+
+Romper mobiliario da studs, pero también calienta el ambiente. Cinco destrozos seguidos (atropellar
+peatones también cuenta) y aparece la primera estrella bajo el minimapa:
+
+| Estrellas | Qué pasa |
+| --- | --- |
+| ★ | Sale el **policía municipal** a pie, pitando y dando el alto. Si te toca, **multa** de 200 studs |
+| ★★ | Aprieta el paso y la multa sube (200 por estrella) |
+| ★★★ | Saca su **patinete oficial** con rotativo azul: corre casi tanto como tú y ataja por otras calles. Si te pilla, acabas en la puerta de la **Policía Local** |
+| ★★★★ | Va tan rápido como tú sin turbo. Último aviso |
+| ★★★★★ | Llaman a **la abuela**, que corre más que nadie y lanza **la zapatilla**: teledirigida y con vuelta, como un bumerán. Zapatillazo = castañazo, 500 studs requisados y **castigado a casa** |
+
+- Cada estrella cuesta cuatro destrozos más. Sin estrellas, lo roto se va olvidando solo.
+- **Esquinazo**: aléjate hasta que te pierdan de vista y aguanta unos segundos sin romper nada (las
+  estrellas parpadean). Se van… y te llevas un premio mayor cuantas más estrellas tuvieras.
+- Si doblas una esquina **siguen tu rastro**; lo que no saben es saltar vallas.
+- **Sáltalos**: pasar por encima del municipal o de la abuela los deja descolocados un momento (y
+  puntúa). La zapatilla también se esquiva saltando cuando avisa «¡Zapatilla va!», o con un quiebro.
+- En el minimapa son el 👮 y la 👵. Durante los minijuegos hay tregua.
+
 ### Vecinos con nombre propio
 
 | | Quién | Dónde | Qué hace |
@@ -151,14 +173,16 @@ se guarda en el navegador.
   pendiente. Donde hay rampas, pistas o porterías el terreno se allana, así los minijuegos y el
   skatepark funcionan igual que en llano.
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
-  entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo y rayo) y
-  `folks.js`, los vecinos con nombre.
+  entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo y rayo),
+  `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
+  y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
   `characters.js` define los personajes elegibles y sus estadísticas.
 - `src/core/` — entrada (teclado, mando, táctil), audio sintetizado con WebAudio y utilidades.
 - `tools/` — utilidades de desarrollo que abren el juego en Chrome sin cabeza para simular la
   física, recorrer los minijuegos y sacar capturas (necesitan `npm run dev` en marcha y Google
-  Chrome instalado en la ruta habitual de macOS). `npm run test:misiones` también prueba la invasión y
-  a los vecinos, y `node tools/probe.mjs '<js>' [captura.png]` evalúa una expresión dentro del juego.
+  Chrome instalado en la ruta habitual de macOS). `npm run test:misiones` también prueba la invasión,
+  a los vecinos y el nivel de búsqueda, y `node tools/probe.mjs '<js>' [captura.png]` evalúa una
+  expresión dentro del juego (o un guion entero con `node tools/probe.mjs @guion.js`).
 
 ### Regenerar el callejero y el relieve
 

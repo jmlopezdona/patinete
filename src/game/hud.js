@@ -8,7 +8,11 @@ export class Hud {
       prompt: $('prompt'), mission: $('mission'), mTitle: $('m-title'), mMain: $('m-main'), mSub: $('m-sub'), big: $('big'), toasts: $('toasts'),
       trick: $('trick'), results: $('results'), zone: $('zone'), studBox: $('studbox'),
       alienBox: $('alienbox'), aliens: $('aliens'), abduct: $('abduct'), abductFill: $('abductfill'), beam: $('beamwarn'),
+      wantedBox: $('wantedbox'), wanted: $('wanted'), cop: $('copwarn'),
     };
+    this.lastWanted = 0;
+    this.lastEvading = false;
+    this.lastCop = 0;
     this.lastBeam = 0;
     this.lastAbduct = null;
     this.shown = 0;
@@ -66,6 +70,34 @@ export class Hud {
     if (k === this.lastBeam) return;
     this.lastBeam = k;
     this.el.beam.style.opacity = k;
+  }
+
+  // Estrellas del nivel de búsqueda (0 las esconde); parpadean mientras les das esquinazo
+  setWanted(n, evading = false) {
+    const b = this.el.wantedBox;
+    if (evading !== this.lastEvading) {
+      this.lastEvading = evading;
+      b.classList.toggle('evading', evading);
+    }
+    if (n === this.lastWanted) return;
+    const up = n > this.lastWanted;
+    this.lastWanted = n;
+    b.classList.toggle('hidden', !n);
+    if (!n) return;
+    this.el.wanted.innerHTML = '<b class="on">★</b>'.repeat(n) + '<b>★</b>'.repeat(5 - n);
+    if (!up) return;
+    b.classList.remove('pop');
+    void b.offsetWidth;
+    b.classList.add('pop');
+  }
+
+  // Destellos de sirena en los bordes cuando te pisan los talones
+  cop(k) {
+    k = Math.round(k * 10) / 10;
+    if (k === this.lastCop) return;
+    this.lastCop = k;
+    this.el.cop.style.opacity = k;
+    this.el.cop.classList.toggle('on', k > 0);
   }
 
   prompt(html) {
