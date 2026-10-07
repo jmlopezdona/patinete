@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # el número de versión cuenta los commits: hace falta el historial entero
       - uses: actions/setup-node@v5
         with:
           node-version: 24

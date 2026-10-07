@@ -13,6 +13,8 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || !mine(url)) return;
+  // version.json dice si hay versión nueva: solo vale recién pedido a la red, nunca el guardado
+  if (url.pathname.endsWith('/version.json')) return;
   // Los ficheros de assets/ llevan un hash en el nombre y no cambian nunca: valen los guardados
   e.respondWith(url.pathname.includes('/assets/') ? cacheFirst(req) : networkFirst(req));
 });
