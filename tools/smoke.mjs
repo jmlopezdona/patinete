@@ -219,6 +219,23 @@ await log('marcianos: victoria', () => {
   window.sim(6);
   return { rechazada: g.save.invasions, premio: g.save.studs - st, amanece: g.env.target === 0, platillo: A.u.state, marcianos: A.aliens.filter((a) => a.state !== 'off').length };
 });
+await log('personajes', () => {
+  const g = window.__game; const p = g.player; const F = g.folks; const sp = g.world.places.spawn;
+  const out = {};
+  for (const id of ['yago', 'teo', 'jose', 'adrian']) {
+    g.setCharacter(id);
+    p.place(sp.x, sp.z, sp.heading);
+    let vm = 0; let ym = 0;
+    window.sim(4, () => { vm = Math.max(vm, p.speed); return { throttle: 1 }; });
+    window.sim(1 / 60, () => ({ jumpPressed: true }));
+    window.sim(1.6, (t) => { ym = Math.max(ym, p.pos.y); return { throttle: 1, trickPressed: t > 0.1 && t < 0.13 }; });
+    out[id] = [p.veh.kind, +vm.toFixed(0), +ym.toFixed(1), document.getElementById('trick').textContent.split('+')[0]].join(' ');
+    out[id + 'Doble'] = id === 'yago' ? F.yago.root.visible : id === 'jose' ? F.jose.fig.group.visible : id === 'teo' ? g.ball.keeperName : F.drummer.fig.group.visible;
+  }
+  out.guardado = g.save.character;
+  return out;
+});
+await shot('s_personajes');
 await log('estado', () => { const g = window.__game; return { studs: g.save.studs, stars: g.save.stars, calls: g.renderer.info.render.calls, tris: g.renderer.info.render.triangles, programs: g.renderer.info.programs.length, geos: g.renderer.info.memory.geometries, tex: g.renderer.info.memory.textures }; });
 if (errors.length) console.log('\nERRORES:\n' + [...new Set(errors)].slice(0, 20).join('\n'));
 else console.log('\nSin errores de consola.');

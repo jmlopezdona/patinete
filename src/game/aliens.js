@@ -742,7 +742,7 @@ export class Aliens {
       if (!pAlive || a.cd > 0) continue;
       const dy = p.pos.y - a.y;
       if (!p.grounded && p.whipT > 0 && d < 4.2 && dy > -2 && dy < 5.5) {
-        this.kick(a, p, time, '¡Tailwhip marciano!', 900);
+        this.kick(a, p, time, p.char.alienTrick, 900);
         continue;
       }
       if (!p.grounded && p.vel.y < -3 && d < 2.6 && dy > 2 && dy < 7) {

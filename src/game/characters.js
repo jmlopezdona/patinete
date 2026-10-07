@@ -1,0 +1,44 @@
+import { C } from '../lego/colors.js';
+import { scooterVehicle, createUnicycle, createBike, createTesla } from '../lego/vehicles.js';
+
+export const COLORS = [C.azure, C.red, C.lime, C.orange, C.magenta, C.yellow, C.purple, C.white];
+
+// Personajes entre los que se puede elegir. Cada uno lleva su vehículo y su forma de moverse:
+// acc = aceleración, vmax / vboost = velocidad punta sin y con turbo, jump = impulso del salto,
+// turn = agilidad al girar, spin = velocidad de giro en el aire.
+export const CHARACTERS = [
+  {
+    id: 'adrian', name: 'Adrián', icon: '🥁', vehicle: 'Patinete', blurb: 'El de siempre: equilibrado y con el mejor tailwhip.',
+    look: { torso: C.black, arms: C.black, legs: C.dgray, hair: 'long', hairColor: C.black, face: 'rock', print: 'bolt', printColor: '#f7d117' },
+    scale: 0.85, color: 0, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
+    build: (color) => scooterVehicle(color, 0.9),
+    stats: { acc: 22, vmax: 31, vboost: 47, jump: 15, turn: 3.1, spin: 7.6 },
+    cam: 1,
+  },
+  {
+    id: 'yago', name: 'Yago', icon: '🤹', vehicle: 'Monociclo', blurb: 'Gira sobre una moneda y salta más que nadie, pero corre menos.',
+    look: { torso: C.red, arms: C.white, legs: C.blue, hair: 'hair', hairColor: C.brown, face: 'grin', print: 'stripes', printColor: '#ffffff' },
+    scale: 0.8, color: 1, trick: 'Pirueta', alienTrick: '¡Pirueta marciana!',
+    build: (color) => createUnicycle(color),
+    stats: { acc: 24, vmax: 27, vboost: 42, jump: 18, turn: 4.1, spin: 9.6 },
+    cam: 1,
+  },
+  {
+    id: 'teo', name: 'Teo', icon: '🧤', vehicle: 'Bicicleta', blurb: 'Pedalea que se las pela: más velocidad punta y buenos saltos.',
+    look: { torso: C.lime, arms: C.lime, legs: C.black, hair: 'hair', hairColor: 0xf0d27a, face: 'glasses', print: 'star', printColor: '#1b1d21' },
+    scale: 0.9, color: 2, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
+    build: (color) => createBike(color),
+    stats: { acc: 20, vmax: 35, vboost: 51, jump: 15.5, turn: 2.9, spin: 7.2 },
+    cam: 1.05,
+  },
+  {
+    id: 'jose', name: 'Jose', icon: '🏀', vehicle: 'Tesla Model X', blurb: 'Un cohete eléctrico: acelera como nadie, pero gira ancho y salta poco.',
+    look: { torso: C.white, arms: C.skin, legs: C.blue, hair: 'none', face: 'senor', print: '#23', printColor: '#c91a09' },
+    scale: 0.9, color: 7, trick: 'Alas de halcón', alienTrick: '¡Portazo marciano!',
+    build: (color) => createTesla(color),
+    stats: { acc: 30, vmax: 39, vboost: 58, jump: 12.5, turn: 2.45, spin: 6 },
+    cam: 1.32,
+  },
+];
+
+export const characterById = (id) => CHARACTERS.find((c) => c.id === id) || CHARACTERS[0];

@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { angDiff, damp, clamp } from '../core/rng.js';
-import { V_BOOST } from './player.js';
 
 const _d = new THREE.Vector3();
 const _l = new THREE.Vector3();
@@ -37,9 +36,10 @@ export class ChaseCamera {
     else this.yaw += angDiff(this.yaw, ty) * (1 - Math.exp(-(p.grounded ? 3.6 : 1.6) * dt));
 
     const far = this.mode === 1;
-    const k = clamp(sp / V_BOOST, 0, 1);
-    const distT = (far ? 22 : 13.5) + k * 3.5;
-    const height = (far ? 11 : 6.2) + k * 0.6;
+    const k = clamp(sp / p.stats.vboost, 0, 1);
+    const big = p.char.cam; // los vehículos grandes se ven desde un poco más lejos
+    const distT = ((far ? 22 : 13.5) + k * 3.5) * big;
+    const height = ((far ? 11 : 6.2) + k * 0.6) * (0.6 + 0.4 * big);
     this.dist = damp(this.dist, distT, 4, dt);
     const fx = Math.sin(this.yaw);
     const fz = Math.cos(this.yaw);

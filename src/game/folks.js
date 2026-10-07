@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createMinifig, nameTag } from '../lego/minifig.js';
+import { createUnicycle } from '../lego/vehicles.js';
 import { Builder } from '../lego/builder.js';
 import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
@@ -29,10 +30,27 @@ export class Folks {
     this.buildJoggers();
   }
 
+  // El personaje que lleva el jugador no puede estar a la vez en su sitio de siempre
+  setPlayer(id) {
+    this.away = id;
+    const Y = this.yago;
+    if (Y) {
+      Y.marker.hidden = id === 'yago';
+      if (id === 'yago') Y.root.visible = Y.tag.visible = false;
+    }
+    const D = this.drummer;
+    if (D) D.fig.group.visible = D.tag.visible = id !== 'adrian';
+    const J = this.jose;
+    if (J) {
+      J.marker.hidden = id === 'jose';
+      if (id === 'jose') J.fig.group.visible = J.ball.visible = J.tag.visible = false;
+    }
+  }
+
   update(dt, p, time, live) {
-    if (this.yago) this.updateYago(dt, p, time, live);
+    if (this.yago && this.away !== 'yago') this.updateYago(dt, p, time, live);
     if (this.drummer) this.updateDrummer(dt, p, time, live);
-    if (this.jose) this.updateJose(dt, p, time, live);
+    if (this.jose && this.away !== 'jose') this.updateJose(dt, p, time, live);
     if (this.joggers) this.updateJoggers(dt, p, time, live);
   }
 
@@ -48,27 +66,12 @@ export class Folks {
     body.position.y = -1.3;
     tilt.add(body);
     root.add(tilt);
-    // Monociclo: rueda con radios y pedales, horquilla y sillín
-    const wheel = new THREE.Group();
-    wheel.position.y = 1.3;
-    const wb = new Builder();
-    wb.add(new THREE.TorusGeometry(1.14, 0.17, 8, 28), C.black, 0, 0, 0, 0, Math.PI / 2, 0);
-    wb.cyl(0.2, 0.5, 0, 0, 0, C.lgray, { axis: 'x', seg: 10 });
-    for (let i = 0; i < 4; i++) wb.box(0.06, 2.2, 0.06, 0, 0, 0, C.lgray, { rx: (i * Math.PI) / 4 });
-    for (const sx of [-1, 1]) {
-      wb.box(0.1, 0.62, 0.14, sx * 0.3, sx * 0.3, 0, C.dgray);
-      wb.box(0.42, 0.1, 0.3, sx * 0.52, sx * 0.6, 0, C.yellow);
-    }
-    wheel.add(wb.mesh(plastic));
-    const fb = new Builder();
-    for (const sx of [-1, 1]) fb.cyl(0.08, 1.5, sx * 0.27, 2.05, 0, C.red, { seg: 8 });
-    fb.box(0.7, 0.12, 0.2, 0, 2.8, 0, C.red);
-    fb.cyl(0.09, 0.4, 0, 3.0, 0, C.lgray, { seg: 8 });
-    fb.box(0.8, 0.26, 1.3, 0, 3.3, 0, C.black, { r: 0.1 });
-    body.add(wheel, fb.mesh(plastic));
+    const uni = createUnicycle(C.red);
+    const wheel = uni.wheel;
+    body.add(uni.group);
     const fig = createMinifig({ torso: C.red, arms: C.white, legs: C.blue, hair: 'hair', hairColor: C.brown, face: 'grin', print: 'stripes', printColor: '#ffffff' });
     fig.group.scale.setScalar(0.8);
-    fig.group.position.y = 3.43 - 1.72 * 0.8;
+    fig.group.position.y = uni.seatY - 1.72 * 0.8;
     body.add(fig.group);
     // Las tres bolas de los malabares
     const balls = [C.yellow, C.azure, C.magenta].map((col) => {
@@ -79,8 +82,9 @@ export class Folks {
     shadows(root);
     const tag = nameTag('Yago', '#fe8a18');
     this.game.scene.add(root, tag);
-    this.yago = { P, root, tilt, wheel, fig, balls, tag, ang: 0, spin: 0, y: 0, vy: 0, air: false, flip: 0, x: P.x, z: P.z, cd: 0 };
-    this.markers.push({ x: P.x, z: P.z, icon: '🤹' });
+    const marker = { x: P.x, z: P.z, icon: '🤹' };
+    this.yago = { P, root, tilt, wheel, fig, balls, tag, marker, ang: 0, spin: 0, y: 0, vy: 0, air: false, flip: 0, x: P.x, z: P.z, cd: 0 };
+    this.markers.push(marker);
   }
 
   updateYago(dt, p, time, live) {
@@ -241,9 +245,11 @@ export class Folks {
     const P = D.P;
     const g = this.game;
     const d = Math.hypot(p.pos.x - P.x, p.pos.z - P.z);
-    D.root.visible = D.tag.visible = d < SEE;
-    if (live) g.sfx.drums(clamp(1 - (d - 14) / 80, 0, 1) ** 2);
-    if (d >= SEE) return;
+    const here = this.away !== 'adrian'; // si Adrián va de paseo, la batería se queda sola y callada
+    D.root.visible = d < SEE;
+    D.tag.visible = here && d < SEE;
+    if (live) g.sfx.drums(here ? clamp(1 - (d - 14) / 80, 0, 1) ** 2 : 0);
+    if (d >= SEE || !here) return;
     const f = D.fig;
     const beat = (time * BPM) / 60; // negras
     const s16 = Math.sin(beat * 4 * Math.PI);
@@ -294,7 +300,8 @@ export class Folks {
     J.z = s.z;
     J.heading = Math.atan2(-H.nx, -H.nz);
     J.target = this.spot(9, 3);
-    this.markers.push({ x: H.x + H.nx * 8, z: H.z + H.nz * 8, icon: '🏀' });
+    J.marker = { x: H.x + H.nx * 8, z: H.z + H.nz * 8, icon: '🏀' };
+    this.markers.push(J.marker);
   }
 
   // Punto de la pista a cierta distancia de la canasta y desplazado hacia un lado

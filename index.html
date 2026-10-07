@@ -56,7 +56,7 @@
         <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> mover</span>
         <span><kbd>Espacio</kbd> saltar</span>
         <span><kbd>Mayús</kbd> turbo</span>
-        <span><kbd>F</kbd> tailwhip</span>
+        <span><kbd>F</kbd> truco</span>
         <span><kbd>E</kbd> misión</span>
         <span><kbd>Esc</kbd> pausa</span>
       </div>
@@ -81,7 +81,13 @@
             <b style="--c:#e3000b">C</b><b style="--c:#ffcf00">O</b><b style="--c:#1591d8">B</b><b style="--c:#00a650">E</b><b style="--c:#ff7a1a">Ñ</b><b style="--c:#1591d8">A</b>
           </div>
           <div class="logo-sub">EN PATINETE</div>
-          <p class="tagline">Cobeña entera, calle a calle y hecha de ladrillos, para recorrerla sobre tu patinete.</p>
+          <p class="tagline">Cobeña entera, calle a calle y hecha de ladrillos, para recorrerla en patinete, monociclo, bici… o Tesla.</p>
+        </div>
+
+        <div class="char-pick">
+          <h4>¿Quién sale hoy?</h4>
+          <div class="chars" id="chars"></div>
+          <p id="char-blurb"></p>
         </div>
 
         <div class="menu-buttons">
@@ -107,7 +113,7 @@
               <li>🚀 Mega salto sobre la charca hasta la Isla del Tesoro</li>
               <li>🟡 Studs por todas las calles y 12 ladrillos dorados escondidos</li>
               <li>👽 De noche llegan los marcianos: échalos a culetazos y esquiva el rayo del platillo</li>
-              <li>🤹 Vecinos: Yago y su monociclo, Teo de portero, Jose en la canasta y Adrián, un batería muy heavy</li>
+              <li>🧑‍🤝‍🧑 Elige personaje: Adrián en patinete, Yago en monociclo, Teo en bici o Jose en su Tesla Model X</li>
             </ul>
           </div>
           <div class="card">
@@ -115,7 +121,7 @@
             <ul class="controls">
               <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / flechas — conducir</li>
               <li><kbd>Espacio</kbd> saltar · <kbd>Mayús</kbd> turbo</li>
-              <li>En el aire: <kbd>A</kbd><kbd>D</kbd> giros · <kbd>F</kbd> tailwhip · <kbd>S</kbd> backflip</li>
+              <li>En el aire: <kbd>A</kbd><kbd>D</kbd> giros · <kbd>F</kbd> truco · <kbd>S</kbd> backflip</li>
               <li><kbd>E</kbd> misión · <kbd>N</kbd> día/noche · <kbd>C</kbd> cámara · <kbd>V</kbd> color</li>
               <li><kbd>R</kbd> recolocar · <kbd>M</kbd> sonido · <kbd>Esc</kbd> pausa</li>
             </ul>
@@ -132,6 +138,7 @@
         <button class="brick-btn primary" id="p-resume">Continuar</button>
         <button class="brick-btn" id="p-abort">Abandonar misión</button>
         <button class="brick-btn" id="p-night">Día / noche</button>
+        <button class="brick-btn" id="p-char">Personaje: Adrián · Patinete</button>
         <button class="brick-btn" id="p-quality">Gráficos: Altos</button>
         <button class="brick-btn" id="p-sound">Sonido: Sí</button>
         <button class="brick-btn" id="p-respawn">Volver a casa</button>

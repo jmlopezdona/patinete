@@ -1,22 +1,17 @@
 import * as THREE from 'three';
-import { createScooter, WHEEL_R, STEER_Z, DECK_Y } from '../lego/scooter.js';
 import { createMinifig } from '../lego/minifig.js';
 import { Builder } from '../lego/builder.js';
 import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
 import { clamp, damp, angDiff } from '../core/rng.js';
+import { CHARACTERS, COLORS, characterById } from './characters.js';
 
 const G = 42;
-const ACC = 22;
-export const V_MAX = 31;
-export const V_BOOST = 47;
 const V_REV = 9;
 const BRAKE = 40;
-const JUMP = 15;
 const STEP = 1.0;
 const TAU = Math.PI * 2;
 
-export const SCOOTER_COLORS = [C.azure, C.red, C.lime, C.orange, C.magenta, C.yellow, C.purple, C.white];
 
 export class Player {
   constructor(game) {
@@ -57,6 +52,9 @@ export class Player {
     this.bumpCd = 0;
     this.time = 0;
     this.colorIdx = 0;
+    this.char = CHARACTERS[0];
+    this.stats = this.char.stats;
+    this.doorVis = 0;
 
     // Jerarquía visual
     this.root = new THREE.Group();
@@ -66,19 +64,10 @@ export class Player {
     this.model = new THREE.Group();
     this.model.position.y = -2.2;
     this.scooterPivot = new THREE.Group();
-    this.scooterPivot.position.z = STEER_Z;
     this.root.add(this.slope);
     this.slope.add(this.flipPivot);
     this.flipPivot.add(this.model);
     this.model.add(this.scooterPivot);
-    this.buildScooter(SCOOTER_COLORS[0]);
-
-    this.rider = createMinifig({ legs: C.sandBlue, torso: 0xf06a0c, arms: 0xf06a0c, hair: 'helmet', hairColor: C.red, face: 'grin', print: 'bolt', printColor: '#ffffff' });
-    this.rider.group.position.set(0, DECK_Y, -0.5);
-    this.model.add(this.rider.group);
-    this.rider.group.traverse((o) => {
-      if (o.isMesh) o.castShadow = true;
-    });
 
     // Cajas de pizza para el reparto
     const pb = new Builder();
@@ -86,9 +75,9 @@ export class Player {
       pb.box(1.9, 0.32, 1.9, 0, 0.16 + i * 0.36, 0, i % 2 ? C.white : C.red, { r: 0.04 });
     }
     this.pizza = pb.mesh(plastic);
-    this.pizza.position.set(0, 1.5, -2.2);
     this.pizza.visible = false;
     this.model.add(this.pizza);
+    this.setCharacter(this.char.id);
 
     this.visY = 0;
     this.visYaw = 0;
@@ -100,19 +89,49 @@ export class Player {
     this.squash = 0;
   }
 
-  buildScooter(color) {
-    if (this.scooter) {
-      this.scooterPivot.remove(this.scooter.group);
-      this.scooter.group.traverse((o) => o.isMesh && o.geometry.dispose());
+  // Cambia de personaje: piloto, vehículo y forma de moverse
+  setCharacter(id, colorIdx) {
+    const ch = (this.char = characterById(id));
+    this.stats = ch.stats;
+    if (this.rider) {
+      this.model.remove(this.rider.group);
+      this.rider.group.traverse((o) => o.isMesh && o.geometry.dispose());
     }
-    this.scooter = createScooter(color);
-    this.scooter.group.position.z = -STEER_Z;
-    this.scooterPivot.add(this.scooter.group);
+    this.rider = createMinifig(ch.look);
+    this.rider.group.scale.setScalar(ch.scale);
+    this.rider.group.traverse((o) => {
+      if (o.isMesh) o.castShadow = true;
+    });
+    this.model.add(this.rider.group);
+    this.colorIdx = (colorIdx ?? ch.color) % COLORS.length;
+    this.buildVehicle();
+    this.kick = 0;
+    this.doorVis = 0;
+  }
+
+  buildVehicle() {
+    if (this.veh) {
+      this.scooterPivot.remove(this.veh.group);
+      this.veh.group.traverse((o) => {
+        if (!o.isMesh) return;
+        o.geometry.dispose();
+        if (o.material.map) {
+          o.material.map.dispose();
+          o.material.dispose();
+        }
+      });
+    }
+    const v = (this.veh = this.char.build(COLORS[this.colorIdx]));
+    this.scooterPivot.position.z = v.steerZ;
+    this.scooterPivot.rotation.y = 0;
+    v.group.position.z = -v.steerZ + (v.shift || 0);
+    this.scooterPivot.add(v.group);
+    this.pizza.position.set(...v.cargo);
   }
 
   nextColor() {
-    this.colorIdx = (this.colorIdx + 1) % SCOOTER_COLORS.length;
-    this.buildScooter(SCOOTER_COLORS[this.colorIdx]);
+    this.colorIdx = (this.colorIdx + 1) % COLORS.length;
+    this.buildVehicle();
   }
 
   place(x, z, heading) {
@@ -264,12 +283,13 @@ export class Player {
     const boosting = inp.boost && this.boost > 0.02 && inp.throttle >= 0;
     if (boosting && !this.boosting) this.game.sfx.boost();
     this.boosting = boosting;
-    const maxV = boosting ? V_BOOST : V_MAX;
+    const S = this.stats;
+    const maxV = boosting ? S.vboost : S.vmax;
     if (boosting) this.boost = Math.max(0, this.boost - h / 3.6);
     if (inp.throttle > 0 || boosting) {
       // En rampas empinadas el empuje casi desaparece: manda la inercia
       const grip = Math.max(0.12, Math.cos(Math.min(Math.PI / 2, Math.abs(this.pitch) * 2.2)));
-      const a = (boosting ? ACC * 1.9 : ACC * inp.throttle) * grip;
+      const a = (boosting ? S.acc * 1.9 : S.acc * inp.throttle) * grip;
       if (this.v < maxV) this.v = Math.min(maxV, this.v + a * h);
       else this.v -= (this.v - maxV) * 1.2 * h;
     } else if (inp.throttle < 0) {
@@ -280,7 +300,7 @@ export class Player {
       this.v = Math.abs(this.v) <= f ? 0 : this.v - Math.sign(this.v) * f;
     }
     const sp = Math.abs(this.v);
-    const turn = 3.1 * Math.min(1, 0.3 + sp / 9) * (1 - 0.36 * Math.min(1, sp / V_BOOST));
+    const turn = S.turn * Math.min(1, 0.3 + sp / 9) * (1 - 0.36 * Math.min(1, sp / S.vboost));
     this.heading -= inp.steer * turn * h * (this.v < -0.5 ? -1 : 1);
     const fx = Math.sin(this.heading);
     const fz = Math.cos(this.heading);
@@ -316,7 +336,7 @@ export class Player {
       this.jumpReq = false;
       this.game.sfx.jump();
       this.squash = 1;
-      this.launch(fx * hsB, Math.max(0, vyB) + JUMP, fz * hsB, null);
+      this.launch(fx * hsB, Math.max(0, vyB) + S.jump, fz * hsB, null);
       return;
     }
 
@@ -349,7 +369,7 @@ export class Player {
         hn = y;
       }
       if (lost > 0.72) {
-        if (sp > 37 && this.invuln <= 0) {
+        if (sp > S.vmax + 6 && this.invuln <= 0) {
           this.crash();
           return;
         }
@@ -454,7 +474,7 @@ export class Player {
     const T = this.terrain;
     this.airTime += h;
     if (this.airTime > 0.12) {
-      const ds = -inp.steer * 7.6 * h;
+      const ds = -inp.steer * this.stats.spin * h;
       this.spin += ds;
       this.spinAbs += Math.abs(ds);
       if (inp.downPressed) this.flipDir = 1;
@@ -467,8 +487,8 @@ export class Player {
     } else if (this.jumpReq) {
       // Margen de cortesía para saltar justo al salir de un borde
       this.jumpReq = false;
-      if (this.vel.y < JUMP * 0.6) {
-        this.vel.y = JUMP;
+      if (this.vel.y < this.stats.jump * 0.6) {
+        this.vel.y = this.stats.jump;
         this.game.sfx.jump();
       }
     }
@@ -549,7 +569,7 @@ export class Player {
     if (this.whipT > 0.18) sketchy = true;
     this.whipT = 0;
     const impact = -this.vel.y;
-    this.v = clamp(v, -V_BOOST, V_BOOST * 1.25);
+    this.v = clamp(v, -this.stats.vboost, this.stats.vboost * 1.25);
     this.pitch = pitch;
     this.gvy = this.v * Math.sin(pitch);
     this.visYaw = angDiff(0, this.visYaw);
@@ -623,7 +643,7 @@ export class Player {
       this.jumpReq = false;
       this.grind = null;
       this.game.sfx.jump();
-      this.launch(g.dx * g.speed, JUMP * 0.92, g.dz * g.speed, null, 0, 0, true);
+      this.launch(g.dx * g.speed, this.stats.jump * 0.92, g.dz * g.speed, null, 0, 0, true);
     } else if (g.t <= 0 || g.t >= 1) {
       this.grind = null;
       this.launch(g.dx * g.speed, 3.5, g.dz * g.speed, null, 0, 0, true);
@@ -649,7 +669,7 @@ export class Player {
     this.crashT = 1.25;
     this.sunk = false;
     this.grind = null;
-    const cols = [...this.rider.colors, SCOOTER_COLORS[this.colorIdx], C.white, C.lgray, C.black];
+    const cols = [...this.rider.colors, COLORS[this.colorIdx], C.white, C.lgray, C.black];
     const vx = this.grounded ? Math.sin(this.heading) * this.v * 0.4 : this.vel.x * 0.5;
     const vz = this.grounded ? Math.cos(this.heading) * this.v * 0.4 : this.vel.z * 0.5;
     this.game.bits.burst(this.pos.x, this.pos.y + 2, this.pos.z, cols, 34, 13, this.terrain.height(this.pos.x, this.pos.z), 1, vx, vz);
@@ -704,7 +724,7 @@ export class Player {
     if (air && !this.grind) tp = clamp(Math.atan2(this.vel.y, Math.hypot(this.vel.x, this.vel.z) + 6) * 0.45, -0.5, 0.5);
     if (this.grind) tp = 0;
     this.visPitch = damp(this.visPitch, tp, air ? 6 : 16, dt);
-    const lean = air ? 0 : inp.steer * Math.min(1, Math.abs(this.v) / 18) * 0.3;
+    const lean = air ? 0 : inp.steer * Math.min(1, Math.abs(this.v) / 18) * 0.3 * this.veh.lean;
     this.visRoll = damp(this.visRoll, lean, 8, dt);
     this.slope.rotation.x = -this.visPitch;
     this.slope.rotation.z = this.visRoll;
@@ -712,38 +732,80 @@ export class Player {
     this.flipPivot.rotation.x = -(this.flip + this.visFlip);
 
     this.steerVis = damp(this.steerVis, -inp.steer * 0.5, 10, dt);
-    const sc = this.scooter;
+    const v = this.veh;
+    const kind = v.kind;
+    const k = this.char.scale;
     let whip = 0;
-    if (this.whipT > 0) {
-      const k = 1 - this.whipT / 0.45;
-      whip = k * TAU;
-    }
-    this.scooterPivot.rotation.y = whip;
-    sc.steer.rotation.y = this.steerVis - whip;
-    sc.front.rotation.y = this.steerVis * 0.6;
-    const roll = ((this.grounded ? this.v : this.speed) * dt) / WHEEL_R;
-    sc.rear.rotation.x += roll;
-    sc.front.rotation.x += roll;
-
-    // Animación de la minifigura
+    if (this.whipT > 0) whip = (1 - this.whipT / 0.45) * TAU;
+    const roll = ((this.grounded ? this.v : this.speed) * dt) / v.wheelR;
     const r = this.rider;
     this.squash = damp(this.squash, 0, 7, dt);
-    const pushing = this.grounded && !this.grind && inp.throttle > 0 && this.v < 20 && this.v > -1 && !this.boosting;
-    this.kick = pushing ? this.kick + dt * (6 + this.v * 0.25) : damp(this.kick, Math.round(this.kick / TAU) * TAU, 10, dt);
-    const kp = Math.max(0, Math.sin(this.kick));
-    let hop = whip ? Math.sin((whip / TAU) * Math.PI) * 0.9 : 0;
-    r.group.position.y = DECK_Y - this.squash * 0.28 + hop;
-    r.group.rotation.x = 0.25 + this.squash * 0.2 + (this.boosting ? 0.1 : 0);
-    r.group.rotation.z = this.visRoll * 0.5;
-    r.legR.rotation.x = kp * 0.95 + (whip ? 0.5 : 0);
-    r.legL.rotation.x = air && !this.grind ? -0.25 : whip ? 0.5 : 0;
-    r.group.position.x = -kp * 0.05;
-    r.armL.rotation.x = -1.72 + this.squash * 0.15;
-    r.armR.rotation.x = -1.72 + this.squash * 0.15;
-    r.armL.rotation.z = this.steerVis * 0.25;
-    r.armR.rotation.z = this.steerVis * 0.25;
-    r.head.rotation.x = -0.2;
+    const hop = whip && kind !== 'car' ? Math.sin((whip / TAU) * Math.PI) * 0.9 : 0;
+    const driving = this.grounded && !this.grind && (inp.throttle > 0 || this.boosting);
+    this.scooterPivot.rotation.y = kind === 'car' ? 0 : whip;
+    r.armL.rotation.z = r.armR.rotation.z = this.steerVis * 0.25;
     r.head.rotation.y = -inp.steer * 0.35;
+    r.group.rotation.z = this.visRoll * 0.5;
+
+    if (kind === 'scooter') {
+      v.steer.rotation.y = this.steerVis - whip;
+      v.front.rotation.y = this.steerVis * 0.6;
+      v.rear.rotation.x += roll;
+      v.front.rotation.x += roll;
+      // Empujones con el pie mientras coge velocidad
+      const pushing = driving && inp.throttle > 0 && this.v < 20 && this.v > -1 && !this.boosting;
+      this.kick = pushing ? this.kick + dt * (6 + this.v * 0.25) : damp(this.kick, Math.round(this.kick / TAU) * TAU, 10, dt);
+      const kp = Math.max(0, Math.sin(this.kick));
+      r.group.position.set(-kp * 0.05, v.seatY - this.squash * 0.28 + hop, v.seatZ);
+      r.group.rotation.x = 0.25 + this.squash * 0.2 + (this.boosting ? 0.1 : 0);
+      r.legR.rotation.x = kp * 0.95 + (whip ? 0.5 : 0);
+      r.legL.rotation.x = air && !this.grind ? -0.25 : whip ? 0.5 : 0;
+      r.armL.rotation.x = r.armR.rotation.x = -1.72 + this.squash * 0.15;
+      r.head.rotation.x = -0.2;
+    } else if (kind === 'unicycle') {
+      // Sentado en el sillín, pedaleando con la rueda y los brazos en cruz
+      v.wheel.rotation.x += roll;
+      const ph = v.wheel.rotation.x;
+      const sp = Math.min(1, this.speed / 12);
+      r.group.position.set(0, v.seatY - 1.72 * k - this.squash * 0.2 + hop, v.seatZ);
+      r.group.rotation.x = 0.1 + this.squash * 0.2 + (this.boosting ? 0.2 : 0);
+      r.legL.rotation.x = -0.75 + Math.sin(ph) * 0.45 * sp;
+      r.legR.rotation.x = -0.75 - Math.sin(ph) * 0.45 * sp;
+      const wob = Math.sin(this.time * 7) * 0.14 * (0.4 + sp);
+      r.armL.rotation.x = r.armR.rotation.x = air && !this.grind ? -2.5 : 0;
+      r.armL.rotation.z = 1.15 + wob - this.visRoll;
+      r.armR.rotation.z = -1.15 + wob - this.visRoll;
+      r.head.rotation.x = 0;
+    } else if (kind === 'bike') {
+      v.steer.rotation.y = this.steerVis * 0.8 - whip;
+      v.rear.rotation.x += roll;
+      v.front.rotation.x += roll;
+      // Pedalea solo cuando acelera; cuesta abajo o en el aire deja las bielas quietas
+      if (driving) this.kick += dt * (4 + Math.abs(this.v) * 0.32);
+      v.cranks.rotation.x = this.kick;
+      const stand = air && !this.grind ? 0.5 : 0;
+      r.group.position.set(0, v.seatY - 1.72 * k - this.squash * 0.2 + hop + stand, v.seatZ + stand * 0.6);
+      r.group.rotation.x = 0.52 + this.squash * 0.15 - stand * 0.3;
+      r.legL.rotation.x = -0.6 + Math.sin(this.kick) * 0.5;
+      r.legR.rotation.x = -0.6 - Math.sin(this.kick) * 0.5;
+      r.armL.rotation.x = r.armR.rotation.x = -1.3 + stand * 0.3;
+      r.head.rotation.x = -0.5;
+    } else {
+      // Coche: ruedas, dirección y puertas de ala de halcón en vez de tailwhip
+      for (const w of v.wheels) w.rotation.x += roll;
+      for (const pv of v.frontPivots) pv.rotation.y = this.steerVis * 0.9;
+      this.doorVis = damp(this.doorVis, this.whipT > 0 ? 1 : 0, this.whipT > 0 ? 22 : 7, dt);
+      v.doors[0].rotation.z = -this.doorVis * 1.2;
+      v.doors[1].rotation.z = this.doorVis * 1.2;
+      r.group.position.set(0, v.seatY - 1.72 * k, v.seatZ);
+      r.group.rotation.x = 0;
+      r.group.rotation.z = 0;
+      r.legL.rotation.x = r.legR.rotation.x = -1.5;
+      r.armL.rotation.x = -1.25 + this.steerVis * 0.5;
+      r.armR.rotation.x = -1.25 - this.steerVis * 0.5;
+      r.armL.rotation.z = r.armR.rotation.z = 0;
+      r.head.rotation.x = 0;
+    }
     // Parpadeo al reaparecer
     if (this.crashT <= 0) this.model.visible = !this.hidden && (this.invuln > 0 ? Math.floor(this.time * 14) % 2 === 0 : true);
   }

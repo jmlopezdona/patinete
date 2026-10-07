@@ -412,11 +412,11 @@ export class Missions {
     return {
       update: () => {
         const left = 60 - this.time;
-        g.hud.mission(`⚽ ${this.def.name}`, `${this.goals} ${this.goals === 1 ? 'gol' : 'goles'}`, `⏱ ${fmt(left)} · Portería de Teo (este) · Oro: 5 goles`);
+        g.hud.mission(`⚽ ${this.def.name}`, `${this.goals} ${this.goals === 1 ? 'gol' : 'goles'}`, `⏱ ${fmt(left)} · Portería del este (para ${g.ball.keeperName}) · Oro: 5 goles`);
         if (left <= 0) {
           const n = this.goals;
           const stars = n >= 5 ? 3 : n >= 3 ? 2 : n >= 1 ? 1 : 0;
-          this.finish(stars, n, [`Goles: <b>${n}</b>`, stars === 0 ? 'Empuja el balón con el patinete hacia la portería de Teo.' : 'Golpea el balón de lado para que Teo no llegue.']);
+          this.finish(stars, n, [`Goles: <b>${n}</b>`, stars === 0 ? `Empuja el balón hacia la portería de ${g.ball.keeperName}.` : 'Golpea el balón de lado para que el portero no llegue.']);
         }
       },
       cleanup: () => g.ball.reset(),

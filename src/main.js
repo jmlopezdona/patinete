@@ -16,7 +16,8 @@ import { createScooter } from './lego/scooter.js';
 import { Terrain } from './world/terrain.js';
 import { buildTown, zoneAt, BOUNDS } from './world/cobena.js';
 import { buildLandmarks } from './world/landmarks.js';
-import { Player, V_BOOST } from './game/player.js';
+import { Player } from './game/player.js';
+import { CHARACTERS, characterById } from './game/characters.js';
 import { ChaseCamera } from './game/camera.js';
 import { Bits } from './game/bits.js';
 import { Studs, STUD_VALUE } from './game/studs.js';
@@ -37,12 +38,13 @@ const TIPS = [
   '🗺️ Los iconos del minimapa son minijuegos: acércate y pulsa <b>E</b>.',
   '👽 Dicen que de noche pasan cosas muy raras en Cobeña… pulsa <b>N</b> si te atreves.',
   '🧱 Embiste bancos, papeleras y buzones: sueltan studs.',
-  '🛹 En el aire: <b>A</b>/<b>D</b> giran, <b>F</b> hace un tailwhip y <b>S</b> un backflip.',
+  '🛹 En el aire: <b>A</b>/<b>D</b> giran, <b>F</b> hace el truco de tu personaje y <b>S</b> un backflip.',
   '🛹 El <b>skatepark</b> está al final de la calle Río Júcar, junto a la rotonda.',
   '🚀 Detrás del skatepark, en el campo, te espera el <b>Mega Salto</b> sobre la charca.',
   '⛲ Sube hasta la <b>Plaza de la Villa</b>: allí están la fuente, la iglesia y el ayuntamiento.',
   '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> en la canasta, las corredoras del parque y <b>Adrián</b>, el batería de la calle Libertad.',
-  '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar el patinete.',
+  '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar tu vehículo.',
+  '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monociclo, bici o Tesla.',
 ];
 const params = new URLSearchParams(location.search);
 
@@ -102,7 +104,7 @@ class Game {
   }
 
   loadSave() {
-    const def = { studs: 0, bricks: [], stars: {}, best: {}, color: 0, muted: false, aliens: 0, invasions: 0 };
+    const def = { studs: 0, bricks: [], stars: {}, best: {}, colors: {}, character: 'adrian', muted: false, aliens: 0, invasions: 0 };
     try {
       return { ...def, ...JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') };
     } catch {
@@ -141,8 +143,6 @@ class Game {
     scene.add(this.player.root);
     const sp = this.world.places.spawn;
     this.player.place(sp.x, sp.z, sp.heading);
-    this.player.colorIdx = (this.save.color || 0) - 1;
-    this.player.nextColor();
     this.camera3 = new ChaseCamera(this);
     this.studs = new Studs(this, this.world.studs, this.world.bricks);
     this.props = new Props(this, this.world.props);
@@ -162,6 +162,7 @@ class Game {
     this.resize();
     window.addEventListener('resize', () => this.resize());
     this.bindUi();
+    this.setCharacter(this.save.character, true);
     this.refreshHud(true);
     if (params.has('night')) {
       this.env.night = this.env.target = 1;
@@ -272,6 +273,20 @@ class Game {
       this.setPaused(false);
     });
     $('p-night').addEventListener('click', () => this.env.toggle());
+    // Selector de personaje: tarjetas en el menú y botón que va rotando en la pausa
+    const box = $('chars');
+    for (const ch of CHARACTERS) {
+      const b = document.createElement('button');
+      b.className = 'char-btn';
+      b.dataset.id = ch.id;
+      b.innerHTML = `<i>${ch.icon}</i><b>${ch.name}</b><small>${ch.vehicle}</small>`;
+      b.addEventListener('click', () => this.setCharacter(ch.id));
+      box.appendChild(b);
+    }
+    $('p-char').addEventListener('click', () => {
+      const i = CHARACTERS.indexOf(this.player.char);
+      this.setCharacter(CHARACTERS[(i + 1) % CHARACTERS.length].id);
+    });
     $('p-quality').addEventListener('click', () => {
       this.quality = (this.quality + 2) % 3;
       this.autoQuality = false;
@@ -303,6 +318,25 @@ class Game {
       if (document.hidden && this.state === 'play') this.setPaused(true);
     });
     $('p-sound').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
+  }
+
+  // Elige quién sale a la calle: cambia piloto y vehículo, y su doble desaparece del pueblo
+  setCharacter(id, silent = false) {
+    const ch = characterById(id);
+    this.player.setCharacter(ch.id, this.save.colors[ch.id]);
+    this.folks.setPlayer(ch.id);
+    this.ball.setKeeper(ch.id !== 'teo');
+    this.missions.defs.find((d) => d.id === 'soccer').desc = `Márcale a ${this.ball.keeperName} todos los goles que puedas en 60 segundos.`;
+    this.missions.near = null;
+    for (const b of document.querySelectorAll('.char-btn')) b.classList.toggle('sel', b.dataset.id === ch.id);
+    document.getElementById('char-blurb').textContent = ch.blurb;
+    document.getElementById('p-char').textContent = `Personaje: ${ch.name} · ${ch.vehicle}`;
+    if (silent) return;
+    this.save.character = ch.id;
+    this.saveGame();
+    this.sfx.init();
+    this.sfx.ui();
+    if (this.state === 'play') this.hud.toast(`${ch.icon} Ahora llevas a <b>${ch.name}</b> con su <b>${ch.vehicle.toLowerCase()}</b>. ${ch.blurb}`);
   }
 
   start() {
@@ -417,7 +451,8 @@ class Game {
       pts += 900 * n + 700 * (n - 1);
     }
     if (r.whips) {
-      parts.push(r.whips > 1 ? `Tailwhip ×${r.whips}` : 'Tailwhip');
+      const name = this.player.char.trick;
+      parts.push(r.whips > 1 ? `${name} ×${r.whips}` : name);
       pts += 400 * r.whips;
     }
     if (r.grind > 0.25) {
@@ -467,6 +502,42 @@ class Game {
     return zoneAt(x, z);
   }
 
+  // Menú: la cámara enseña al personaje elegido, a la derecha del panel, desde el lado más despejado
+  menuCamera() {
+    const c = this.camera3.cam;
+    const p = this.player;
+    const pp = p.pos;
+    const want = 15 * p.char.cam;
+    const clear = (a) => {
+      for (let r = 3; r <= want; r += 1) if (this.terrain.height(pp.x + Math.sin(a) * r, pp.z + Math.cos(a) * r) > 2.5) return r - 1.5;
+      return want;
+    };
+    const key = `${pp.x.toFixed(0)},${pp.z.toFixed(0)},${p.heading.toFixed(1)}`;
+    if (key !== this.menuKey) {
+      this.menuKey = key;
+      let best = -Infinity;
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2;
+        // Mejor de tres cuartos por delante, y con sitio para balancearse a los lados
+        const d = Math.abs(((a - p.heading - 0.7 + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+        const sc = Math.min(clear(a), clear(a - 0.3), clear(a + 0.3)) - d * 2.5;
+        if (sc > best) {
+          best = sc;
+          this.menuAng = a;
+        }
+      }
+    }
+    const a = this.menuAng + Math.sin(this.time * 0.35) * 0.3;
+    const R = Math.max(7, clear(a));
+    const sx = Math.sin(a);
+    const sz = Math.cos(a);
+    const off = c.aspect > 1.25 ? R * 0.34 : 0;
+    c.position.set(pp.x + sx * R, pp.y + 4.6 + (want - R) * 0.5, pp.z + sz * R);
+    c.lookAt(pp.x - sz * off, pp.y + 2.6, pp.z + sx * off);
+    c.fov = 50;
+    c.updateProjectionMatrix();
+  }
+
   // ---------- Bucle principal ----------
   loop(t) {
     const dt = Math.min(0.05, Math.max(0.001, (t - this.last) / 1000));
@@ -477,16 +548,8 @@ class Game {
       if (this.input.hit('pause')) this.setPaused(!this.paused);
       if (!this.paused) this.update(dt, inp);
     } else {
-      // Menú: la cámara orbita la plaza
       this.time += dt;
-      // Menú: la cámara sobrevuela la casa de salida
-      const a = this.time * 0.1 + 2.4;
-      const c = this.camera3.cam;
-      const h = this.world.places.spawn;
-      c.position.set(h.x + Math.sin(a) * 74, 40 + Math.sin(this.time * 0.2) * 4, h.z + Math.cos(a) * 74);
-      c.lookAt(h.x, 5, h.z);
-      c.fov = 50;
-      c.updateProjectionMatrix();
+      this.menuCamera();
       this.player.updateVisual(dt, this.input.neutral);
       this.traffic.update(dt, this.player, this.time);
       this.folks.update(dt, this.player, this.time, false);
@@ -494,7 +557,7 @@ class Game {
       this.missions.update(dt, this.time);
     }
     if (this.statue) this.statue.rotation.y += dt * 0.35;
-    this.env.update(dt, this.state === 'play' ? this.player.pos : this.camera3.look.set(this.world.places.spawn.x, 0, this.world.places.spawn.z), this.camera3.cam);
+    this.env.update(dt, this.player.pos, this.camera3.cam);
     if (this.quality > 0) this.composer.render(dt);
     else this.renderer.render(this.scene, this.camera3.cam);
     this.input.endFrame();
@@ -524,7 +587,7 @@ class Game {
     if (input.hit('camera')) this.camera3.mode = 1 - this.camera3.mode;
     if (input.hit('color')) {
       p.nextColor();
-      this.save.color = p.colorIdx;
+      this.save.colors[p.char.id] = p.colorIdx;
       this.dirty = true;
     }
     if (input.hit('reset') && p.crashT <= 0 && !p.held) {
@@ -557,7 +620,7 @@ class Game {
       const fx = Math.sin(p.heading);
       const fz = Math.cos(p.heading);
       if (p.boosting && p.grounded) {
-        this.bits.spawn(p.pos.x - fx * 2.8, p.pos.y + 0.5, p.pos.z - fz * 2.8, -fx * 6 + (Math.random() - 0.5) * 4, 1 + Math.random() * 3, -fz * 6 + (Math.random() - 0.5) * 4, Math.random() < 0.5 ? 0xffd23a : 0xff7a1a, 0.4, 0.4, p.pos.y);
+        this.bits.spawn(p.pos.x - fx * p.veh.tail, p.pos.y + 0.5, p.pos.z - fz * p.veh.tail, -fx * 6 + (Math.random() - 0.5) * 4, 1 + Math.random() * 3, -fz * 6 + (Math.random() - 0.5) * 4, Math.random() < 0.5 ? 0xffd23a : 0xff7a1a, 0.4, 0.4, p.pos.y);
       }
       if (p.grounded && p.speed > 5) {
         for (const s of this.world.splash) {

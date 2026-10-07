@@ -161,19 +161,32 @@ export class Ball {
     this.vel = new THREE.Vector3();
     this.floor = BASE + 0.1 + this.r;
     this.wait = 0;
-    // Teo, el portero: rubio y con gafas
-    this.keeper = createMinifig({ torso: C.lime, arms: C.lime, legs: C.black, hair: 'hair', hairColor: 0xf0d27a, face: 'glasses', print: 'star', printColor: '#1b1d21' });
-    this.keeper.group.scale.setScalar(0.9);
+    // Teo, el portero: rubio y con gafas. Si Teo sale a pasear, para un suplente.
+    const teo = createMinifig({ torso: C.lime, arms: C.lime, legs: C.black, hair: 'hair', hairColor: 0xf0d27a, face: 'glasses', print: 'star', printColor: '#1b1d21' });
+    teo.group.scale.setScalar(0.9);
     const tag = nameTag('Teo', '#a5ca18');
     tag.position.y = 6.9;
-    this.keeper.group.add(tag);
-    this.keeper.group.rotation.y = -Math.PI / 2;
-    this.keeper.armL.rotation.z = 1.3;
-    this.keeper.armR.rotation.z = -1.3;
-    game.scene.add(this.keeper.group);
+    teo.group.add(tag);
+    const sub = createMinifig({ torso: C.orange, arms: C.orange, legs: C.black, hair: 'cap', hairColor: C.black, face: 'cool', print: 'star', printColor: '#1b1d21' });
+    this.keepers = { teo, sub };
+    for (const k of [teo, sub]) {
+      k.group.rotation.y = -Math.PI / 2;
+      k.armL.rotation.z = 1.3;
+      k.armR.rotation.z = -1.3;
+      game.scene.add(k.group);
+    }
+    this.setKeeper(true);
     this.kz = place.cz;
     this.kx = place.goalX - 1.6;
     this.reset();
+  }
+
+  setKeeper(teo) {
+    this.keeperName = teo ? 'Teo' : 'el suplente';
+    this.keeper = teo ? this.keepers.teo : this.keepers.sub;
+    this.keepers.teo.group.visible = teo;
+    this.keepers.sub.group.visible = !teo;
+    this.keeper.group.position.copy((teo ? this.keepers.sub : this.keepers.teo).group.position);
   }
 
   reset() {

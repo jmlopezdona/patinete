@@ -130,6 +130,7 @@ export class Minimap {
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     for (const m of markers) {
+      if (m.hidden) continue;
       put(m.x, m.z, (x, y, out) => {
         g.globalAlpha = out ? 0.75 : 1;
         g.fillStyle = '#ffffff';

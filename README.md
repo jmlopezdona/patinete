@@ -35,19 +35,35 @@ tableta o un móvil (hay controles táctiles) con la dirección «Network» que 
 | Conducir | `W` `A` `S` `D` o flechas | Stick izquierdo, gatillos |
 | Saltar | `Espacio` | A |
 | Turbo | `Mayús` | B |
-| Tailwhip (en el aire) | `F` | X |
+| Truco del personaje (en el aire) | `F` | X |
 | Giros en el aire | `A` / `D` | Stick |
 | Backflip / frontflip | pulsar `S` / `W` en el aire | — |
 | Empezar minijuego | `E` | Y |
 | Día / noche (de noche: ¡marcianos!) | `N` | — |
 | Soltarse del rayo abductor | machacar `Espacio` | A |
 | Cámara cerca / lejos | `C` | Select |
-| Color del patinete | `V` | — |
+| Color del vehículo | `V` | — |
 | Recolocarse | `R` | — |
 | Sonido | `M` | — |
 | Pausa | `Esc` | Start |
 
 Para hacer *grind*, salta y cae sobre una barandilla del skatepark.
+
+## Personajes
+
+En el menú principal (o con «Personaje» en la pausa) se elige quién sale a la calle. Cada uno
+lleva su vehículo y se conduce distinto:
+
+| | Personaje | Vehículo | Cómo va | Su truco (`F` en el aire) |
+| --- | --- | --- | --- | --- |
+| 🥁 | **Adrián** | Patinete | El de siempre: equilibrado | Tailwhip |
+| 🤹 | **Yago** | Monociclo | Gira sobre una moneda y salta más que nadie, pero corre menos | Pirueta |
+| 🧤 | **Teo** | Bicicleta | Más velocidad punta y buenos saltos | Tailwhip |
+| 🏀 | **Jose** | Tesla Model X | Acelera y corre como nadie, pero gira ancho y salta poco | Alas de halcón: abre las puertas en pleno vuelo |
+
+Mientras llevas a un personaje, su doble desaparece del pueblo: Yago deja libre la pista de circo,
+la batería de Adrián se queda sola y callada, Jose no está en la canasta y a Teo lo sustituye otro
+portero. El color de cada vehículo se cambia con `V` y se guarda por separado.
 
 ## Qué hay en Cobeña
 
@@ -115,13 +131,15 @@ se guarda en el navegador.
 - [Three.js](https://threejs.org) + [Vite](https://vite.dev). Sin modelos ni texturas externas:
   todo se genera por código al arrancar.
 - `src/lego/` — paleta, shader de ladrillos (studs y juntas dibujados por pieza), instanciado
-  masivo, constructor de piezas, patinete, minifiguras y modelos.
+  masivo, constructor de piezas, patinete, minifiguras y modelos. `vehicles.js` añade el monociclo,
+  la bici y el Tesla.
 - `src/world/` — `cobena-data.js` (callejero ya procesado), `cobena.js` (suelo por capas, calles,
   casas, vallas y mobiliario), `landmarks.js` (skatepark y demás lugares especiales) y `terrain.js`
   (terreno analítico: rampas, quarter pipes, bowls… que usa la física).
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
   entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo y rayo) y
   `folks.js`, los vecinos con nombre.
+  `characters.js` define los personajes elegibles y sus estadísticas.
 - `src/core/` — entrada (teclado, mando, táctil), audio sintetizado con WebAudio y utilidades.
 - `tools/` — utilidades de desarrollo que abren el juego en Chrome sin cabeza para simular la
   física, recorrer los minijuegos y sacar capturas (necesitan `npm run dev` en marcha y Google
