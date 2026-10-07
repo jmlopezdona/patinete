@@ -58,8 +58,8 @@ export class Folks {
     if (D) D.fig.group.visible = D.tag.visible = id !== 'adrian';
     // Sin Jose, su padre se queda tirando solo
     const J = this.jose;
-    if (J && J.kid.away !== (id === 'josemanuel')) {
-      J.kid.away = id === 'josemanuel';
+    if (J && J.kid.away !== (id === 'jose')) {
+      J.kid.away = id === 'jose';
       J.kid.fig.group.visible = J.kid.tag.visible = false;
       this.resetJose();
     }
@@ -559,7 +559,7 @@ export class Folks {
       this.game.scene.add(fig.group, tag);
       return { name, fig, tag, k: scale, x: 0, z: 0, y: 0, heading: 0, walk: 0, drib: 0, thud: false, moving: false, to: null, speed: 0, look: null, bounce: false, jump: null, follow: 0, push: 0, cheer: 0, away: false };
     };
-    const ch = characterById('josemanuel');
+    const ch = characterById('jose');
     const dad = baller('Padre de Jose', { torso: C.white, arms: C.skin, legs: C.blue, hair: 'none', face: 'senor', print: '#23', printColor: '#c91a09' }, 1, '#e8731a');
     const kid = baller(ch.name, ch.look, ch.scale, '#' + COLORS[ch.color].toString(16).padStart(6, '0'));
     const ball = new THREE.Mesh(new THREE.SphereGeometry(0.56, 16, 12), new THREE.MeshStandardMaterial({ color: 0xe8731a, roughness: 0.6 }));

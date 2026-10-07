@@ -39,7 +39,7 @@ const inB = (x, z, m = 0) => x > B.x0 + m && x < B.x1 - m && z > B.z0 + m && z <
 // Casas de los personajes: edificio de OSM, calle a la que salen y número del portal. La primera
 // es el origen del mapa.
 const HOMES = [
-  { id: 'josemanuel', way: 663317227, street: 'Calle Río Júcar', n: 44 },
+  { id: 'jose', way: 663317227, street: 'Calle Río Júcar', n: 44 },
   { id: 'yago', way: 787857131, street: 'Calle Río Guadiana', n: 17 },
   { id: 'teo', way: 788577518, street: 'Avenida Río Guadalquivir', n: 39 },
   { id: 'adrian', way: 671793426, street: 'Calle Libertad', n: 17 },
