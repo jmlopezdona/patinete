@@ -5,6 +5,7 @@ import { createMinifig, nameTag } from '../lego/minifig.js';
 import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
 import { BASE } from '../world/city.js';
+import { characterById } from './characters.js';
 
 const _q = new THREE.Quaternion();
 const _a = new THREE.Vector3();
@@ -161,10 +162,10 @@ export class Ball {
     this.vel = new THREE.Vector3();
     this.floor = BASE + 0.1 + this.r;
     this.wait = 0;
-    // Teo, el portero: rubio y con gafas. Si Teo sale a pasear, para un suplente.
-    const teo = createMinifig({ torso: C.lime, arms: C.lime, legs: C.black, hair: 'hair', hairColor: 0xf0d27a, face: 'glasses', print: 'star', printColor: '#1b1d21' });
+    // Teo, el portero: rizos, gafas redondas y la albiceleste. Si Teo sale a pasear, para un suplente.
+    const teo = createMinifig(characterById('teo').look);
     teo.group.scale.setScalar(0.9);
-    const tag = nameTag('Teo', '#a5ca18');
+    const tag = nameTag('Teo', '#74acdf');
     tag.position.y = 6.9;
     teo.group.add(tag);
     const sub = createMinifig({ torso: C.orange, arms: C.orange, legs: C.black, hair: 'cap', hairColor: C.black, face: 'cool', print: 'star', printColor: '#1b1d21' });

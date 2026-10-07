@@ -4,6 +4,7 @@ import { createUnicycle } from '../lego/vehicles.js';
 import { Builder } from '../lego/builder.js';
 import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
+import { characterById } from './characters.js';
 import { DATA } from '../world/cobena.js';
 import { angDiff, damp, clamp } from '../core/rng.js';
 
@@ -221,8 +222,8 @@ export class Folks {
       root.add(m);
       return m;
     });
-    // El artista: pequeño, melenudo y con cara de concierto
-    const fig = createMinifig({ torso: 0x111835, arms: 0x111835, legs: C.dgray, hair: 'long', hairColor: C.black, face: 'rock', shirt: { front: 'psicopato' } });
+    // El artista: pequeño, con su flequillo a tazón y cara de concierto
+    const fig = createMinifig(characterById('adrian').look);
     const k = 0.68;
     fig.group.scale.setScalar(k);
     fig.group.position.set(0, 2.0 - 1.75 * k, -1.25);

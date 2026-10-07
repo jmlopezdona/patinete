@@ -9,7 +9,7 @@ export const COLORS = [C.azure, C.red, C.lime, C.orange, C.magenta, C.yellow, C.
 export const CHARACTERS = [
   {
     id: 'josemanuel', name: 'Jose Manuel', icon: '🛴', vehicle: 'Patinete', blurb: 'El de siempre: equilibrado y con el mejor tailwhip.',
-    look: { legs: C.sandBlue, torso: 0x1c1b30, arms: C.yellow, hair: 'helmet', hairColor: C.red, face: 'grin', shirt: { front: 'adva-delante', back: 'adva-atras', long: true } },
+    look: { legs: C.sandBlue, torso: 0x1c1b30, arms: C.yellow, hair: 'messy', hairColor: 0x2f1e17, face: 'smile', glasses: 'square', brows: 0x2a1a12, shirt: { front: 'adva-delante', back: 'adva-atras', long: true } },
     scale: 1, color: 0, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
     build: (color) => scooterVehicle(color),
     stats: { acc: 22, vmax: 31, vboost: 47, jump: 15, turn: 3.1, spin: 7.6 },
@@ -17,7 +17,7 @@ export const CHARACTERS = [
   },
   {
     id: 'adrian', name: 'Adrián', icon: '🥁', vehicle: 'Monopatín', blurb: 'Surfea el asfalto: gira fino, buen ollie y kickflips de escándalo.',
-    look: { torso: 0x111835, arms: 0x111835, legs: C.dgray, hair: 'long', hairColor: C.black, face: 'rock', shirt: { front: 'psicopato' } },
+    look: { torso: 0x111835, arms: 0x111835, legs: C.dgray, hair: 'bowl', hairColor: 0x2b1c14, hairTips: 0xbf9f68, face: 'rock', shirt: { front: 'psicopato' } },
     scale: 0.85, color: 1, trick: 'Kickflip', alienTrick: '¡Kickflip marciano!',
     build: (color) => createSkateboard(color),
     stats: { acc: 21, vmax: 30, vboost: 46, jump: 16.5, turn: 3.4, spin: 8.6 },
@@ -33,7 +33,7 @@ export const CHARACTERS = [
   },
   {
     id: 'teo', name: 'Teo', icon: '🧤', vehicle: 'Bicicleta', blurb: 'Pedalea que se las pela: más velocidad punta y buenos saltos.',
-    look: { torso: C.lime, arms: C.lime, legs: C.black, hair: 'hair', hairColor: 0xf0d27a, face: 'glasses', print: 'star', printColor: '#1b1d21' },
+    look: { torso: C.celeste, arms: C.celeste, legs: C.black, hair: 'curly', hairColor: 0x3d2616, hairTips: 0x57381f, face: 'smirk', glasses: 'round', brows: 0x3d2616, shirt: { front: 'argentina', back: 'argentina-atras' } },
     scale: 0.9, color: 2, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
     build: (color) => createBike(color),
     stats: { acc: 20, vmax: 35, vboost: 51, jump: 15.5, turn: 2.9, spin: 7.2 },
