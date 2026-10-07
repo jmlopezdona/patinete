@@ -6,7 +6,7 @@ import { createScooter, WHEEL_R, STEER_Z, DECK_Y } from './scooter.js';
 
 // Vehículos del jugador. Todos miran hacia +Z con el origen en el suelo y comparten interfaz:
 //   group    malla completa
-//   kind     'scooter' | 'skate' | 'unicycle' | 'bike' | 'car'
+//   kind     'scooter' | 'skate' | 'skates' | 'unicycle' | 'bike' | 'car'
 //   wheelR   radio de rueda (para que giren a la velocidad justa)
 //   steerZ   eje vertical sobre el que pivota el vehículo en los trucos
 //   seatY/Z  dónde va sentado (o de pie) el piloto
@@ -151,6 +151,100 @@ export function createBike(color = C.lime) {
   cranks.add(cb.mesh(plastic));
   group.add(steer, rear, cranks);
   return { group, steer, front, rear, cranks, kind: 'bike', wheelR: WR, steerZ: SZ, seatY: SEAT[0] + 0.62, seatZ: SEAT[1] - 0.1, barY: 3.78, cargo: [0, 2.35, -2.3], tail: 3.0, lean: 1.15 };
+}
+
+// Patines en línea: no son un vehículo aparte sino dos botas que se calzan en las piernas de la
+// minifigura (wear), así que siguen cada zancada. El grupo va vacío y seatY es lo que levantan del suelo.
+export function createSkates(color = C.magenta) {
+  const R = 0.24;
+  const H = 2 * R; // de la suela al suelo
+  const b = new Builder();
+  b.box(0.98, 0.66, 1.46, 0, -1.44, 0.17, C.white, { r: 0.12 });
+  b.box(0.98, 0.62, 1.08, 0, -0.9, 0, C.white, { r: 0.1 });
+  // Cierre de la caña, hebilla del empeine y guía con sus cuatro ruedas
+  b.box(1.02, 0.2, 1.12, 0, -0.72, 0, color, { r: 0.06 });
+  b.box(1.02, 0.16, 0.5, 0, -1.26, 0.52, color, { r: 0.05 });
+  b.box(0.26, 0.22, 1.86, 0, -1.84, 0.15, C.dgray, { r: 0.05 });
+  for (let i = 0; i < 4; i++) {
+    b.cyl(R, 0.2, 0, -1.75 - H + R, -0.56 + i * 0.47, color, { axis: 'x', seg: 14 });
+    b.cyl(R * 0.42, 0.24, 0, -1.75 - H + R, -0.56 + i * 0.47, C.lgray, { axis: 'x', seg: 8 });
+  }
+  const geo = b.geometry();
+  const boots = [0, 1].map(() => {
+    const m = new THREE.Mesh(geo, plastic);
+    m.castShadow = true;
+    return m;
+  });
+  const wear = (fig) => {
+    fig.legL.add(boots[0]);
+    fig.legR.add(boots[1]);
+  };
+  return { group: new THREE.Group(), boots, wear, kind: 'skates', wheelR: R, steerZ: 0, seatY: H, seatZ: 0, cargo: [0, 2.2, -1.6], tail: 1, lean: 1.3 };
+}
+
+// Monovolumen familiar: lunas transparentes para que se vea quién va dentro y puerta corredera
+// detrás, a la derecha. seats dice dónde van sentados el conductor y la niña (altura de la cadera).
+export function createMinivan(color = C.medAzure, plate = 'PAPÁ') {
+  const group = new THREE.Group();
+  const W = 4.8;
+  const L = 9.6;
+  const BELT = 2.8;
+  const ROOF = 5.3;
+  const b = new Builder();
+  b.box(W - 0.2, 0.5, L - 0.6, 0, 0.9, 0, C.black);
+  b.box(W, BELT - 1.1, L, 0, (BELT + 1.1) / 2, 0, color, { r: 0.3 });
+  b.box(W - 0.3, 0.3, 6.8, 0, ROOF + 0.15, -1.25, color, { r: 0.1 });
+  for (const sx of [-1, 1]) {
+    const x = sx * (W / 2 - 0.16);
+    b.add(profileGeo([[2.85, BELT], [3.2, BELT], [2.25, ROOF], [1.9, ROOF]], 0.3), color, x, 0, 0);
+    for (const z of [0.1, -2.5, -4.5]) b.box(0.3, ROOF - BELT, 0.34, x, (ROOF + BELT) / 2, z, color);
+    b.box(0.5, 0.12, 6.2, sx * 1.5, ROOF + 0.4, -1.3, C.lgray, { r: 0.05 }); // barras del techo
+    b.box(1.0, 0.45, 0.16, sx * 1.6, 2.25, L / 2 + 0.02, 0xfff3b0, { r: 0.06 });
+    b.box(0.7, 0.9, 0.16, sx * 1.9, 2.3, -L / 2 - 0.02, C.red, { r: 0.06 });
+    b.box(0.2, 0.34, 0.5, sx * (W / 2 + 0.2), BELT + 0.2, 2.75, C.black, { r: 0.06 }); // retrovisores
+    for (const wz of [-2.9, 2.9]) b.cyl(1.14, 0.3, sx * (W / 2 - 0.1), 1.0, wz, C.black, { axis: 'x', seg: 18 });
+  }
+  for (const sz of [-1, 1]) b.box(W + 0.2, 0.5, 0.5, 0, 1.25, sz * (L / 2 + 0.03), C.lgray, { r: 0.1 });
+  b.box(2.0, 0.5, 0.12, 0, 2.2, L / 2 + 0.03, C.black, { r: 0.05 });
+  // Hueco de la puerta corredera (solo se ve con ella abierta), asientos, salpicadero y volante
+  b.box(0.08, BELT - 1.5, 2.2, -W / 2 - 0.01, (BELT + 1.3) / 2, -1.3, C.black);
+  for (const [x, z] of [[1.15, 0.2], [-1.15, 0.2], [1.15, -2.3], [-1.15, -2.3]]) b.box(1.7, 1.9, 0.4, x, BELT + 0.5, z, C.cream, { r: 0.12, rx: -0.1 });
+  b.box(W - 0.5, 0.5, 0.9, 0, BELT + 0.1, 2.6, C.dgray, { r: 0.1 });
+  b.cyl(0.07, 0.8, 1.15, BELT + 0.4, 2.2, C.black, { rx: 1.0, seg: 8 });
+  b.add(new THREE.TorusGeometry(0.42, 0.08, 6, 18), C.black, 1.15, BELT + 0.6, 1.88, -0.4, 0, 0);
+  group.add(b.mesh(plastic));
+  group.add(new THREE.Mesh(profileGeo([[3.05, BELT], [2.08, ROOF], [-4.6, ROOF], [-4.6, BELT]], W - 0.34), glass));
+
+  for (const back of [false, true]) {
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.48), new THREE.MeshBasicMaterial({ map: textTexture(plate, { bg: '#ffffff', fg: '#12202e', w: 256, h: 82, border: '#12202e' }) }));
+    pl.position.set(0, 1.3, (back ? -1 : 1) * (L / 2 + 0.3));
+    if (back) pl.rotation.y = Math.PI;
+    group.add(pl);
+  }
+
+  const door = new THREE.Group();
+  const db = new Builder();
+  db.box(0.14, BELT - 1.4, 2.3, -W / 2 - 0.08, (BELT + 1.3) / 2, -1.3, color, { r: 0.05 });
+  db.box(0.1, 0.14, 0.5, -W / 2 - 0.18, BELT - 0.35, -0.6, C.lgray, { r: 0.04 });
+  door.add(db.mesh(plastic));
+  group.add(door);
+
+  const wb = new Builder();
+  wb.cyl(0.95, 0.7, 0, 0, 0, C.black, { axis: 'x', seg: 18 });
+  wb.cyl(0.52, 0.74, 0, 0, 0, C.lgray, { axis: 'x', seg: 12 });
+  for (let i = 0; i < 3; i++) wb.box(0.76, 0.14, 0.9, 0, 0, 0, C.dgray, { rx: (i * Math.PI) / 3 });
+  const wgeo = wb.geometry();
+  const wheels = [];
+  for (const sx of [-1, 1]) {
+    for (const wz of [-2.9, 2.9]) {
+      const w = new THREE.Mesh(wgeo, plastic);
+      w.castShadow = true;
+      w.position.set(sx * (W / 2 - 0.34), 0.95, wz);
+      group.add(w);
+      wheels.push(w);
+    }
+  }
+  return { group, wheels, door, wheelR: 0.95, len: L, width: W, seats: { driver: [1.15, 1.6, 0.95], kid: [-1.15, 1.6, -1.55] }, doorZ: -1.3 };
 }
 
 // Tesla Model X de juguete: morro bajo, techo de cristal y puertas de ala de halcón

@@ -81,19 +81,28 @@ sale de su casa, lleva su vehículo y se conduce distinto:
 | 🥁 | **Adrián** | Calle Libertad, 17 | Monopatín | Gira fino y tiene buen ollie. Se impulsa con el pie y luego va de lado | Kickflip |
 | 🤹 | **Yago** | Calle Río Guadiana, 17 | Monociclo | Gira sobre una moneda y salta más que nadie, pero corre menos | Pirueta |
 | 🧤 | **Teo** | Avenida Río Guadalquivir, 39 | Bicicleta | Más velocidad punta y buenos saltos | Tailwhip |
+| 🤳 | **Emma** | No vive en Cobeña: la puerta del parque El Palmeral | Patines | Arranca y gira como nadie; con turbo se agacha con las manos a la espalda | Espagat |
 
 Al elegirlo en el menú, el personaje aparece en la puerta de su casa; en la pausa se cambia sobre
 la marcha, sin moverse del sitio. «Volver a casa» y el castigo de la abuela llevan a la casa del
 que se lleve en ese momento.
 
+A Emma, que viene de fuera, la trae su padre: al elegirla en el menú el monovolumen llega por la
+calle Río Júcar, da la vuelta al fondo y para junto a la puerta del parque El Palmeral; ella se
+baja con los patines puestos y, al empezar la partida, el padre se despide con la mano y se va.
+Su «casa» es esa puerta.
+
 Mientras llevas a un personaje, su doble desaparece del pueblo: Yago deja libre la pista de circo,
-la batería de Adrián se queda sola y callada y a Teo lo sustituye otro portero. El color de cada
+la batería de Adrián se queda sola y callada, a Teo lo sustituye otro portero y Emma deja de
+hacerse selfies en el parque. El color de cada
 vehículo se cambia con `V` y se guarda por separado.
 
 ## Qué hay en Cobeña
 
 - **Las casas de los personajes**: Río Júcar, 44; Río Guadiana, 17; Río Guadalquivir, 39 y Libertad, 17.
   Llevan cartel con el número y banderín, y la del que se lleva sale marcada en el minimapa.
+- **Parque El Palmeral**, pegado a Río Júcar, 44: su puerta, con arco y palmeras, está donde muere
+  la calle.
 - **Skatepark nuevo**, en su parcela junto a la rotonda: half-pipe, bowl circular, funbox con
   barandilla, mesa de salto, rollers y raíles.
 - **Plaza de la Villa** con el ayuntamiento, la iglesia de San Cipriano y su campanario, y la fuente
@@ -159,6 +168,7 @@ peatones también cuenta) y aparece la primera estrella bajo el minimapa:
 | 🥁 | **Adrián** | Calle Libertad, 17 | Doble bombo y flequillo a tazón. Cuanto más te acercas, más suena |
 | 🏀 | **Jose** | Pista de baloncesto más cercana a Río Júcar, 44 | Tiros en suspensión y entradas a canasta (no las mete todas) |
 | 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de Río Júcar, 44 | Footing en grupo dando la vuelta a los dos parques |
+| 🤳 | **Emma** | Parque El Palmeral, pasada la puerta | Selfies sin parar, con sus patines: posa, dispara, mira la foto y cambia de ángulo, rodeada de corazones. Si te acercas, se gira para sacarte de fondo |
 
 Todos salen en el minimapa con su icono.
 
@@ -223,7 +233,8 @@ se guarda en el navegador.
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
   `characters.js` define los personajes elegibles y sus estadísticas (sus casas y puntos de salida
-  van en el callejero, en `places.homes`). `photo.js` es el modo foto:
+  van en el callejero, en `places.homes`; la puerta del parque de Emma la pone `landmarks.js`), y
+  `dropoff.js` es el coche que la trae. `photo.js` es el modo foto:
   cámara libre, filtros (van en la pasada final de `main.js`) y la captura a mayor resolución.
 - `src/core/` — entrada (teclado, mando, táctil), audio sintetizado con WebAudio y utilidades.
   `install.js` registra el service worker y pone el botón de instalar.

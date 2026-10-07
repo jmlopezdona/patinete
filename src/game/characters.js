@@ -1,10 +1,11 @@
 import { C } from '../lego/colors.js';
-import { scooterVehicle, createSkateboard, createUnicycle, createBike } from '../lego/vehicles.js';
+import { scooterVehicle, createSkateboard, createUnicycle, createBike, createSkates } from '../lego/vehicles.js';
 
 export const COLORS = [C.azure, C.red, C.lime, C.orange, C.magenta, C.yellow, C.purple, C.white];
 
-// Personajes entre los que se puede elegir. Cada uno sale de su casa (cobena-data: places.homes)
-// y lleva su vehículo y su forma de moverse:
+// Personajes entre los que se puede elegir. Cada uno sale de su casa (cobena-data: places.homes;
+// Emma, que no es de Cobeña, de la puerta del parque donde la deja su padre) y lleva su vehículo y
+// su forma de moverse:
 // acc = aceleración, vmax / vboost = velocidad punta sin y con turbo, jump = impulso del salto,
 // turn = agilidad al girar, spin = velocidad de giro en el aire.
 export const CHARACTERS = [
@@ -39,6 +40,14 @@ export const CHARACTERS = [
     build: (color) => createBike(color),
     stats: { acc: 20, vmax: 35, vboost: 51, jump: 15.5, turn: 2.9, spin: 7.2 },
     cam: 1.05,
+  },
+  {
+    id: 'emma', name: 'Emma', icon: '🤳', vehicle: 'Patines', plural: true, blurb: 'Viene de fuera: su padre la deja en el parque. Sobre patines arranca y gira como nadie.',
+    look: { torso: 0xf6f4ee, arms: 0xf6f4ee, legs: 0x26324d, hair: 'ponytail', hairColor: 0x1f1410, face: 'smile', glasses: 'square', brows: 0x1f1410, earrings: C.gold, shirt: { front: 'espana', back: 'espana-atras' } },
+    scale: 0.9, color: 4, trick: 'Espagat', alienTrick: '¡Espagat marciano!',
+    build: (color) => createSkates(color),
+    stats: { acc: 25, vmax: 29, vboost: 45, jump: 16, turn: 3.8, spin: 9 },
+    cam: 1,
   },
 ];
 

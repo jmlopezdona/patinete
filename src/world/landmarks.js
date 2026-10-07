@@ -499,6 +499,82 @@ function drummer(W) {
   W.places.drummer = { x, z, rot, y: 0.5 };
 }
 
+// ---------- La puerta del parque El Palmeral: allí deja su padre a Emma ----------
+
+// La calle Río Júcar muere en el parque. El coche llega por ella, da la vuelta al fondo y para
+// mirando al oeste, pegado a la acera norte, que es a la que se baja Emma (su punto de salida).
+function parkGate(W) {
+  const park = DATA.greens.find(([, name]) => DATA.names[name] === 'Parque El Palmeral');
+  const street = DATA.names.indexOf('Calle Río Júcar');
+  if (!park || street < 0) return;
+  const pts = park[2];
+  const n = pts.length / 2;
+  // El cabo de la calle que queda más cerca del parque, hacia dónde apunta y lo larga que es
+  let end = null;
+  let len = 0;
+  for (const [, , , name, , r] of DATA.roads) {
+    if (name !== street) continue;
+    for (let i = 2; i < r.length; i += 2) len += Math.hypot(r[i] - r[i - 2], r[i + 1] - r[i - 1]);
+    for (const [i, j] of [[0, 2], [r.length - 2, r.length - 4]]) {
+      let d = Infinity;
+      for (let k = 0; k < n; k++) d = Math.min(d, Math.hypot(pts[k * 2] - r[i], pts[k * 2 + 1] - r[i + 1]));
+      if (!end || d < end.d) end = { d, x: r[i], z: r[i + 1], h: Math.atan2(r[i] - r[j], r[i + 1] - r[j + 1]) };
+    }
+  }
+  if (!end) return;
+  const f = frame(end.x, end.z, end.h); // X local: a la izquierda de la marcha; Z local: calle adelante
+  // La puerta va donde la calle, prolongada, entra en el parque
+  let t = Infinity;
+  for (let k = 0; k < n; k++) {
+    const a = f.inv(pts[k * 2], pts[k * 2 + 1]);
+    const b = f.inv(pts[((k + 1) % n) * 2], pts[((k + 1) % n) * 2 + 1]);
+    if (a[0] > 0 === b[0] > 0) continue;
+    const z = a[1] + ((b[1] - a[1]) * a[0]) / (a[0] - b[0]);
+    if (z > 0 && z < t) t = z;
+  }
+  if (t > 60) return;
+  // El arco se corre a un lado si un árbol tapa el paso
+  const SPAN = 11;
+  let g = null;
+  for (const side of [0, 3, -3, 6, -6, 9, -9]) {
+    const c = f.sub(side, t);
+    let ok = true;
+    for (let lx = -SPAN / 2 - 0.8; lx <= SPAN / 2 + 0.8 && ok; lx += 0.7) {
+      for (let lz = -3; lz <= 9 && ok; lz += 0.7) ok = free(W, ...c.p(lx, lz));
+    }
+    if (ok) {
+      g = c;
+      break;
+    }
+  }
+  if (!g) return;
+  arch(W, g.x, g.z, g.rot, SPAN, 9, 'EL PALMERAL', '#237841', C.tan);
+  for (const sx of [-1, 1]) {
+    const q = g.p(sx * (SPAN / 2 + 3.6), 2.5);
+    let ok = true;
+    for (let a = 0; a < 6 && ok; a++) ok = free(W, q[0] + Math.cos(a) * 1.6, q[1] + Math.sin(a) * 1.6);
+    if (ok) palm(W, q[0], q[1]);
+  }
+  const LANE = 3.3; // del eje de la calle al centro de cada carril
+  const TURN = 5.2; // la vuelta se da este trecho antes del final de la calle
+  // Tras la vuelta el coche avanza hasta que la acera a la que se baja Emma quede libre de farolas
+  let roll = 1.3;
+  const lampNear = (x, z) => {
+    for (let i = 0; i < DATA.lamps.length; i += 4) if (Math.hypot(DATA.lamps[i] - x, DATA.lamps[i + 1] - z) < 7) return true;
+    return false;
+  };
+  while (roll < 24 && lampNear(...f.p(LANE + 4.3, -TURN - roll + 1.3))) roll += 1;
+  const stop = f.p(LANE, -TURN - roll);
+  const spawn = f.p(LANE + 4.3, -TURN - roll + 1.3);
+  const west = end.h + Math.PI;
+  W.places.homes.emma = {
+    name: 'la puerta del parque El Palmeral', x: g.x, z: g.z,
+    spawn: { x: spawn[0], z: spawn[1], heading: Math.atan2(Math.sin(west), Math.cos(west)) },
+    view: -0.75, // en el menú, la cámara por su derecha: detrás quedan el coche y la puerta del parque
+    drop: { from: f.p(-LANE, -TURN - 40), turn: f.p(0, -TURN), r: LANE, stop, away: f.p(LANE, -Math.min(len - 14, 230)), heading: end.h },
+  };
+}
+
 // ---------- Parques infantiles ----------
 
 function playground(W, gx, gz) {
@@ -555,7 +631,8 @@ export function buildLandmarks(W) {
   const sp = DATA.places.spawn;
   W.places.spawn = { x: sp.x, z: sp.z, heading: sp.heading };
   W.places.home = DATA.places.home;
-  W.places.homes = DATA.places.homes;
+  W.places.homes = { ...DATA.places.homes };
+  parkGate(W);
   W.places.race = DATA.race;
   W.places.bounds = BOUNDS;
 }

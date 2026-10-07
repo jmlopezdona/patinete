@@ -304,7 +304,87 @@ function argentinaShirt(front) {
   return new THREE.CanvasTexture(cv);
 }
 
-const DRAWN_SHIRTS = { argentina: () => argentinaShirt(true), 'argentina-atras': () => argentinaShirt(false) };
+// Camiseta blanca de la selección española: cuello de pico granate con ribete dorado, tres tiras
+// granates por los hombros y, por delante, el escudo con sus dos estrellas
+function espanaShirt(front) {
+  const GRANATE = '#7b1f38';
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 512;
+  const g = cv.getContext('2d');
+  g.scale(2, 2);
+  g.fillStyle = '#f6f4ee';
+  g.fillRect(0, 0, 256, 256);
+  g.lineJoin = 'round';
+  g.lineCap = 'round';
+  // Tiras de los hombros, que bajan hacia las mangas
+  g.strokeStyle = GRANATE;
+  g.lineWidth = 6;
+  for (const sx of [-1, 1]) {
+    for (let i = 0; i < 3; i++) {
+      g.beginPath();
+      g.moveTo(128 + sx * (62 + i * 11), -4);
+      g.lineTo(128 + sx * (118 + i * 11), 44);
+      g.stroke();
+    }
+  }
+  const neck = () => {
+    g.beginPath();
+    if (front) {
+      g.moveTo(88, -6);
+      g.lineTo(128, 40);
+      g.lineTo(168, -6);
+    } else {
+      g.moveTo(88, 3);
+      g.lineTo(168, 3);
+    }
+    g.stroke();
+  };
+  g.lineWidth = 15;
+  neck();
+  g.strokeStyle = '#e2b53a';
+  g.lineWidth = 4;
+  neck();
+  if (front) {
+    // Escudo a la izquierda del pecho (derecha de la imagen) y marca de tres hojas al otro lado
+    g.fillStyle = '#f5b921';
+    g.strokeStyle = GRANATE;
+    g.lineWidth = 3;
+    for (const x of [171, 189]) {
+      starPath(g, x, 76, 8);
+      g.stroke();
+      g.fill();
+    }
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(160, 90);
+    g.lineTo(200, 90);
+    g.lineTo(200, 118);
+    g.quadraticCurveTo(200, 138, 180, 148);
+    g.quadraticCurveTo(160, 138, 160, 118);
+    g.closePath();
+    g.fillStyle = '#c8102e';
+    g.fill();
+    g.save();
+    g.clip();
+    g.fillStyle = '#f5b921';
+    g.fillRect(160, 106, 40, 16);
+    g.restore();
+    g.stroke();
+    g.fillStyle = GRANATE;
+    for (const a of [-0.55, 0, 0.55]) {
+      g.beginPath();
+      g.ellipse(76 + Math.sin(a) * 13, 112 - Math.cos(a) * 13, 7, 15, a, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillRect(58, 122, 36, 5);
+  }
+  return new THREE.CanvasTexture(cv);
+}
+
+const DRAWN_SHIRTS = {
+  argentina: () => argentinaShirt(true), 'argentina-atras': () => argentinaShirt(false),
+  espana: () => espanaShirt(true), 'espana-atras': () => espanaShirt(false),
+};
 
 // Camiseta para pegar en el torso: la foto de una de verdad (public/camisetas), recortada en cuadrado,
 // o una de las pintadas a mano
@@ -491,6 +571,8 @@ export function createMinifig(o = {}) {
   } else {
     hb.stud(0, 1.05, 0, skin);
   }
+  // Pendientes: una bolita a cada lado de la cabeza
+  if (o.earrings != null) for (const sx of [-1, 1]) hb.sphere(0.1, sx * 0.64, 0.36, 0.06, o.earrings, { seg: 8, seg2: 6 });
   head.add(hb.mesh(plastic));
   group.add(head);
 

@@ -45,6 +45,8 @@ const HOMES = [
   { id: 'adrian', way: 671793426, street: 'Calle Libertad', n: 17 },
 ];
 const SKATE_WAY = 672252920;
+// Parques que en OSM no tienen nombre, con el que les dan los vecinos
+const PARK_NAMES = { 672252921: 'Parque El Palmeral' };
 
 // ---------- Geometría ----------
 const r1 = (v) => Math.round(v * 10) / 10;
@@ -689,7 +691,7 @@ for (const w of ways) {
   if (isGreen) {
     if (!pts.some((p) => inB(p[0], p[1]))) continue;
     const wood = t.natural === 'wood' || t.landuse === 'forest' || t.landuse === 'orchard';
-    greens.push({ type: wood ? 1 : t.landuse === 'meadow' ? 2 : 0, name: nameIdx(t.name), pts: simplify(strip(pts), 0.8) });
+    greens.push({ type: wood ? 1 : t.landuse === 'meadow' ? 2 : 0, name: nameIdx(t.name || PARK_NAMES[w.id]), pts: simplify(strip(pts), 0.8) });
   } else if (t.natural === 'water' && inB(c[0], c[1])) water.push(simplify(strip(pts), 0.4));
   else if (t.leisure === 'swimming_pool' && inB(c[0], c[1], 6)) {
     const o = obb(strip(pts));
@@ -980,6 +982,36 @@ const clearPads = (arr, step, xi = 0) => {
   for (let i = 0; i < arr.length; i += step) if (!padSpots.some((r) => rectDist(r, arr[i + xi], arr[i + xi + 1]) < 1.5)) out.push(...arr.slice(i, i + step));
   return out;
 };
+// A Emma la deja su padre en coche donde la calle Río Júcar muere en el parque El Palmeral, y se
+// baja a la acera norte: la farola de ese fondo de calle pasa a la acera de enfrente
+{
+  const park = greens.find((g) => names[g.name] === 'Parque El Palmeral');
+  const street = names.indexOf('Calle Río Júcar');
+  let end = null;
+  for (const r of roads) {
+    if (r.name !== street || !park) continue;
+    const n = r.pts.length;
+    for (const [p, q] of [[r.pts[0], r.pts[1]], [r.pts[n - 1], r.pts[n - 2]]]) {
+      const d = Math.min(...park.pts.map((k) => Math.hypot(k[0] - p[0], k[1] - p[1])));
+      const l = Math.hypot(p[0] - q[0], p[1] - q[1]);
+      if (!end || d < end.d) end = { d, x: p[0], z: p[1], ux: (p[0] - q[0]) / l, uz: (p[1] - q[1]) / l };
+    }
+  }
+  if (!end) warn('no encuentro dónde muere la calle Río Júcar en El Palmeral');
+  else {
+    for (let i = 0; i < lamps.length; i += 4) {
+      const dx = lamps[i] - end.x;
+      const dz = lamps[i + 1] - end.z;
+      const fwd = dx * end.ux + dz * end.uz;
+      const left = dx * end.uz - dz * end.ux;
+      if (fwd < -30 || fwd > 2 || left < 0 || left > 12) continue;
+      lamps[i] = r1(lamps[i] - 2 * left * end.uz);
+      lamps[i + 1] = r1(lamps[i + 1] + 2 * left * end.ux);
+      lamps[i + 2] = -lamps[i + 2];
+      lamps[i + 3] = -lamps[i + 3];
+    }
+  }
+}
 function freeNear(x, z) {
   for (let r = 0; r < 60; r += 3) {
     for (let a = 0; a < 8; a++) {
