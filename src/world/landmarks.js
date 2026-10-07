@@ -6,6 +6,7 @@ import { addPin } from '../lego/models.js';
 import { BASE, frame, fbox, tree, lamp, palm, addSign } from './city.js';
 import { DATA, BOUNDS } from './cobena.js';
 import { lift } from './relief.js';
+import { roamSpot } from './streets.js';
 
 const B = BASE;
 const RAD = Math.PI / 180;
@@ -655,7 +656,8 @@ export function buildLandmarks(W) {
   const sp = DATA.places.spawn;
   W.places.spawn = { x: sp.x, z: sp.z, heading: sp.heading };
   W.places.home = DATA.places.home;
-  W.places.homes = { ...DATA.places.homes };
+  // Iker no sale de casa: cada vez aparece en un punto distinto del callejero
+  W.places.homes = { ...DATA.places.homes, iker: roamSpot() };
   parkGate(W);
   W.places.race = DATA.race;
   W.places.bounds = BOUNDS;

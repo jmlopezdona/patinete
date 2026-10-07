@@ -568,6 +568,19 @@ export function createMinifig(o = {}) {
         hb.sphere(0.17 - 0.06 * t, R * Math.sin(b), 1.24 + (low - 1.24) * t, R * Math.cos(b), i % 2 ? tips : hairColor, { seg: 8, seg2: 6 });
       }
     }
+  } else if (hairType === 'crop') {
+    // Corte a capas: mechones lisos echados hacia delante, flequillo corto y recto sobre la frente y los lados rapados
+    const sides = o.hairTips ?? hairColor;
+    hb.add(new THREE.SphereGeometry(0.71, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.8, 0);
+    shortSides(sides, 0.42, 0.84);
+    for (const [x, y, z, r] of [[-0.3, 1.22, 0.24, 0.36], [0.3, 1.22, 0.24, 0.36], [0, 1.3, 0, 0.4], [-0.36, 1.14, -0.24, 0.36], [0.36, 1.14, -0.24, 0.36], [0, 1.16, -0.42, 0.38]]) {
+      hb.sphere(r, x, y, z, hairColor, { seg: 12, seg2: 10, sy: 0.55 });
+    }
+    for (let i = 0; i < 9; i++) {
+      const a = (i - 4) * 0.23;
+      const h = 0.36 + (i % 2) * 0.06 + (i === 3 ? 0.05 : 0);
+      hb.box(0.19, h, 0.16, 0.66 * Math.sin(a), 1.2 - h / 2, 0.66 * Math.cos(a), hairColor, { r: 0.05, ry: a, rx: -0.12 });
+    }
   } else if (hairType === 'bowl') {
     // Corte a tazón: flequillo recto y desfilado, que se va aclarando hacia las puntas, y rapado por debajo en un tono intermedio
     const tips = o.hairTips ?? hairColor;
