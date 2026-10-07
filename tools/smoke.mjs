@@ -211,13 +211,40 @@ await log('marcianos: abducción', () => {
   return { destino: dest, zona: g.zoneName(p.pos.x, p.pos.z), robados: st - g.save.studs, visible: !p.hidden, enElSuelo: p.grounded };
 });
 await shot('s_abducido');
+await log('marcianos: rescate', () => {
+  const g = window.__game; const A = g.aliens; const p = g.player; const u = A.u;
+  const cow = g.cows.list[0];
+  // Junto a las vacas, el platillo va a por una; la segunda vez se le deja llevársela
+  const snatch = () => {
+    p.place(cow.x + 60, cow.z, 0); u.x = p.pos.x; u.z = p.pos.z + 20; u.vx = u.vz = 0;
+    const rnd = Math.random; Math.random = () => 0.1; A.snatchCd = 0; A.falling = null; A.pickVictim(p); Math.random = rnd;
+    A.setUfo('snatch');
+    const v = A.vic;
+    let n = 0; while (!v.lifting && n++ < 900) { p.invuln = 5; window.sim(1 / 60); }
+    window.sim(2);
+    return v;
+  };
+  const st = g.save.studs;
+  const v = snatch();
+  const up = v.h;
+  p.place(u.x, u.z, 0); window.sim(0.1);
+  const pisando = A.vic === v; // por el suelo no se corta el rayo
+  window.sim(0.4, (t) => ({ jumpPressed: t < 0.02 }));
+  const saved = A.falling === v && u.state === 'stun';
+  window.sim(3);
+  const back = !v.ref.taken && v.obj.scale.x === 1 && v.obj.position.y === 0;
+  const w = snatch();
+  let n = 0; while (A.vic === w && n++ < 1500) window.sim(1 / 60);
+  return { presa: v.name, sube: +up.toFixed(1), pisandoNo: pisando, rescatada: saved, premio: g.save.studs - st, enElPrado: back, laSegundaSeLaLlevan: A.lost.length === 1 && !w.obj.visible };
+});
+await shot('s_rescate');
 await log('marcianos: victoria', () => {
   const g = window.__game; const A = g.aliens; const p = g.player;
   const st = g.save.studs;
   A.wave.count = A.wave.goal - 1;
   A.score(p, g.time, null, 500);
   window.sim(6);
-  return { rechazada: g.save.invasions, premio: g.save.studs - st, amanece: g.env.target === 0, platillo: A.u.state, marcianos: A.aliens.filter((a) => a.state !== 'off').length };
+  return { rechazada: g.save.invasions, premio: g.save.studs - st, amanece: g.env.target === 0, platillo: A.u.state, marcianos: A.aliens.filter((a) => a.state !== 'off').length, devueltos: !A.lost.length && !g.cows.list.some((c) => c.taken || !c.group.visible) };
 });
 await log('búsqueda: multa y cuartelillo', () => {
   const g = window.__game; const W = g.wanted; const p = g.player; const sp = g.world.places.spawn;

@@ -150,6 +150,11 @@ campanario y empieza a soltar marcianos de ladrillo por las calles.
 - **Rayo abductor**: el platillo te sigue con un círculo de luz. Si te quedas debajo te sube:
   machaca `Espacio` para soltarte. Si no, te lleva volando a otra punta del pueblo (la Isla del
   Tesoro, la fuente de la plaza, la bolera…) y te birla unos studs.
+- **Rescate de vecinos**: cuando no va a por ti, el platillo se lleva a un vecino, un coche o
+  una de las vacas del campo del Mega Salto (🆘 en el minimapa). Mientras lo sube, el rayo no te
+  coge: **salta y crúzalo por el aire** para cortarlo. El platillo se queda aturdido, tú con el
+  turbo lleno y, al echar la oleada, cada rescate suma premio. Si llegas tarde, se lo queda dentro
+  hasta que se marche.
 - Cada noche hay que echar a una **oleada** (8 marcianos la primera, 4 más cada vez). Al
   conseguirlo el platillo huye, amanece y te llevas el premio. No hay «game over».
 - Los puntos verdes del minimapa son marcianos; el 🛸, el platillo. Durante los minijuegos se esconden.
@@ -247,7 +252,8 @@ se guarda en el navegador.
   pendiente. Donde hay rampas, pistas o porterías el terreno se allana, así los minijuegos y el
   skatepark funcionan igual que en llano.
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
-  entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo y rayo),
+  entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo, rayo y
+  rescates), `cows.js`, las vacas que pastan junto al Mega Salto,
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
   `characters.js` define los personajes elegibles y sus estadísticas (sus casas y puntos de salida

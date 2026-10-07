@@ -9,8 +9,6 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
   para saltar y darle en la panza. Con el Mega Salto te cuelas dentro.
 - [ ] **Róbale el platillo.** Tras tres culetazos al piloto, el ovni es tuyo: vuelas sobre Cobeña
   y eres tú quien abduce cosas.
-- [ ] **Rescate de vecinos.** El platillo abduce peatones, coches y alguna vaca. Saltas desde una
-  rampa, atraviesas el rayo y los liberas.
 - [ ] **Marcianos disfrazados.** De día hay vecinos a los que les asoma una antena. Si les das un
   culetazo se les cae el disfraz.
 - [ ] **El robo de la estatua dorada.** Un marciano se lleva la estatua del patinete de la fuente
@@ -37,6 +35,12 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `rescate-vecinos`)
+
+- [x] **Rescate de vecinos.** El platillo abduce peatones, coches y alguna vaca. Saltas,
+  atraviesas el rayo por el aire y los liberas; si llegas tarde, se los queda hasta que se va.
+- [x] **Vacas** pastando en el campo del Mega Salto.
 
 ## Ya hecho (rama `modo-foto`)
 
