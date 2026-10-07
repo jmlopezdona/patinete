@@ -837,13 +837,16 @@ kbd {
 #pause {
   position: fixed;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
   background: rgba(8, 16, 26, 0.6);
   backdrop-filter: blur(4px);
+  overflow-y: auto;
+  touch-action: pan-y; /* si aun así no cabe, que se pueda deslizar */
 }
 #pause .card {
-  width: min(360px, 90vw);
+  width: min(360px, 100%);
+  margin: auto; /* centrado si cabe; si no, empieza arriba y no se corta el título */
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1002,5 +1005,25 @@ body.touch #speedo .num {
   .menu-cards,
   .tagline {
     display: none;
+  }
+}
+/* Móvil apaisado: la pausa en dos columnas para que quepan todas las opciones */
+@media (max-height: 540px) {
+  #pause .card {
+    width: min(600px, 100%);
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  #pause h2 {
+    flex-basis: 100%;
+    font-size: 24px;
+    margin-bottom: 0;
+  }
+  #pause .brick-btn {
+    flex: 1 1 calc(50% - 4px); /* si quedan impares, el último ocupa la fila entera */
+    width: auto;
+    font-size: 16px;
+    padding: 9px 12px 12px;
   }
 }
