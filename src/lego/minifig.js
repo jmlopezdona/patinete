@@ -5,6 +5,8 @@ import { plastic } from './materials.js';
 
 const faceCache = new Map();
 const printCache = new Map();
+const shirtCache = new Map();
+const shirtGeos = {};
 let headGeo = null;
 
 function faceTexture(kind, skin = C.skin) {
@@ -208,6 +210,43 @@ function printTexture(kind, color) {
   return tex;
 }
 
+// Foto de una camiseta de verdad (public/camisetas), recortada en cuadrado
+function shirtTexture(name) {
+  if (shirtCache.has(name)) return shirtCache.get(name);
+  const tex = new THREE.TextureLoader().load(`camisetas/${name}.jpg`);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  shirtCache.set(name, tex);
+  return tex;
+}
+
+// Panel con la silueta del torso (y de la cadera si la camiseta va por fuera) para pegarle la foto.
+// La foto se pega sin deformar: se ajusta al alto y lo que sobra por los lados queda fuera.
+function shirtGeo(long) {
+  const key = long ? 'long' : 'short';
+  if (shirtGeos[key]) return shirtGeos[key];
+  const rows = long ? [[1.76, 0.96], [2.12, 1], [3.72, 0.76]] : [[2.12, 1], [3.72, 0.76]];
+  const y0 = rows[0][0];
+  const h = 3.72 - y0;
+  const pos = [];
+  const uv = [];
+  const idx = [];
+  rows.forEach(([y, hw], i) => {
+    for (const sx of [-1, 1]) {
+      pos.push(sx * hw, y, 0);
+      uv.push(0.5 + (sx * hw) / h, (y - y0) / h);
+    }
+    if (i) idx.push(i * 2 - 2, i * 2 - 1, i * 2, i * 2 - 1, i * 2 + 1, i * 2);
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  shirtGeos[key] = g;
+  return g;
+}
+
 function getHeadGeo() {
   if (headGeo) return headGeo;
   const pts = [new THREE.Vector2(0.001, 0), new THREE.Vector2(0.5, 0), new THREE.Vector2(0.62, 0.12)];
@@ -241,7 +280,7 @@ export function createMinifig(o = {}) {
   const legR = mkLeg(-1);
 
   const body = new Builder();
-  body.box(2.0, 0.42, 1.0, 0, 1.93, 0, o.hips ?? legs, { r: 0.06 });
+  body.box(2.0, 0.42, 1.0, 0, 1.93, 0, o.hips ?? (o.shirt?.long ? torso : legs), { r: 0.06 });
   const tg = new THREE.BoxGeometry(2.0, 1.6, 1.0);
   const tp = tg.attributes.position;
   for (let i = 0; i < tp.count; i++) if (tp.getY(i) > 0) tp.setX(i, tp.getX(i) * 0.76);
@@ -258,6 +297,18 @@ export function createMinifig(o = {}) {
     );
     pm.position.set(0, 2.92, 0.507);
     group.add(pm);
+  }
+
+  if (o.shirt) {
+    // Camiseta de foto: el pecho por delante y, si la hay, la espalda por detrás
+    for (const [name, back] of [[o.shirt.front, false], [o.shirt.back, true]]) {
+      if (!name) continue;
+      const sm = new THREE.Mesh(shirtGeo(o.shirt.long), new THREE.MeshStandardMaterial({ map: shirtTexture(name), roughness: 0.5 }));
+      sm.position.z = back ? -0.507 : 0.507;
+      if (back) sm.rotation.y = Math.PI;
+      sm.receiveShadow = true;
+      group.add(sm);
+    }
   }
 
   const head = new THREE.Group();

@@ -222,7 +222,7 @@ export class Folks {
       return m;
     });
     // El artista: pequeño, melenudo y con cara de concierto
-    const fig = createMinifig({ torso: C.black, arms: C.black, legs: C.dgray, hair: 'long', hairColor: C.black, face: 'rock', print: 'bolt', printColor: '#f7d117' });
+    const fig = createMinifig({ torso: 0x111835, arms: 0x111835, legs: C.dgray, hair: 'long', hairColor: C.black, face: 'rock', shirt: { front: 'psicopato' } });
     const k = 0.68;
     fig.group.scale.setScalar(k);
     fig.group.position.set(0, 2.0 - 1.75 * k, -1.25);
