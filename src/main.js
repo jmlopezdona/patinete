@@ -9,6 +9,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { makeRng } from './core/rng.js';
 import { Input } from './core/input.js';
 import { setupInstall } from './core/install.js';
+import { setupUpdate } from './core/update.js';
 import { Sfx } from './core/audio.js';
 import { BrickBatch } from './lego/batch.js';
 import { Builder } from './lego/builder.js';
@@ -334,6 +335,7 @@ class Game {
       this.state = 'menu';
       this.hud.show(false);
       $('menu').classList.remove('out');
+      this.checkUpdate();
     });
     this.input.bindTouch(document.getElementById('touch'));
     window.addEventListener('touchstart', () => document.body.classList.add('touch'), { once: true, passive: true });
@@ -342,6 +344,7 @@ class Game {
     });
     $('p-sound').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
     setupInstall($('btn-install'), $('install-hint'));
+    this.checkUpdate = setupUpdate($('version'), $('update'), $('update-text'), [$('btn-update'), $('p-update')]);
   }
 
   // La casa del personaje que se lleva, con su punto de salida a la calle
@@ -403,6 +406,7 @@ class Game {
   setPaused(p) {
     if (this.state !== 'play') return;
     this.paused = p;
+    if (p) this.checkUpdate();
     document.getElementById('pause').classList.toggle('hidden', !p);
     document.getElementById('p-abort').classList.toggle('hidden', !this.missions.active);
     if (this.sfx.ctx) {

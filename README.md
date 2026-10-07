@@ -43,6 +43,11 @@ barra del navegador**, con su icono en la pantalla de inicio.
   juego lo recuerda con un aviso). Ahí la orientación no se bloquea: hay que girar el móvil.
 - Después de abrirlo una vez con conexión, **arranca también sin ella**. Cuando hay red siempre se
   carga la última versión publicada.
+- El menú enseña la **versión** que se está jugando (`v1.0.N`: los dos primeros números son los de
+  `package.json` y `N` los commits que lleva el juego, así que sube sola con cada publicación). El
+  juego instalado suele quedarse abierto días sin recargarse; por eso, al abrirlo, al volver a él y
+  al pausar pregunta si hay algo más nuevo y, si lo hay, un platillo lo avisa en el menú y en la
+  pausa con un botón para actualizar.
 
 Hace falta servirlo por HTTPS (GitHub Pages lo hace) o desde `localhost`. El service worker solo
 se registra en la versión compilada (`npm run build` y `npm run preview`), no con `npm run dev`.
@@ -252,7 +257,9 @@ se guarda en el navegador.
   `dropoff.js` es el coche que la trae. `photo.js` es el modo foto:
   cámara libre, filtros (van en la pasada final de `main.js`) y la captura a mayor resolución.
 - `src/core/` — entrada (teclado, mando, táctil), audio sintetizado con WebAudio y utilidades.
-  `install.js` registra el service worker y pone el botón de instalar.
+  `install.js` registra el service worker y pone el botón de instalar, y `update.js` enseña la
+  versión y avisa cuando se ha publicado otra (compara con el `version.json` que escribe
+  `vite.config.js` al compilar).
 - `public/` — `manifest.webmanifest` (nombre, iconos, pantalla completa y horizontal) y `sw.js`,
   el service worker: la red manda siempre que la hay y lo ya cargado queda guardado para jugar sin
   conexión. Los iconos de `public/icons` se dibujan con `npm run iconos`.

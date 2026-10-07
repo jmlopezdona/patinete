@@ -90,13 +90,19 @@
             <b style="--c:#e3000b">C</b><b style="--c:#ffcf00">O</b><b style="--c:#1591d8">B</b><b style="--c:#00a650">E</b><b style="--c:#ff7a1a">Ñ</b><b style="--c:#1591d8">A</b>
           </div>
           <div class="logo-sub">EN PATINETE</div>
-          <p class="tagline">Cobeña entera, calle a calle y hecha de ladrillos, para recorrerla en patinete, monopatín, monociclo, bici o patines.</p>
+          <p class="tagline">Cobeña entera, calle a calle y hecha de ladrillos, para recorrerla en patinete, monopatín, monociclo, bici o patines. <span id="version"></span></p>
         </div>
 
         <div class="char-pick">
           <h4>¿Quién sale hoy?</h4>
           <div class="chars" id="chars"></div>
           <p id="char-blurb"></p>
+        </div>
+
+        <div id="update" class="hidden">
+          <i>🛸</i>
+          <p><b>¡Los marcianos han traído una versión nueva!</b> <span id="update-text"></span></p>
+          <button id="btn-update" class="brick-btn">¡La quiero!</button>
         </div>
 
         <div class="menu-buttons">
@@ -148,6 +154,7 @@
       <div class="card">
         <h2>Pausa</h2>
         <button class="brick-btn primary" id="p-resume">Continuar</button>
+        <button class="brick-btn update hidden" id="p-update">🛸 ¡Versión nueva! Actualizar</button>
         <button class="brick-btn" id="p-abort">Abandonar misión</button>
         <button class="brick-btn" id="p-night">Día / noche</button>
         <button class="brick-btn" id="p-photo">📷 Modo foto</button>
