@@ -342,6 +342,13 @@ export class Sfx {
     this.tone(620, 0.16, 'square', 0.07 * vol, 0.9);
     this.tone(930, 0.2, 'triangle', 0.06 * vol, 0.95);
   }
+  // Machaque: el golpe contra el aro, que se queda temblando
+  dunk(vol = 1) {
+    this.tone(95, 0.22, 'sine', 0.5 * vol, 0.5);
+    this.noise(0.08, 0.3 * vol, 700, 0.9);
+    this.tone(540, 0.34, 'square', 0.06 * vol, 0.92, 0.03);
+    this.tone(810, 0.4, 'triangle', 0.05 * vol, 0.95, 0.03);
+  }
   // El clic del móvil de Emma y el tintineo de la foto que le gusta
   selfie(vol = 1) {
     this.noise(0.03, 0.3 * vol, 3200, 1.2);

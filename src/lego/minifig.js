@@ -611,7 +611,7 @@ export function nameTag(name, color = '#ffd23a') {
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillStyle = '#ffffff';
-  g.fillText(name, 128, 43);
+  g.fillText(name, 128, 43, 212);
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, fog: false }));

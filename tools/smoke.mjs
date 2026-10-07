@@ -308,12 +308,35 @@ await log('personajes', () => {
     window.sim(1 / 60, () => ({ jumpPressed: true }));
     window.sim(1.6, (t) => { ym = Math.max(ym, p.pos.y); return { throttle: 1, trickPressed: t > 0.1 && t < 0.13 }; });
     out[id] = [p.veh.kind, +vm.toFixed(0), +ym.toFixed(1), document.getElementById('trick').textContent.split('+')[0]].join(' ');
-    out[id + 'Doble'] = id === 'yago' ? F.yago.root.visible : id === 'teo' ? g.ball.keeperName : id === 'adrian' ? F.drummer.fig.group.visible : id === 'emma' ? F.emma.fig.group.visible : 'no tiene';
+    out[id + 'Doble'] = id === 'yago' ? F.yago.root.visible : id === 'teo' ? g.ball.keeperName : id === 'adrian' ? F.drummer.fig.group.visible : id === 'emma' ? F.emma.fig.group.visible : !F.jose.kid.away;
   }
   out.guardado = g.save.character;
   return out;
 });
 await shot('s_personajes');
+// La canasta: Jose tira solo si se lleva a Jose Manuel; con otro personaje, padre e hijo juegan juntos
+await log('canasta', () => {
+  const g = window.__game; const p = g.player; const J = g.folks.jose; const H = J.H; const out = {};
+  const jugadas = () => Object.keys(J.seen).sort().join(' ');
+  p.place(H.x + H.nx * 24 + J.tx * 6, H.z + H.nz * 24 + J.tz * 6, Math.atan2(-H.nx, -H.nz));
+  J.seen = {};
+  window.sim(30);
+  out.solo = [J.kid.fig.group.visible, jugadas()].join(' ');
+  g.setCharacter('yago');
+  const n = J.n; const made = J.made; let juntos = 9; let fuera = -9;
+  J.seen = {};
+  for (let i = 0; i < 80 * 60; i++) {
+    window.sim(1 / 60);
+    if (!J.dad.jump && !J.kid.jump) juntos = Math.min(juntos, Math.hypot(J.dad.x - J.kid.x, J.dad.z - J.kid.z));
+    for (const P of [J.dad, J.kid]) fuera = Math.max(fuera, Math.abs((P.x - H.x) * J.tx + (P.z - H.z) * J.tz) - H.half, -((P.x - H.x) * H.nx + (P.z - H.z) * H.nz));
+  }
+  out.aDuo = [J.kid.fig.group.visible, J.n - n, J.made - made].join(' ');
+  out.jugadas = jugadas();
+  out.sinPisarse = juntos > 2;
+  out.enLaPista = fuera < 0;
+  return out;
+});
+await shot('s_canasta');
 // Emma: en el menú la trae su padre en coche y se baja; de vecina, selfies y corazones en El Palmeral
 await log('emma', () => {
   const g = window.__game; const p = g.player; const D = g.dropoff; const E = g.folks.emma; const out = {};
