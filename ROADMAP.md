@@ -7,8 +7,6 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 
 - [ ] **Jefe final: la nave nodriza.** Se planta sobre el skatepark y hay que usar el half-pipe
   para saltar y darle en la panza. Con el Mega Salto te cuelas dentro.
-- [ ] **Róbale el platillo.** Tras tres culetazos al piloto, el ovni es tuyo: vuelas sobre Cobeña
-  y eres tú quien abduce cosas.
 - [ ] **Marcianos disfrazados.** De día hay vecinos a los que les asoma una antena. Si les das un
   culetazo se les cae el disfraz.
 - [ ] **El robo de la estatua dorada.** Un marciano se lleva la estatua del patinete de la fuente
@@ -23,7 +21,6 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 
 ## Objetos
 
-- [ ] **Timbre sónico.** Aturde a todos los marcianos cercanos.
 - [ ] **Gorro de papel de aluminio.** El rayo no te detecta durante un rato.
 - [ ] **Baba verde.** Charcos donde derrapas sin control o rebotas.
 - [ ] **Cohete en el patinete.** Turbo infinito durante 10 segundos.
@@ -35,6 +32,16 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `robar-platillo`)
+
+- [x] **Róbale el platillo.** Atontado baja casi hasta el suelo: tres coscorrones saltando y el
+  piloto sale por los aires. Durante 40 segundos lo llevas tú y eres tú quien abduce marcianos,
+  vecinos, coches y vacas.
+- [x] **Timbre sónico.** Aparece por las calles durante la invasión, se guarda y se gasta con `Q`:
+  aturde a los marcianos de alrededor (el culetazo vale por cualquier lado) y atonta al platillo.
+- [x] **Objetos.** La base para los que faltan: uno por la calle cada vez, hueco en el HUD, tecla
+  `Q` y botón táctil.
 
 ## Ya hecho (rama `rescate-vecinos`)
 

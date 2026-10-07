@@ -38,6 +38,7 @@ import { Folks } from './game/folks.js';
 import { Dropoff } from './game/dropoff.js';
 import { Wanted } from './game/wanted.js';
 import { Photo } from './game/photo.js';
+import { Items } from './game/items.js';
 
 const SAVE_KEY = 'cobena-patinete-v1';
 const QUALITY_NAMES = ['Bajos', 'Medios', 'Altos'];
@@ -170,6 +171,7 @@ class Game {
     this.env = new Environment(this, this.world.lamps);
     this.cows = new Cows(this);
     this.aliens = new Aliens(this);
+    this.items = new Items(this);
     this.folks = new Folks(this);
     this.dropoff = new Dropoff(this);
     this.wanted = new Wanted(this);
@@ -691,7 +693,8 @@ class Game {
     this.studs.update(dt, p);
     this.traffic.update(dt, p, this.time);
     this.cows.update(dt, p, this.time);
-    this.aliens.update(dt, p, this.time);
+    this.aliens.update(dt, p, this.time, inp);
+    this.items.update(dt, p, this.time);
     this.wanted.update(dt, p, this.time);
     this.folks.update(dt, p, this.time, true);
     this.dropoff.update(dt, true);
@@ -738,6 +741,7 @@ class Game {
       blips.length = 0;
       for (const b of this.aliens.blips) blips.push(b);
       for (const b of this.wanted.blips) blips.push(b);
+      for (const b of this.items.blips) blips.push(b);
       this.minimap.draw(p.pos.x, p.pos.z, this.camera3.yaw, p.heading, m.active ? [] : this.markers, m.goalPos, blips);
     }
     if (this.frame % 20 === 0) {

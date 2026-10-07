@@ -238,6 +238,63 @@ await log('marcianos: rescate', () => {
   return { presa: v.name, sube: +up.toFixed(1), pisandoNo: pisando, rescatada: saved, premio: g.save.studs - st, enElPrado: back, laSegundaSeLaLlevan: A.lost.length === 1 && !w.obj.visible };
 });
 await shot('s_rescate');
+await log('marcianos: timbre sónico', () => {
+  const g = window.__game; const A = g.aliens; const I = g.items; const p = g.player; const u = A.u;
+  // Aparece por la calle, se recoge pasando por encima y con Q deja tontos a los de alrededor
+  const sp = g.world.places.spawn;
+  p.place(sp.x, sp.z, sp.heading);
+  I.held = null; I.group.visible = false; I.cd = 0;
+  window.sim(0.5);
+  const enLaCalle = I.group.visible && I.blips.length === 1;
+  for (const o of A.aliens) o.cd = 99;
+  p.place(I.drop.x - 6, I.drop.z, Math.PI / 2); p.invuln = 5;
+  window.sim(0.8, () => ({ throttle: 1 }));
+  const cogido = I.held;
+  const live = A.aliens.slice(0, 3);
+  live.forEach((a, i) => { a.state = 'chase'; a.t = 9; a.x = p.pos.x + 12 + i * 3; a.z = p.pos.z + 10; a.y = 0; a.fig.group.visible = true; a.fig.group.scale.setScalar(1); });
+  u.x = p.pos.x + 20; u.z = p.pos.z; A.setUfo('hunt');
+  window.sim(1 / 60, () => ({ keys: ['KeyQ'] }));
+  const tontos = `${A.aliens.filter((a) => a.state === 'dazed').length}/${live.length}`;
+  // A uno tonto se le da el culetazo aunque te esté mirando
+  const a = A.aliens.find((x) => x.state === 'dazed');
+  for (const o of A.aliens) o.cd = o === a ? 0 : 99;
+  const c0 = A.wave.count;
+  a.heading = Math.PI;
+  p.place(a.x, a.z - 9, 0); p.v = 20; p.invuln = 0;
+  window.sim(0.6, () => ({ throttle: 1 }));
+  return { enLaCalle, cogido, gastado: I.held === null, tontos, platillo: u.state, culetazoDeFrente: A.wave.count - c0 };
+});
+await log('marcianos: robo del platillo', () => {
+  const g = window.__game; const A = g.aliens; const p = g.player; const u = A.u;
+  const cow = g.cows.list[0];
+  for (const o of A.aliens) o.cd = 99;
+  p.place(cow.x + 30, cow.z, 0);
+  // Tres coscorrones saltando bajo el platillo atontado
+  const golpes = [];
+  for (let k = 0; k < 3; k++) {
+    p.invuln = 5; u.x = p.pos.x; u.z = p.pos.z; u.vx = u.vz = 0; A.setUfo('stun');
+    window.sim(1.5);
+    const bajo = +u.y.toFixed(0);
+    window.sim(0.5, (t) => ({ jumpPressed: t < 0.02 }));
+    golpes.push(`${u.hits} a ${bajo}`);
+    if (k < 2) window.sim(1.2);
+  }
+  let n = 0; while (u.state === 'board' && n++ < 300) window.sim(1 / 60);
+  const tuyo = u.state === 'ride' && p.hidden && !A.pilot.group.visible && !!A.mate;
+  const x0 = u.x;
+  window.sim(1.5, () => ({ throttle: 1 }));
+  const vuela = Math.hypot(u.x - x0, u.z - cow.z) > 20;
+  // Con el rayo encendido se lleva a un marciano y a una vaca
+  const a = A.aliens[0]; const c0 = A.wave.count;
+  u.x = cow.x; u.z = cow.z; u.vx = u.vz = 0;
+  a.state = 'wander'; a.t = 5; a.x = u.x + 3; a.z = u.z; a.y = 0; a.fig.group.visible = true;
+  window.sim(3, () => ({ jump: true }));
+  const botin = `${A.wave.count - c0} marciano, ${A.lost.length} vaca`;
+  A.ride.t = 0.3; window.sim(0.6);
+  const fin = u.state === 'rest' && !p.held && !p.hidden && !g.camera3.rig && A.pilot.group.visible && !A.mate && u.hits === 0;
+  n = 0; while (!p.grounded && n++ < 600) window.sim(1 / 60);
+  return { golpes: golpes.join(', '), tuyo, vuela, botin, finDelPaseo: fin, vacaDevuelta: !cow.taken && cow.group.visible && !A.lost.length, enElSuelo: p.grounded, castañazo: p.crashT > 0 };
+});
 await log('marcianos: victoria', () => {
   const g = window.__game; const A = g.aliens; const p = g.player;
   const st = g.save.studs;

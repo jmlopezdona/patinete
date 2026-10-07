@@ -15,12 +15,13 @@ const MAP = {
   camera: ['KeyC'],
   color: ['KeyV'],
   photo: ['KeyT'],
+  item: ['KeyQ'],
   // Solo en el modo foto: subir y bajar la cámara, y esconder los controles
   rise: ['KeyE'],
   sink: ['KeyQ'],
   hide: ['KeyH'],
 };
-const PAD = { jump: 0, boost: 1, trick: 2, action: 3, pause: 9, camera: 8 };
+const PAD = { jump: 0, boost: 1, trick: 2, action: 3, item: 5, pause: 9, camera: 8 };
 
 export class Input {
   constructor() {
@@ -42,7 +43,7 @@ export class Input {
   }
 
   _blank() {
-    return { steer: 0, throttle: 0, boost: false, jumpPressed: false, trickPressed: false, upPressed: false, downPressed: false };
+    return { steer: 0, throttle: 0, boost: false, jump: false, jumpPressed: false, trickPressed: false, upPressed: false, downPressed: false };
   }
 
   held(a) {
@@ -118,6 +119,7 @@ export class Input {
     let steer = (this.held('right') ? 1 : 0) - (this.held('left') ? 1 : 0);
     let throttle = (this.held('up') ? 1 : 0) - (this.held('down') ? 1 : 0);
     let boost = this.held('boost');
+    let jump = this.held('jump') || this.touch.jump;
     this._padHits = null;
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
     for (const p of pads) {
@@ -128,6 +130,7 @@ export class Input {
       const lt = p.buttons[6] ? p.buttons[6].value : 0;
       if (rt > 0.1 || lt > 0.1) throttle = rt - lt;
       if (p.buttons[PAD.boost] && p.buttons[PAD.boost].pressed) boost = true;
+      if (p.buttons[PAD.jump] && p.buttons[PAD.jump].pressed) jump = true;
       this._padHits = new Set();
       for (const a in PAD) {
         const down = !!(p.buttons[PAD[a]] && p.buttons[PAD[a]].pressed);
@@ -145,6 +148,7 @@ export class Input {
     s.steer = steer;
     s.throttle = throttle;
     s.boost = boost;
+    s.jump = jump; // mantenido: el rayo del platillo robado
     s.jumpPressed = this.hit('jump');
     s.trickPressed = this.hit('trick');
     s.upPressed = this.hit('up');

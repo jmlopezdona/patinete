@@ -326,6 +326,29 @@ export class Sfx {
     [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.16, 'triangle', 0.13, 1, i * 0.07));
     this.noise(0.25, 0.2, 2600, 1, 'bandpass', 0, 0.4);
   }
+  // Objetos: recoger uno y el timbrazo que deja tontos a los marcianos
+  pickup() {
+    [988, 1319, 1976].forEach((f, i) => this.tone(f, 0.14, 'triangle', 0.13, 1, i * 0.06));
+  }
+  sonic() {
+    [0, 0.09, 0.18, 0.27].forEach((d) => {
+      this.tone(2100, 0.16, 'triangle', 0.16, 1, d);
+      this.tone(2650, 0.2, 'triangle', 0.1, 1, d + 0.03);
+    });
+    this.tone(1300, 0.9, 'sine', 0.12, 0.35, 0.3);
+    this.noise(0.6, 0.12, 5200, 3, 'bandpass', 0.3, 0.3);
+  }
+  // Coscorrón al platillo: suena a cacerola
+  ufoHit() {
+    this.tone(260, 0.5, 'triangle', 0.3, 0.6);
+    this.tone(784, 0.7, 'sine', 0.12, 0.97);
+    this.tone(1175, 0.5, 'sine', 0.07, 0.97, 0.02);
+    this.noise(0.08, 0.3, 2400, 1);
+  }
+  slurp() {
+    this.tone(260, 0.24, 'sine', 0.14, 4.5);
+    this.tone(1400, 0.08, 'triangle', 0.08, 1, 0.22);
+  }
   moo() {
     this.tone(165, 0.3, 'sawtooth', 0.07, 0.85);
     this.tone(140, 0.7, 'sawtooth', 0.09, 0.7, 0.26);

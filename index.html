@@ -27,6 +27,7 @@
         <div class="stat small"><i class="gbrick"></i><span id="bricks">0/12</span></div>
         <div class="stat small"><i class="star">★</i><span id="stars">0/15</span></div>
         <div class="stat small hidden" id="alienbox"><i class="alien">👽</i><span id="aliens">0/8</span></div>
+        <div class="stat small hidden" id="ufobox"><i class="alien">🛸</i><span id="ufohits">0/3</span></div>
       </div>
 
       <div id="mission" class="hidden">
@@ -54,6 +55,12 @@
         <div class="a-bar"><div id="abductfill"></div></div>
         <div class="a-hint">Machaca <kbd>Espacio</kbd> (o <b>Salto</b>) para soltarte</div>
       </div>
+      <div id="ride" class="hidden">
+        <div class="a-title">🛸 ¡El platillo es tuyo!</div>
+        <div class="a-bar"><div id="ridefill"></div></div>
+        <div class="a-hint">Mantén <kbd>Espacio</kbd> (o <b>Salto</b>) para abducir con el rayo</div>
+      </div>
+      <div id="itembox" class="hidden"><i id="itemicon">🔔</i><span id="itemname"></span><kbd>Q</kbd></div>
       <div id="trick"></div>
       <div id="prompt" class="hidden"></div>
       <div id="big"></div>
@@ -65,6 +72,7 @@
         <span><kbd>Espacio</kbd> saltar</span>
         <span><kbd>Mayús</kbd> turbo</span>
         <span><kbd>F</kbd> truco</span>
+        <span><kbd>Q</kbd> objeto</span>
         <span><kbd>E</kbd> misión</span>
         <span><kbd>T</kbd> foto</span>
         <span><kbd>Esc</kbd> pausa</span>
@@ -73,6 +81,7 @@
       <div id="touch">
         <div id="stick"><div id="knob"></div></div>
         <button class="tb" id="tb-pause" data-act="pause">II</button>
+        <button class="tb sm hidden" id="tb-item" data-act="item">🔔</button>
         <div id="tbuttons">
           <button class="tb sm" data-act="action">E</button>
           <button class="tb sm" data-act="trick">Truco</button>
@@ -129,6 +138,8 @@
               <li>🚀 Mega salto sobre la charca hasta la Isla del Tesoro</li>
               <li>🟡 Studs por todas las calles y 12 ladrillos dorados escondidos</li>
               <li>👽 De noche llegan los marcianos: échalos a culetazos y esquiva el rayo del platillo</li>
+              <li>🛸 Atonta al platillo, dale tres coscorrones saltando… y róbaselo para abducir marcianos tú</li>
+              <li>🔔 Recoge el timbre sónico y hazlo sonar: deja tontos a todos los marcianos de alrededor</li>
               <li>🚨 Si rompes mucho mobiliario te persigue el policía municipal… y con cinco estrellas, la abuela con la zapatilla</li>
               <li>🧑‍🤝‍🧑 Elige personaje: Jose en patinete, Adrián en monopatín, Yago en monociclo, Teo en bici, Emma en patines, Iker en patinete eléctrico o Leo en su patinete</li>
             </ul>
@@ -139,7 +150,7 @@
               <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / flechas — conducir</li>
               <li><kbd>Espacio</kbd> saltar · <kbd>Mayús</kbd> turbo</li>
               <li>En el aire: <kbd>A</kbd><kbd>D</kbd> giros · <kbd>F</kbd> truco · <kbd>S</kbd> backflip</li>
-              <li><kbd>E</kbd> misión · <kbd>N</kbd> día/noche · <kbd>C</kbd> cámara · <kbd>V</kbd> color</li>
+              <li><kbd>Q</kbd> usar objeto · <kbd>E</kbd> misión · <kbd>N</kbd> día/noche · <kbd>C</kbd> cámara · <kbd>V</kbd> color</li>
               <li><kbd>R</kbd> recolocar · <kbd>M</kbd> sonido · <kbd>T</kbd> modo foto · <kbd>Esc</kbd> pausa</li>
             </ul>
           </div>
