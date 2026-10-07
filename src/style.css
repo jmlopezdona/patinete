@@ -793,6 +793,40 @@ kbd {
   background: var(--yellow);
   animation: pop 0.5s;
 }
+/* La pandilla: una placa roja torcida, como una pegatina encima de los personajes */
+.crew {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px 4px;
+  padding: 6px 22px 10px;
+  font-size: clamp(26px, 3.3vw, 42px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--red);
+  border: 4px solid #fff;
+  border-radius: 16px;
+  box-shadow: inset 0 -7px 0 rgba(0, 0, 0, 0.22), 0 6px 0 rgba(0, 0, 0, 0.4), 0 0 26px rgba(255, 210, 58, 0.45);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+  transform: rotate(-3deg);
+  animation: crewin 0.6s 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) backwards;
+}
+.crew i {
+  font-size: 0.7em;
+  font-style: normal;
+  color: var(--yellow);
+}
+@keyframes crewin {
+  from {
+    transform: rotate(-14deg) scale(0.3);
+    opacity: 0;
+  }
+}
 .char-pick h4 {
   font-size: 16px;
   color: var(--yellow);
@@ -1314,6 +1348,11 @@ body.touch #speedo .num {
   .menu-cards,
   .tagline {
     display: none;
+  }
+  .crew {
+    margin-bottom: 8px;
+    padding: 3px 16px 6px;
+    font-size: 24px;
   }
 }
 /* Móvil apaisado: la pausa en dos columnas para que quepan todas las opciones */
