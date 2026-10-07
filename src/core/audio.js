@@ -114,7 +114,7 @@ export class Sfx {
     o.stop(t + dur + 0.03);
   }
 
-  noise(dur, vol = 0.3, freq = 1000, q = 1, type = 'bandpass', delay = 0, slide = 0) {
+  noise(dur, vol = 0.3, freq = 1000, q = 1, type = 'bandpass', delay = 0, slide = 0, bus = null) {
     if (!this.ctx) return;
     const ctx = this.ctx;
     const t = ctx.currentTime + delay;
@@ -131,7 +131,7 @@ export class Sfx {
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     src.connect(f);
     f.connect(g);
-    g.connect(this.sfxBus);
+    g.connect(bus || this.sfxBus);
     src.start(t, Math.random());
     src.stop(t + dur + 0.03);
   }
@@ -230,6 +230,21 @@ export class Sfx {
   }
   ui() {
     this.tone(880, 0.06, 'triangle', 0.1);
+  }
+
+  // ---------- Modo foto ----------
+  // Calla el juego sin parar el reloj del audio, para que el obturador sí suene
+  hush(on) {
+    if (!this.ctx) return;
+    if (on) this.ctx.resume();
+    const t = this.ctx.currentTime;
+    this.sfxBus.gain.setTargetAtTime(on ? 0 : 0.9, t, 0.03);
+    this.musicBus.gain.setTargetAtTime(on ? 0 : 0.34 * (1 - this.drumVol * 0.9), t, 0.03);
+    this.drumBus.gain.setTargetAtTime(on ? 0 : this.drumVol * 0.85, t, 0.03);
+  }
+  shutter() {
+    this.noise(0.035, 0.5, 3200, 1.2, 'bandpass', 0, 0, this.master);
+    this.noise(0.06, 0.4, 1400, 1, 'bandpass', 0.075, 0, this.master);
   }
 
   // ---------- Marcianos ----------

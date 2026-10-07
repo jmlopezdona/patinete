@@ -33,6 +33,7 @@ import { Minimap } from './game/minimap.js';
 import { Aliens } from './game/aliens.js';
 import { Folks } from './game/folks.js';
 import { Wanted } from './game/wanted.js';
+import { Photo } from './game/photo.js';
 
 const SAVE_KEY = 'cobena-patinete-v1';
 const QUALITY_NAMES = ['Bajos', 'Medios', 'Altos'];
@@ -48,15 +49,21 @@ const TIPS = [
   '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> en la canasta, las corredoras del parque y <b>Adrián</b>, el batería de la calle Libertad.',
   '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar tu vehículo.',
   '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monopatín, monociclo, bici o Tesla.',
+  '📷 Pulsa <b>T</b> en pleno salto: el <b>modo foto</b> para el tiempo y te deja mover la cámara para sacar la foto.',
 ];
 const params = new URLSearchParams(location.search);
 
-// Pasada final: efecto maqueta (desenfoque en los bordes), viñeta y un poco de saturación
+// Pasada final: efecto maqueta (desenfoque en los bordes), viñeta y un poco de saturación.
+// El modo foto mueve la saturación, el contraste, el tinte y la viñeta para sus filtros.
 const FinalShader = {
-  uniforms: { tDiffuse: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uBlur: { value: 1 } },
+  uniforms: {
+    tDiffuse: { value: null }, uRes: { value: new THREE.Vector2(1, 1) }, uBlur: { value: 1 },
+    uSat: { value: 1.14 }, uContrast: { value: 1 }, uTint: { value: new THREE.Vector3(1, 1, 1) }, uVig: { value: 0.26 },
+  },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: `
     uniform sampler2D tDiffuse; uniform vec2 uRes; uniform float uBlur; varying vec2 vUv;
+    uniform float uSat; uniform float uContrast; uniform vec3 uTint; uniform float uVig;
     void main(){
       vec3 c = texture2D(tDiffuse, vUv).rgb;
       float d = abs(vUv.y - 0.44);
@@ -75,9 +82,10 @@ const FinalShader = {
         c = s / 10.0;
       }
       float l = dot(c, vec3(0.299, 0.587, 0.114));
-      c = mix(vec3(l), c, 1.14);
+      c = mix(vec3(l), c, uSat);
+      c = clamp((c - 0.5) * uContrast + 0.5, 0.0, 1.0) * uTint;
       vec2 q = vUv - 0.5;
-      c *= mix(0.74, 1.0, smoothstep(0.82, 0.32, length(q * vec2(1.0, 0.86))));
+      c *= mix(1.0 - uVig, 1.0, smoothstep(0.82, 0.32, length(q * vec2(1.0, 0.86))));
       gl_FragColor = vec4(c, 1.0);
     }`,
 };
@@ -159,6 +167,7 @@ class Game {
     this.aliens = new Aliens(this);
     this.folks = new Folks(this);
     this.wanted = new Wanted(this);
+    this.photo = new Photo(this);
     this.blips = [];
     this.minimap = new Minimap(document.getElementById('minimap'), this.world);
     this.markers = [...this.missions.defs, ...this.folks.markers];
@@ -255,11 +264,12 @@ class Game {
     this.resize();
   }
 
-  resize() {
+  // `scale` fuerza la densidad de píxeles: el modo foto la sube para sacar la imagen más grande que la pantalla
+  resize(scale) {
     const w = window.innerWidth;
     const h = window.innerHeight;
     const dpr = window.devicePixelRatio || 1;
-    const pr = this.quality === 2 ? Math.min(dpr, 2) : this.quality === 1 ? Math.min(dpr, 1.25) : 1;
+    const pr = scale || (this.quality === 2 ? Math.min(dpr, 2) : this.quality === 1 ? Math.min(dpr, 1.25) : 1);
     this.renderer.setPixelRatio(pr);
     this.renderer.setSize(w, h, false);
     this.composer.setPixelRatio(pr);
@@ -284,6 +294,7 @@ class Game {
       this.setPaused(false);
     });
     $('p-night').addEventListener('click', () => this.env.toggle());
+    $('p-photo').addEventListener('click', () => this.photo.open());
     // Selector de personaje: tarjetas en el menú y botón que va rotando en la pausa
     const box = $('chars');
     for (const ch of CHARACTERS) {
@@ -328,7 +339,7 @@ class Game {
     this.input.bindTouch(document.getElementById('touch'));
     window.addEventListener('touchstart', () => document.body.classList.add('touch'), { once: true, passive: true });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.state === 'play') this.setPaused(true);
+      if (document.hidden && this.state === 'play' && !this.photo.on) this.setPaused(true);
     });
     $('p-sound').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
     setupInstall($('btn-install'), $('install-hint'));
@@ -561,8 +572,12 @@ class Game {
     this.frame++;
     const inp = this.input.update();
     if (this.state === 'play') {
-      if (this.input.hit('pause')) this.setPaused(!this.paused);
-      if (!this.paused) this.update(dt, inp);
+      if (this.photo.on) this.photo.update(dt);
+      else {
+        if (this.input.hit('pause')) this.setPaused(!this.paused);
+        if (this.input.hit('photo')) this.photo.open();
+        if (!this.paused) this.update(dt, inp);
+      }
     } else {
       this.time += dt;
       this.menuCamera();
@@ -604,7 +619,9 @@ class Game {
     for (let i = 0; i < L.length; i += 2) L[i].position.y += lift(L[i].position.x, L[i].position.z);
     const look = this.camera3.look;
     cam.lookAt(look.x, look.y + lift(look.x, look.z), look.z);
-    if (this.quality > 0) this.composer.render(dt);
+    if (this.camera3.roll) cam.rotateZ(this.camera3.roll);
+    // Los filtros del modo foto van en la pasada final: ahí se pinta siempre con ella
+    if (this.quality > 0 || this.photo.on) this.composer.render(dt);
     else this.renderer.render(this.scene, cam);
     for (let i = 0; i < L.length; i += 2) L[i].position.y = L[i + 1];
   }

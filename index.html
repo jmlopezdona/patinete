@@ -66,6 +66,7 @@
         <span><kbd>Mayús</kbd> turbo</span>
         <span><kbd>F</kbd> truco</span>
         <span><kbd>E</kbd> misión</span>
+        <span><kbd>T</kbd> foto</span>
         <span><kbd>Esc</kbd> pausa</span>
       </div>
 
@@ -133,7 +134,7 @@
               <li><kbd>Espacio</kbd> saltar · <kbd>Mayús</kbd> turbo</li>
               <li>En el aire: <kbd>A</kbd><kbd>D</kbd> giros · <kbd>F</kbd> truco · <kbd>S</kbd> backflip</li>
               <li><kbd>E</kbd> misión · <kbd>N</kbd> día/noche · <kbd>C</kbd> cámara · <kbd>V</kbd> color</li>
-              <li><kbd>R</kbd> recolocar · <kbd>M</kbd> sonido · <kbd>Esc</kbd> pausa</li>
+              <li><kbd>R</kbd> recolocar · <kbd>M</kbd> sonido · <kbd>T</kbd> modo foto · <kbd>Esc</kbd> pausa</li>
             </ul>
           </div>
         </div>
@@ -149,11 +150,51 @@
         <button class="brick-btn primary" id="p-resume">Continuar</button>
         <button class="brick-btn" id="p-abort">Abandonar misión</button>
         <button class="brick-btn" id="p-night">Día / noche</button>
+        <button class="brick-btn" id="p-photo">📷 Modo foto</button>
         <button class="brick-btn" id="p-char">Personaje: Jose Manuel · Patinete</button>
         <button class="brick-btn" id="p-quality">Gráficos: Altos</button>
         <button class="brick-btn" id="p-sound">Sonido: Sí</button>
         <button class="brick-btn" id="p-respawn">Volver a casa</button>
         <button class="brick-btn ghost" id="p-menu">Menú principal</button>
+      </div>
+    </div>
+
+    <!-- Modo foto -->
+    <div id="photo" class="hidden">
+      <div id="ph-pad"></div>
+      <div id="ph-panel">
+        <h3>📷 Modo foto</h3>
+        <label><span>Zoom</span><input type="range" id="ph-zoom" min="15" max="85" step="1" /></label>
+        <label><span>Inclinación</span><input type="range" id="ph-roll" min="-45" max="45" step="1" /></label>
+        <label><span>Desenfoque</span><input type="range" id="ph-blur" min="0" max="3" step="0.1" /></label>
+        <label><span>Viñeta</span><input type="range" id="ph-vig" min="0" max="0.7" step="0.02" /></label>
+        <button class="ph-chip" id="ph-filter">Filtro: Normal</button>
+        <div class="ph-chips">
+          <button class="ph-chip" id="ph-night">🌙 Noche</button>
+          <button class="ph-chip" id="ph-char">🧍 Piloto</button>
+          <button class="ph-chip" id="ph-logo">🏷️ Sello</button>
+        </div>
+        <button class="brick-btn primary" id="ph-shot">📸 Hacer foto</button>
+        <div class="ph-chips">
+          <button class="ph-chip" id="ph-reset">Restablecer</button>
+          <button class="ph-chip" id="ph-hide">Ocultar</button>
+          <button class="ph-chip" id="ph-exit">Salir</button>
+        </div>
+      </div>
+      <div id="ph-help">
+        <span class="ph-keys">Arrastra para girar · botón derecho para desplazar · rueda para acercar · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> mover · <kbd>Q</kbd><kbd>E</kbd> bajar y subir · <kbd>H</kbd> ocultar · <kbd>Espacio</kbd> foto · <kbd>Esc</kbd> salir</span>
+        <span class="ph-touch">Un dedo gira la cámara · dos dedos acercan y desplazan · toca la pantalla para recuperar los controles</span>
+      </div>
+      <div id="ph-flash"></div>
+      <div id="ph-preview" class="hidden">
+        <div class="card">
+          <img id="ph-img" alt="La foto que acabas de hacer" />
+          <div class="ph-actions">
+            <a class="brick-btn primary" id="ph-save">⬇ Guardar</a>
+            <button class="brick-btn" id="ph-share">Compartir</button>
+            <button class="brick-btn ghost" id="ph-again">Seguir</button>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -14,6 +14,11 @@ const MAP = {
   mute: ['KeyM'],
   camera: ['KeyC'],
   color: ['KeyV'],
+  photo: ['KeyT'],
+  // Solo en el modo foto: subir y bajar la cámara, y esconder los controles
+  rise: ['KeyE'],
+  sink: ['KeyQ'],
+  hide: ['KeyH'],
 };
 const PAD = { jump: 0, boost: 1, trick: 2, action: 3, pause: 9, camera: 8 };
 
