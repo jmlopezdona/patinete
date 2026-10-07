@@ -56,7 +56,12 @@ export class Sfx {
     this.drumBus.gain.value = 0;
     this.drumBus.connect(this.master);
     this.drumVol = 0;
+    this.eerie = false;
+    this.eerieBus = ctx.createGain();
+    this.eerieBus.gain.value = 0;
+    this.eerieBus.connect(this.master);
     this._startMusic();
+    this._startEerie();
     this._startDrums();
   }
 
@@ -246,8 +251,9 @@ export class Sfx {
     if (on) this.ctx.resume();
     const t = this.ctx.currentTime;
     this.sfxBus.gain.setTargetAtTime(on ? 0 : 0.9, t, 0.03);
-    this.musicBus.gain.setTargetAtTime(on ? 0 : 0.34 * (1 - this.drumVol * 0.9), t, 0.03);
+    this.musicBus.gain.setTargetAtTime(on ? 0 : this._musicVol(), t, 0.03);
     this.drumBus.gain.setTargetAtTime(on ? 0 : this.drumVol * 0.85, t, 0.03);
+    this.eerieBus.gain.setTargetAtTime(on ? 0 : this._eerieVol(), t, 0.03);
   }
   shutter() {
     this.noise(0.035, 0.5, 3200, 1.2, 'bandpass', 0, 0, this.master);
@@ -261,6 +267,14 @@ export class Sfx {
     this.ufoL.g.gain.setTargetAtTime(vol * (tense ? 0.16 : 0.09), t, 0.12);
     this.ufoL.o.frequency.setTargetAtTime(tense ? 330 : 170, t, 0.15);
     this.ufoL.lfo.frequency.setTargetAtTime(tense ? 13 : 6, t, 0.15);
+  }
+  // Con los marcianos en Cobeña la musiquilla de día deja paso a la de la invasión
+  invaded(on) {
+    if (!this.ctx || on === this.eerie) return;
+    this.eerie = on;
+    const t = this.ctx.currentTime;
+    this.musicBus.gain.setTargetAtTime(this._musicVol(), t, on ? 0.5 : 1.2);
+    this.eerieBus.gain.setTargetAtTime(this._eerieVol(), t, on ? 1.2 : 0.5);
   }
   invasion() {
     [220, 208, 196, 185, 175].forEach((f, i) => this.tone(f, 0.34, 'sawtooth', 0.1, 0.94, i * 0.26));
@@ -371,7 +385,16 @@ export class Sfx {
     this.drumVol = vol;
     const t = this.ctx.currentTime;
     this.drumBus.gain.setTargetAtTime(vol * 0.85, t, 0.12);
-    this.musicBus.gain.setTargetAtTime(0.34 * (1 - vol * 0.9), t, 0.2);
+    this.musicBus.gain.setTargetAtTime(this._musicVol(), t, 0.2);
+    this.eerieBus.gain.setTargetAtTime(this._eerieVol(), t, 0.2);
+  }
+
+  _musicVol() {
+    return this.eerie ? 0 : 0.34 * (1 - this.drumVol * 0.9);
+  }
+
+  _eerieVol() {
+    return this.eerie ? 0.42 * (1 - this.drumVol * 0.9) : 0;
   }
 
   _startDrums() {
@@ -510,5 +533,102 @@ export class Sfx {
       }
     };
     this.musicTimer = setInterval(tick, 80);
+  }
+
+  // Música de la invasión: pedal grave, arpegio en menor y un theremín que se lamenta
+  _startEerie() {
+    const ctx = this.ctx;
+    const step = 60 / 100 / 4;
+    const chords = [
+      [50, 57, 62, 65],
+      [50, 58, 62, 65],
+      [50, 58, 62, 67],
+      [49, 57, 61, 64],
+    ];
+    const bass = [38, 34, 43, 45];
+    const arp = [0, 1, 2, 3, 2, 1, 2, 3];
+    // Theremín: [paso, nota, pasos que dura]
+    const lead = [[0, 69, 6], [8, 74, 6], [16, 70, 12], [32, 67, 6], [40, 70, 6], [48, 69, 8], [56, 73, 7]];
+    const sparks = [86, 89, 93, 98];
+    const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+    let i = 0;
+    let last = 69;
+    let next = ctx.currentTime + 0.1;
+    const play = (m, t, dur, type, vol, cut) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = cut;
+      o.type = type;
+      o.frequency.value = hz(m);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(f);
+      f.connect(g);
+      g.connect(this.eerieBus);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    };
+    const theremin = (m, t, dur) => {
+      const o = ctx.createOscillator();
+      const lfo = ctx.createOscillator();
+      const lg = ctx.createGain();
+      const g = ctx.createGain();
+      // Llega resbalando desde la nota anterior, con vibrato
+      o.frequency.setValueAtTime(hz(last), t);
+      o.frequency.exponentialRampToValueAtTime(hz(m), t + 0.16);
+      lfo.frequency.value = 5.5;
+      lg.gain.value = hz(m) * 0.012;
+      lfo.connect(lg);
+      lg.connect(o.frequency);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.11, t + 0.12);
+      g.gain.setValueAtTime(0.11, t + dur * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g);
+      g.connect(this.eerieBus);
+      o.start(t);
+      lfo.start(t);
+      o.stop(t + dur + 0.02);
+      lfo.stop(t + dur + 0.02);
+      last = m;
+    };
+    const tick = () => {
+      if (!this.eerie || ctx.state !== 'running') {
+        // Cada invasión empieza por el principio
+        i = 0;
+        next = ctx.currentTime + 0.1;
+        return;
+      }
+      while (next < ctx.currentTime + 0.25) {
+        const s = i % 64;
+        const bar = Math.floor(s / 16);
+        const b = s % 16;
+        const phrase = Math.floor(i / 64) % 4;
+        if (b % 2 === 0) play(bass[bar], next, step * 1.7, 'triangle', b === 0 ? 0.3 : 0.16, 500);
+        play(chords[bar][arp[b % 8]], next, step * 1.4, 'sawtooth', 0.045, 1100);
+        // La primera vuelta va sin theremín, para que entre de sorpresa
+        if (phrase !== 0) for (const [at, m, len] of lead) if (at === s) theremin(m, next, step * len);
+        if (b === 0 || b === 3) {
+          // Latido
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.frequency.setValueAtTime(70, next);
+          o.frequency.exponentialRampToValueAtTime(36, next + 0.14);
+          g.gain.setValueAtTime(b === 0 ? 0.4 : 0.26, next);
+          g.gain.exponentialRampToValueAtTime(0.0001, next + 0.2);
+          o.connect(g);
+          g.connect(this.eerieBus);
+          o.start(next);
+          o.stop(next + 0.22);
+        }
+        if (Math.random() < 0.07) play(sparks[(Math.random() * sparks.length) | 0], next, 0.5, 'sine', 0.035, 6000);
+        next += step;
+        i++;
+      }
+    };
+    this.eerieTimer = setInterval(tick, 80);
   }
 }

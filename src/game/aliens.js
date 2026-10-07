@@ -224,6 +224,7 @@ export class Aliens {
       if (on) this.resume(p);
       else this.retreat(p);
     }
+    g.sfx.invaded(on);
     if (this.dawnT > 0) {
       this.dawnT -= dt;
       if (this.dawnT <= 0 && g.env.target > 0.5) g.env.toggle();

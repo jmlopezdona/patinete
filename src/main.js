@@ -328,6 +328,7 @@ class Game {
       this.missions.abort();
       this.setPaused(false);
       this.sfx.ufo(0, false);
+      this.sfx.invaded(false);
       this.sfx.drums(0);
       this.wanted.reset(true);
       this.state = 'menu';
