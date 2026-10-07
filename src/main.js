@@ -14,8 +14,8 @@ import { Builder } from './lego/builder.js';
 import { createBrickMaterial, plastic, plasticDouble, goldMetal, textTexture } from './lego/materials.js';
 import { createScooter } from './lego/scooter.js';
 import { Terrain } from './world/terrain.js';
-import { buildCity, ISLAND, HALF, BLOCK, ZONES, zoneRect, blockC } from './world/city.js';
-import { buildLandmarks, SPECIAL } from './world/landmarks.js';
+import { buildTown, zoneAt, BOUNDS } from './world/cobena.js';
+import { buildLandmarks } from './world/landmarks.js';
 import { Player, V_BOOST } from './game/player.js';
 import { ChaseCamera } from './game/camera.js';
 import { Bits } from './game/bits.js';
@@ -28,14 +28,16 @@ import { Environment } from './game/env.js';
 import { Hud } from './game/hud.js';
 import { Minimap } from './game/minimap.js';
 
-const SAVE_KEY = 'brick-city-patinete-v1';
+const SAVE_KEY = 'cobena-patinete-v1';
 const QUALITY_NAMES = ['Bajos', 'Medios', 'Altos'];
 const TIPS = [
   '💨 Mantén <b>Mayús</b> para usar el turbo. Se recarga con studs y trucos.',
   '🗺️ Los iconos del minimapa son minijuegos: acércate y pulsa <b>E</b>.',
   '🧱 Embiste bancos, papeleras y buzones: sueltan studs.',
   '🛹 En el aire: <b>A</b>/<b>D</b> giran, <b>F</b> hace un tailwhip y <b>S</b> un backflip.',
-  '🚀 Sigue la calle hacia el este hasta el muelle para el <b>Mega Salto</b>.',
+  '🛹 El <b>skatepark</b> está al final de la calle Río Júcar, junto a la rotonda.',
+  '🚀 Detrás del skatepark, en el campo, te espera el <b>Mega Salto</b> sobre la charca.',
+  '⛲ Sube hasta la <b>Plaza de la Villa</b>: allí están la fuente, la iglesia y el ayuntamiento.',
   '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar el patinete.',
 ];
 const params = new URLSearchParams(location.search);
@@ -140,7 +142,7 @@ class Game {
     this.camera3 = new ChaseCamera(this);
     this.studs = new Studs(this, this.world.studs, this.world.bricks);
     this.props = new Props(this, this.world.props);
-    this.traffic = new Traffic(this, this.world.pedLoops);
+    this.traffic = new Traffic(this, this.world.pedPaths);
     this.traffic.addStatic(this.world.spectators);
     this.pins = new Pins(this, this.world.places.bowling);
     this.ball = new Ball(this, this.world.places.soccer);
@@ -169,13 +171,14 @@ class Game {
 
   buildWorld() {
     const W = (this.world = {
-      batch: new BrickBatch(), geo: new Builder(), terrain: new Terrain(ISLAND), rng: this.rng,
-      signs: [], props: [], lamps: [], doors: [], studs: [], bricks: [], pedLoops: [], alleys: [], extras: [], spectators: [], splash: [],
-      places: {}, map: { blocks: [], buildings: [], circles: [] },
+      batch: new BrickBatch(), geo: new Builder(), terrain: new Terrain(), rng: this.rng,
+      signs: [], props: [], lamps: [], doors: [], studs: [], bricks: [], pedPaths: [], extras: [], spectators: [], splash: [],
+      places: {}, map: { blocks: [], buildings: [], circles: [], pitches: [] },
     });
     this.terrain = W.terrain;
-    buildCity(W, SPECIAL);
+    buildTown(W);
     buildLandmarks(W);
+    this.scene.add(W.ground.build());
     this.brickMat = createBrickMaterial();
     const studMat = new THREE.MeshStandardMaterial({ roughness: 0.4 });
     this.scene.add(W.batch.build(this.brickMat, studMat));
@@ -202,8 +205,6 @@ class Game {
       this.scene.add(st.group);
       this.statue = st.group;
     }
-    this.skateRect = zoneRect(ZONES.skate);
-    this.parkRect = zoneRect(ZONES.park);
   }
 
   setupComposer() {
@@ -301,7 +302,7 @@ class Game {
     this.camera3.snap = true;
     document.getElementById('menu').classList.add('out');
     this.hud.show(true);
-    this.hud.toast('¡Bienvenido a <b>Brick City</b>! Busca los iconos del mapa para jugar.');
+    this.hud.toast('¡Bienvenido a <b>Cobeña</b>! Sales de casa, en Río Júcar 44. Busca los iconos del mapa para jugar.');
     setTimeout(() => document.getElementById('keys').classList.add('fade'), 14000);
   }
 
@@ -439,20 +440,20 @@ class Game {
   }
 
   zoneName(x, z) {
-    if (x > 288) return 'Isla del Tesoro';
-    if (x > ISLAND) return 'Muelle del Mega Salto';
-    if (Math.abs(x) > HALF || Math.abs(z) > HALF) return 'Playa';
-    const s = this.skateRect;
-    if (x > s.x0 && x < s.x1 && z > s.z0 && z < s.z1) return 'Skatepark';
-    const k = this.parkRect;
-    if (x > k.x0 && x < k.x1 && z > k.z0 && z < k.z1) return z > k.cz + 4 ? 'Campo de Fútbol' : 'Parque del Estanque';
-    const inB = (i, j) => Math.abs(x - blockC(i)) < BLOCK / 2 + 7 && Math.abs(z - blockC(j)) < BLOCK / 2 + 7;
-    if (inB(3, 3)) return 'Plaza Central';
-    if (inB(5, 1)) return 'Bolera Gigante';
-    if (inB(3, 1)) return 'Torre Brick';
-    if (Math.max(Math.abs(x), Math.abs(z)) < 95) return 'Centro';
-    if (Math.abs(z) >= Math.abs(x)) return z < 0 ? 'Barrio Norte' : 'Barrio Sur';
-    return x < 0 ? 'Barrio Oeste' : 'Barrio Este';
+    const P = this.world.places;
+    const m = P.megaHole;
+    if (x > m.x0 - 16 && x < m.x1 + 4 && z > m.z0 - 4 && z < m.z1 + 4) return x > P.mega.islandX - 23 ? 'Isla del Tesoro' : 'Charca del Mega Salto';
+    if (Math.hypot(x - P.trick.x0, z - P.trick.z0) < 130 && this.terrain.height(x, z) > 0.3) {
+      const q = P.trick.poly;
+      let c = false;
+      for (let i = 0, j = q.length - 2; i < q.length; j = i, i += 2) {
+        if (q[i + 1] > z !== q[j + 1] > z && x < ((q[j] - q[i]) * (z - q[i + 1])) / (q[j + 1] - q[i + 1]) + q[i]) c = !c;
+      }
+      if (c) return 'Skatepark de Cobeña';
+    }
+    if (Math.abs(x - P.soccer.cx) < 35 && Math.abs(z - P.soccer.cz) < 23) return 'Pista Polideportiva';
+    if (Math.abs(x - P.bowling.pinX) < 22 && Math.abs(z - P.bowling.z + 17) < 22) return 'Bolera del Recinto Ferial';
+    return zoneAt(x, z);
   }
 
   // ---------- Bucle principal ----------
@@ -467,10 +468,12 @@ class Game {
     } else {
       // Menú: la cámara orbita la plaza
       this.time += dt;
-      const a = this.time * 0.12 + 2.4;
+      // Menú: la cámara sobrevuela la casa de salida
+      const a = this.time * 0.1 + 2.4;
       const c = this.camera3.cam;
-      c.position.set(Math.sin(a) * 46 + 4, 15 + Math.sin(this.time * 0.2) * 3, Math.cos(a) * 46);
-      c.lookAt(6, 6, 0);
+      const h = this.world.places.spawn;
+      c.position.set(h.x + Math.sin(a) * 74, 40 + Math.sin(this.time * 0.2) * 4, h.z + Math.cos(a) * 74);
+      c.lookAt(h.x, 5, h.z);
       c.fov = 50;
       c.updateProjectionMatrix();
       this.player.updateVisual(dt, this.input.neutral);
@@ -479,7 +482,7 @@ class Game {
       this.missions.update(dt, this.time);
     }
     if (this.statue) this.statue.rotation.y += dt * 0.35;
-    this.env.update(dt, this.state === 'play' ? this.player.pos : this.camera3.look.set(0, 0, 0), this.camera3.cam);
+    this.env.update(dt, this.state === 'play' ? this.player.pos : this.camera3.look.set(this.world.places.spawn.x, 0, this.world.places.spawn.z), this.camera3.cam);
     if (this.quality > 0) this.composer.render(dt);
     else this.renderer.render(this.scene, this.camera3.cam);
     this.input.endFrame();
@@ -518,6 +521,12 @@ class Game {
     }
 
     p.update(dt, inp);
+    // Límite del mapa: más allá solo hay campos
+    if (p.pos.x < BOUNDS.x0 + 6 || p.pos.x > BOUNDS.x1 - 6 || p.pos.z < BOUNDS.z0 + 6 || p.pos.z > BOUNDS.z1 - 6) {
+      p.place(Math.min(BOUNDS.x1 - 14, Math.max(BOUNDS.x0 + 14, p.pos.x)), Math.min(BOUNDS.z1 - 14, Math.max(BOUNDS.z0 + 14, p.pos.z)), p.heading + Math.PI);
+      this.camera3.snap = true;
+      this.hud.toast('🌾 Por ahí se acaba Cobeña: solo quedan campos de cereal.');
+    }
     this.props.update(dt, p);
     this.studs.update(dt, p);
     this.traffic.update(dt, p, this.time);

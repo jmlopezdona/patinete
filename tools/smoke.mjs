@@ -31,6 +31,12 @@ await page.evaluate(() => {
       I.endFrame();
     }
   };
+  // Centro del half-pipe mirando a lo largo de la parcela del skatepark
+  window.pipe = () => {
+    const T = g.world.places.trick;
+    const c = Math.cos(T.rot), s = Math.sin(T.rot);
+    g.player.place(T.x0 - 2 * c - 19 * s, T.z0 + 2 * s - 19 * c, Math.atan2(c, -s));
+  };
   window.startMission = (id) => {
     const m = g.missions;
     if (m.active) m._cleanup();
@@ -64,8 +70,7 @@ await log('carrera', () => {
 await shot('s_carrera');
 await log('carrera fin', () => {
   const g = window.__game; const m = g.missions;
-  const RACE = [[87, 29], [145, 29], [145, -58], [145, -145], [29, -145], [-87, -145], [-87, -29], [-203, -29], [-203, 58], [-203, 145], [-116, 145], [-29, 145], [-29, 87], [-29, 38]];
-  for (const c of RACE) { g.player.place(c[0], c[1], 0); window.sim(0.1); }
+  for (const c of g.world.places.race.gates) { g.player.place(c[0], c[1], 0); window.sim(0.1); }
   return { st: m.state, stars: g.save.stars, best: g.save.best };
 });
 await shot('s_resultado');
@@ -74,7 +79,7 @@ await page.evaluate(() => { window.sim(1.2, (t) => (t > 1 ? { keys: ['KeyE'] } :
 await log('trucos', () => {
   const g = window.__game; const m = g.missions;
   window.startMission('tricks');
-  g.player.place(57, 87, 0); g.player.v = 31;
+  window.pipe(); g.player.v = 31;
   window.sim(14, (t, p) => ({ throttle: 1, steer: p.grounded ? 0 : 1, trickPressed: !p.grounded && p.airTime > 0.2 && p.airTime < 0.23 }));
   return { score: m.score, combo: g.combo, st: m.state };
 });
@@ -138,12 +143,12 @@ await page.evaluate(() => { window.sim(1.2, (t) => (t > 1 ? { keys: ['KeyE'] } :
 await log('noche + mega salto', () => {
   const g = window.__game;
   g.env.night = g.env.target = 1; g.env.apply();
-  g.player.place(150, 29, Math.PI / 2); g.player.boost = 1; g.player.v = 40;
+  g.player.place(g.world.places.megaHole.x0 - 86, g.world.places.mega.z, Math.PI / 2); g.player.boost = 1; g.player.v = 40;
   window.sim(3.05, () => ({ throttle: 1, boost: true }));
   return { pos: g.player.pos.toArray().map((n) => +n.toFixed(1)), grounded: g.player.grounded };
 });
 await shot('s_mega_noche');
-await log('noche ciudad', () => { const g = window.__game; g.player.place(-29, -60, 0); g.camera3.snap = true; window.sim(1.5, () => ({ throttle: 1 })); return { bricks: g.save.bricks.length }; });
+await log('noche ciudad', () => { const g = window.__game; g.player.place(g.world.places.spawn.x, g.world.places.spawn.z, g.world.places.spawn.heading); g.camera3.snap = true; window.sim(1.5, () => ({ throttle: 1 })); return { bricks: g.save.bricks.length }; });
 await shot('s_noche');
 await log('estado', () => { const g = window.__game; return { studs: g.save.studs, stars: g.save.stars, calls: g.renderer.info.render.calls, tris: g.renderer.info.render.triangles, programs: g.renderer.info.programs.length, geos: g.renderer.info.memory.geometries, tex: g.renderer.info.memory.textures }; });
 if (errors.length) console.log('\nERRORES:\n' + [...new Set(errors)].slice(0, 20).join('\n'));

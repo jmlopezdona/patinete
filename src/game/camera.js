@@ -9,7 +9,7 @@ const _l = new THREE.Vector3();
 export class ChaseCamera {
   constructor(game) {
     this.game = game;
-    this.cam = new THREE.PerspectiveCamera(62, 1, 0.4, 3200);
+    this.cam = new THREE.PerspectiveCamera(62, 1, 0.4, 1700);
     this.yaw = 0;
     this.snap = true;
     this.mode = 0;

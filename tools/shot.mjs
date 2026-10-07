@@ -9,20 +9,20 @@ const only = process.argv[3] ? process.argv[3].split(',') : null;
 const URL = process.env.GAME_URL || 'http://localhost:5173/';
 fs.mkdirSync(out, { recursive: true });
 
-const tp = (x, z, h, extra = '') => `(() => { const g = window.__game; g.player.place(${x}, ${z}, ${h}); g.camera3.snap = true; ${extra} })()`;
+// Coloca al jugador en un lugar con nombre (más un desplazamiento) mirando en una dirección
+const at = (place, dx, dz, h, extra = '') => `(() => { const g = window.__game; const P = g.world.places; const p = ${place}; g.player.place(p.x + ${dx}, p.z + ${dz}, ${h}); g.camera3.snap = true; ${extra} })()`;
 
 const SHOTS = [
   { name: 'menu', url: '?q=2', wait: 2500 },
   { name: 'spawn', url: '?autostart&q=2', wait: 2500 },
-  { name: 'street', js: tp(29, -20, Math.PI), wait: 1200 },
-  { name: 'skate', js: tp(87, 46, 0), wait: 1200 },
-  { name: 'halfpipe', js: tp(76, 87, -Math.PI / 2), wait: 1200 },
-  { name: 'park', js: tp(-140, 50, 0.4), wait: 1200 },
-  { name: 'soccer', js: tp(-170, 112, Math.PI / 2), wait: 1200 },
-  { name: 'bowling', js: tp(116, -99, Math.PI), wait: 1200 },
-  { name: 'pier', js: tp(215, 29, Math.PI / 2), wait: 1200 },
-  { name: 'tower', js: tp(0, -80, Math.PI), wait: 1200 },
-  { name: 'night', js: tp(-29, 20, Math.PI, 'g.env.night = g.env.target = 1; g.env.apply();'), wait: 1500 },
+  { name: 'street', js: at('P.spawn', -120, 60, -1.09), wait: 1200 },
+  { name: 'skate', js: at('P.trick', 0, 0, 'P.trick.heading'), wait: 1200 },
+  { name: 'halfpipe', js: at('{ x: P.trick.x0, z: P.trick.z0 }', 10, 10, Math.PI), wait: 1200 },
+  { name: 'plaza', js: at('P.pizza', 0, 0, 'Math.atan2(P.plaza.x - P.pizza.x, P.plaza.z - P.pizza.z)'), wait: 1200 },
+  { name: 'soccer', js: at('P.soccer.marker', 0, 0, 0), wait: 1200 },
+  { name: 'bowling', js: at('P.bowling.marker', 0, 4, Math.PI), wait: 1200 },
+  { name: 'mega', js: at('P.mega', 0, 0, Math.PI / 2), wait: 1200 },
+  { name: 'night', js: at('P.spawn', 0, 0, -1.09, 'g.env.night = g.env.target = 1; g.env.apply();'), wait: 1500 },
 ];
 
 const browser = await puppeteer.launch({

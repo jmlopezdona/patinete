@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { legoUniforms } from '../lego/materials.js';
 import { damp } from '../core/rng.js';
+import { CENTER } from '../world/cobena.js';
 
 const SUN = new THREE.Vector3(0.52, 0.74, 0.42).normalize();
 const DAY = { top: new THREE.Color(0x2f86e6), hor: new THREE.Color(0xc4e6ff), sun: new THREE.Color(0xfff0d8), hemiS: new THREE.Color(0xd4ebff), hemiG: new THREE.Color(0xa09680) };
@@ -71,10 +72,10 @@ export class Environment {
     // Nubes de ladrillos
     const rng = game.rng;
     const boxes = [];
-    for (let c = 0; c < 16; c++) {
-      const cx = rng.range(-1000, 1000);
+    for (let c = 0; c < 70; c++) {
+      const cx = CENTER.x + rng.range(-2600, 2600);
       const cy = rng.range(130, 210);
-      const cz = rng.range(-1000, 1000);
+      const cz = CENTER.z + rng.range(-2600, 2600);
       const n = rng.int(4, 7);
       for (let i = 0; i < n; i++) boxes.push([cx + rng.range(-34, 34), cy + rng.range(-5, 7), cz + rng.range(-16, 16), rng.range(26, 52), rng.range(9, 15), rng.range(22, 36)]);
     }

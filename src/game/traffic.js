@@ -3,64 +3,39 @@ import { carModel } from '../lego/models.js';
 import { createMinifig } from '../lego/minifig.js';
 import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
-import { roadC } from '../world/city.js';
+import { DATA } from '../world/cobena.js';
 import { angDiff, damp } from '../core/rng.js';
 
-// Circuitos rectangulares por las calles (índices de calle x0, x1, z0, z1)
-const LOOPS = [
-  [0, 7, 0, 7], [1, 6, 1, 4], [2, 4, 0, 4], [0, 3, 0, 4], [4, 7, 1, 4], [2, 4, 4, 7],
-  [3, 4, 2, 6], [0, 2, 1, 3], [5, 7, 0, 2], [0, 7, 6, 7], [0, 7, 0, 7], [1, 6, 1, 4],
-];
 const KINDS = [
   ['car', C.red], ['taxi', C.yellow], ['bus', C.red], ['car', C.medAzure], ['police', C.white], ['truck', C.orange],
   ['icecream', C.pink], ['car', C.lime], ['car', C.sandBlue], ['bus', C.green], ['taxi', C.yellow], ['car', C.magenta],
 ];
-const LANE = 3.5;
 
-// Polilínea con esquinas redondeadas, muestreada cada ~1 unidad
-function loopPath(l, dir) {
-  const o = dir > 0 ? LANE : -LANE;
-  const x0 = roadC(l[0]) + o;
-  const x1 = roadC(l[1]) - o;
-  const z0 = roadC(l[2]) + o;
-  const z1 = roadC(l[3]) - o;
-  const corners = dir > 0 ? [[x0, z0], [x1, z0], [x1, z1], [x0, z1]] : [[x0, z0], [x0, z1], [x1, z1], [x1, z0]];
-  const pts = [];
-  const R = 5;
-  for (let i = 0; i < 4; i++) {
-    const p = corners[i];
-    const a = corners[(i + 3) % 4];
-    const b = corners[(i + 1) % 4];
-    const din = [Math.sign(p[0] - a[0]), Math.sign(p[1] - a[1])];
-    const dout = [Math.sign(b[0] - p[0]), Math.sign(b[1] - p[1])];
-    const s = [p[0] - din[0] * R, p[1] - din[1] * R];
-    const e = [p[0] + dout[0] * R, p[1] + dout[1] * R];
-    for (let k = 0; k <= 8; k++) {
-      const t = k / 8;
-      const u = 1 - t;
-      pts.push([u * u * s[0] + 2 * u * t * p[0] + t * t * e[0], u * u * s[1] + 2 * u * t * p[1] + t * t * e[1]]);
-    }
-    // Recta hasta la siguiente esquina
-    const len = Math.abs(b[0] - p[0]) + Math.abs(b[1] - p[1]) - 2 * R;
-    const n = Math.max(1, Math.round(len / 2));
-    for (let k = 1; k < n; k++) pts.push([e[0] + dout[0] * ((len * k) / n), e[1] + dout[1] * ((len * k) / n)]);
-  }
-  return pts;
+// Paseo de ida y vuelta por una polilínea (puntos x, z seguidos)
+function walkPath(pts) {
+  const cum = [0];
+  for (let i = 2; i < pts.length; i += 2) cum.push(cum[cum.length - 1] + Math.hypot(pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1]));
+  return { pts, cum, len: cum[cum.length - 1] };
 }
 
 export class Traffic {
-  constructor(game, pedLoops) {
+  constructor(game, pedPaths) {
     this.game = game;
     this.cars = [];
     const rng = game.rng;
-    LOOPS.forEach((l, i) => {
+    // Dos coches por cada circuito de calles reales
+    const loops = DATA.cars.map((f) => {
+      const path = [];
+      for (let i = 0; i < f.length; i += 2) path.push([f[i], f[i + 1]]);
+      return path;
+    });
+    const slots = loops.flatMap((path) => [[path, 0], [path, 0.5]]);
+    slots.forEach(([path, at], i) => {
       const [kind, color] = KINDS[i % KINDS.length];
       const model = carModel(kind, color);
       const mesh = new THREE.Mesh(model.geo, plastic);
       mesh.castShadow = true;
-      const dir = i % 2 ? -1 : 1;
-      const path = loopPath(l, dir);
-      const idx = Math.floor(rng() * path.length);
+      const idx = Math.floor((at + rng() * 0.3) * path.length) % path.length;
       const car = { mesh, path, idx, x: path[idx][0], z: path[idx][1], heading: 0, speed: 0, cruise: kind === 'bus' || kind === 'truck' ? 11 : rng.range(13, 17), hl: model.len / 2, hw: model.width / 2, honk: 0 };
       const nx = path[(idx + 1) % path.length];
       car.heading = Math.atan2(nx[0] - car.x, nx[1] - car.z);
@@ -73,15 +48,16 @@ export class Traffic {
     const torsoC = [C.red, C.blue, C.green, C.white, C.orange, C.magenta, C.turquoise, C.yellow, C.lavender, C.black];
     const legC = [C.blue, C.black, C.dgray, C.brown, C.sandBlue, C.darkRed, C.green, C.tan];
     const hairC = [C.brown, C.black, C.yellow, C.orange, C.dgray, C.darkRed, C.white];
-    const count = 26;
+    const paths = pedPaths.map(walkPath).filter((p) => p.len > 20);
+    const count = Math.min(64, paths.length * 2);
     for (let i = 0; i < count; i++) {
-      const loop = pedLoops[Math.floor(rng() * pedLoops.length)];
+      const loop = paths[i % paths.length];
       const fig = createMinifig({
         torso: rng.pick(torsoC), legs: rng.pick(legC), hair: rng.pick(['hair', 'hair', 'cap', 'none']), hairColor: rng.pick(hairC),
         face: rng.pick(['smile', 'smile', 'grin', 'cool', 'wink']), print: rng.pick([null, 'tie', 'stripes', 'buttons', 'star']), printColor: rng.pick(['#ffffff', '#1b1d21', '#f7d117']),
       });
       game.scene.add(fig.group);
-      this.peds.push({ fig, loop, s: rng() * loop.h * 8, dir: rng.chance(0.5) ? 1 : -1, speed: rng.range(2.2, 3.6), ph: rng() * 6, fly: 0, vy: 0, y: 0, x: 0, z: 0, off: rng.range(-0.5, 0.5), cd: 0 });
+      this.peds.push({ fig, loop, s: rng() * loop.len, seg: 0, dir: rng.chance(0.5) ? 1 : -1, speed: rng.range(2.2, 3.6), ph: rng() * 6, fly: 0, vy: 0, y: 0, x: 0, z: 0, off: rng.range(-0.7, 0.7), cd: 0 });
     }
   }
 
@@ -151,7 +127,7 @@ export class Traffic {
       c.heading += angDiff(c.heading, th) * Math.min(1, 6 * dt);
       c.mesh.position.set(c.x, 0, c.z);
       c.mesh.rotation.y = c.heading;
-      const far = Math.abs(dxp) + Math.abs(dzp) > 330;
+      const far = Math.abs(dxp) + Math.abs(dzp) > 420;
       c.mesh.visible = !far;
       // Choque con el patinete
       if (pAlive && player.pos.y < 4.4) {
@@ -189,31 +165,26 @@ export class Traffic {
     const T = this.game.terrain;
     for (const p of this.peds) {
       const L = p.loop;
-      const per = L.h * 8;
-      if (p.fly <= 0) p.s = (p.s + p.dir * p.speed * dt + per) % per;
-      const side = Math.floor(p.s / (2 * L.h)) % 4;
-      const u = p.s - side * 2 * L.h - L.h;
-      const h = L.h + p.off;
-      let x;
-      let z;
-      let hd;
-      if (side === 0) {
-        x = L.cx + u;
-        z = L.cz - h;
-        hd = Math.PI / 2;
-      } else if (side === 1) {
-        x = L.cx + h;
-        z = L.cz + u;
-        hd = 0;
-      } else if (side === 2) {
-        x = L.cx - u;
-        z = L.cz + h;
-        hd = -Math.PI / 2;
-      } else {
-        x = L.cx - h;
-        z = L.cz - u;
-        hd = Math.PI;
+      if (p.fly <= 0) {
+        p.s += p.dir * p.speed * dt;
+        if (p.s >= L.len) {
+          p.s = L.len;
+          p.dir = -1;
+        } else if (p.s <= 0) {
+          p.s = 0;
+          p.dir = 1;
+        }
       }
+      while (p.seg < L.cum.length - 2 && p.s > L.cum[p.seg + 1]) p.seg++;
+      while (p.seg > 0 && p.s < L.cum[p.seg]) p.seg--;
+      const i2 = p.seg * 2;
+      const sl = L.cum[p.seg + 1] - L.cum[p.seg] || 1;
+      const ux = (L.pts[i2 + 2] - L.pts[i2]) / sl;
+      const uz = (L.pts[i2 + 3] - L.pts[i2 + 1]) / sl;
+      const t = p.s - L.cum[p.seg];
+      const x = L.pts[i2] + ux * t - uz * p.off;
+      const z = L.pts[i2 + 1] + uz * t + ux * p.off;
+      let hd = Math.atan2(ux, uz);
       if (p.dir < 0) hd += Math.PI;
       p.x = x;
       p.z = z;

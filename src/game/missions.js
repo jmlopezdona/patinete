@@ -33,18 +33,17 @@ function beamMaterial(color, opacity) {
   return new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
 }
 
-const RACE = [[87, 29], [145, 29], [145, -58], [145, -145], [29, -145], [-87, -145], [-87, -29], [-203, -29], [-203, 58], [-203, 145], [-116, 145], [-29, 145], [-29, 87], [-29, 38]];
-
 // Minijuegos: carrera, trucos, bolos, reparto de pizza y fútbol.
 export class Missions {
   constructor(game) {
     this.game = game;
     const P = game.world.places;
+    const sp = P.spawn;
     this.defs = [
-      { id: 'race', name: 'Gran Premio Brick', icon: '🏁', color: 0xffc61a, x: P.plaza.x + 9, z: P.plaza.z + 18, desc: 'Da la vuelta al circuito urbano lo más rápido que puedas.', lower: true, unit: (v) => fmt(v) },
+      { id: 'race', name: 'Gran Premio de Cobeña', icon: '🏁', color: 0xffc61a, x: sp.x - Math.sin(sp.heading) * 14, z: sp.z - Math.cos(sp.heading) * 14, desc: 'Da la vuelta al barrio de los ríos lo más rápido que puedas.', lower: true, unit: (v) => fmt(v) },
       { id: 'tricks', name: 'Rey del Skatepark', icon: '🛹', color: 0xfe8a18, x: P.trick.marker.x, z: P.trick.marker.z, desc: '75 segundos para encadenar tus mejores trucos.', unit: (v) => `${Math.round(v)} pts` },
       { id: 'bowling', name: 'Bolos Gigantes', icon: '🎳', color: 0x2f7dff, x: P.bowling.x - 5.5, z: P.bowling.z + 1.5, desc: 'Tú eres la bola: derriba los 10 bolos en dos tiradas.', unit: (v) => `${v} bolos` },
-      { id: 'pizza', name: 'Pizza Exprés', icon: '🍕', color: 0xe23b2a, x: P.pizza.x, z: P.pizza.z, desc: 'Reparte 5 pizzas antes de que se enfríen.', lower: true, unit: (v) => fmt(v) },
+      { id: 'pizza', name: 'Pizza Exprés', icon: '🍕', color: 0xe23b2a, x: P.pizza.x, z: P.pizza.z, desc: 'Reparte 5 pizzas por las calles de Cobeña antes de que se enfríen.', lower: true, unit: (v) => fmt(v) },
       { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Marca todos los goles que puedas en 60 segundos.', unit: (v) => `${v} goles` },
     ];
     this.state = 'idle';
@@ -229,12 +228,16 @@ export class Missions {
   // ---------- Carrera ----------
   _race() {
     const g = this.game;
+    const R = g.world.places.race;
+    const RACE = R.gates;
     const n = RACE.length;
+    const gold = Math.round(R.length / 29);
+    const silver = Math.round(R.length / 23);
     let idx = 0;
-    g.player.place(-10, 29, Math.PI / 2);
+    g.player.place(R.start.x, R.start.z, R.start.heading);
     const place = () => {
       const c = RACE[idx];
-      const prev = idx ? RACE[idx - 1] : [-10, 29];
+      const prev = idx ? RACE[idx - 1] : [R.start.x, R.start.z];
       this.gate.position.set(c[0], 5.5, c[1]);
       this.gate.rotation.y = Math.atan2(c[0] - prev[0], c[1] - prev[1]);
       this.gate.visible = true;
@@ -252,15 +255,15 @@ export class Missions {
         const p = g.player.pos;
         const c = RACE[idx];
         this.gate.scale.setScalar(1 + Math.sin(time * 6) * 0.05);
-        g.hud.mission(`🏁 ${this.def.name}`, fmt(this.time), `Control ${idx}/${n} · Oro 0:44 · Plata 0:56`);
-        if (Math.hypot(p.x - c[0], p.z - c[1]) < 8.5) {
+        g.hud.mission(`🏁 ${this.def.name}`, fmt(this.time), `Control ${idx}/${n} · Oro ${fmt(gold)} · Plata ${fmt(silver)}`);
+        if (Math.hypot(p.x - c[0], p.z - c[1]) < 9.5) {
           idx++;
           g.sfx.checkpoint();
           g.player.boost = Math.min(1, g.player.boost + 0.12);
           if (idx >= n) {
             const t = this.time;
-            const stars = t <= 44 ? 3 : t <= 56 ? 2 : 1;
-            this.finish(stars, t, [`Tiempo: <b>${fmt(t)}</b>`, stars === 3 ? '¡Vuelta de oro!' : stars === 2 ? 'Plata. El oro está en 0:44.' : 'Bronce. La plata está en 0:56.']);
+            const stars = t <= gold ? 3 : t <= silver ? 2 : 1;
+            this.finish(stars, t, [`Tiempo: <b>${fmt(t)}</b>`, stars === 3 ? '¡Vuelta de oro!' : stars === 2 ? `Plata. El oro está en ${fmt(gold)}.` : `Bronce. La plata está en ${fmt(silver)}.`]);
           } else {
             g.hud.big(`${idx}/${n}`, '#ffd23a', 0.5, true);
             place();
@@ -346,13 +349,13 @@ export class Missions {
   _pizza() {
     const g = this.game;
     const P = g.world.places.pizza;
-    const doors = g.world.doors.filter((d) => Math.hypot(d.x - P.x, d.z - P.z) > 30);
+    const doors = g.world.doors.filter((d) => Math.hypot(d.x - P.x, d.z - P.z) > 60);
     const rng = g.rng;
     const route = [];
     let cur = P;
     let total = 0;
     for (let i = 0; i < 5; i++) {
-      let cands = doors.filter((d) => !route.includes(d) && Math.hypot(d.x - cur.x, d.z - cur.z) > 80 && Math.hypot(d.x - cur.x, d.z - cur.z) < 230);
+      let cands = doors.filter((d) => !route.includes(d) && Math.hypot(d.x - cur.x, d.z - cur.z) > 120 && Math.hypot(d.x - cur.x, d.z - cur.z) < 380);
       if (!cands.length) cands = doors.filter((d) => !route.includes(d));
       const d = cands[Math.floor(rng() * cands.length)];
       total += Math.abs(d.x - cur.x) + Math.abs(d.z - cur.z);

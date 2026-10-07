@@ -46,24 +46,54 @@ const res = await page.evaluate(() => {
     out[name] = { end: [+p.pos.x.toFixed(1), +p.pos.y.toFixed(2), +p.pos.z.toFixed(1)], v: +p.v.toFixed(1), maxY: +maxY.toFixed(2), maxV: +maxV.toFixed(1), airS: +(airFrames / 60).toFixed(2), grindS: +(grindFrames / 60).toFixed(2), events: JSON.parse(JSON.stringify(events)), trace: trace.join(' | ') };
   }
   const setV = (v) => { p.v = v; };
-  run('A_accel', () => p.place(-150, 29, Math.PI / 2), 3, () => ({ throttle: 1 }));
-  run('A2_boost', () => p.place(-150, 29, Math.PI / 2), 4, () => ({ throttle: 1, boost: true }));
-  run('B_curb', () => { p.place(0, 29, Math.PI); setV(30); }, 1.2, () => ({ throttle: 1 }));
-  run('C_tabletop', () => { p.place(66, 128, Math.PI / 2); setV(30); }, 3, () => ({ throttle: 1 }));
-  run('D_halfpipe', () => { p.place(57, 87, 0); setV(31); }, 10, () => ({ throttle: 1 }));
-  run('E_bowl', () => { p.place(110, 63, 0.3); setV(28); }, 8, () => ({ throttle: 1 }));
-  run('F_wall20', () => { p.place(-29, 29, Math.PI / 2); setV(20); }, 1.5, () => ({ throttle: 1 }));
-  run('F_wall35', () => { p.place(-29, 0, Math.PI / 2); setV(40); p.boost = 1; }, 3, () => ({ throttle: 1, boost: true }));
-  run('G_rail', () => { p.place(80, 52, 0); setV(25); }, 3, (t, pl) => ({ throttle: 1, jumpPressed: pl.grounded && pl.pos.z > 61.5 && pl.pos.z < 63 }));
-  run('H_mega', () => { p.place(120, 29, Math.PI / 2); setV(30); p.boost = 1; }, 7, (t, pl) => ({ throttle: pl.pos.x > 300 ? -1 : 1, boost: pl.pos.x < 290 }));
-  run('H2_megaSlow', () => { p.place(200, 29, Math.PI / 2); setV(25); p.boost = 0; }, 5, () => ({ throttle: 1 }));
-  run('I_spin360', () => { p.place(66, 128, Math.PI / 2); setV(31); }, 3, (t, pl) => ({ throttle: 1, steer: pl.grounded ? 0 : 1, trickPressed: !pl.grounded && pl.airTime > 0.1 && pl.airTime < 0.13 }));
-  run('J_backflip', () => { p.place(57, 87, 0); setV(31); }, 4, (t, pl) => ({ throttle: pl.grounded ? 1 : -1, downPressed: !pl.grounded && pl.airTime > 0.13 && pl.airTime < 0.16 }));
-  run('K_funbox', () => { p.place(80, 105, Math.PI / 2); setV(28); }, 3, () => ({ throttle: 1 }));
-  run('L_rollers', () => { p.place(130, 90, 0); setV(22); }, 3, () => ({ throttle: 1 }));
-  run('M_pondKicker', () => { p.place(-140, 61, -Math.PI / 2); setV(24); }, 3, () => ({ throttle: 1 }));
-  run('N_return', () => { p.place(335, 42, -Math.PI / 2); p.boost = 1; }, 5, () => ({ throttle: 1, boost: true }));
-  run('O_steer', () => { p.place(0, 29, Math.PI / 2); setV(20); }, 2, () => ({ throttle: 1, steer: 1 }));
+  const P = g.world.places;
+  // Coordenadas locales del skatepark: X a lo largo de la parcela (hacia el este), Z hacia el sur
+  const T = P.trick;
+  const cs = Math.cos(T.rot), sn = Math.sin(T.rot);
+  const E = Math.atan2(cs, -sn); // rumbo +X local
+  const sk = (lx, lz, h, v) => { p.place(T.x0 + lx * cs + lz * sn, T.z0 - lx * sn + lz * cs, h); setV(v); };
+  const sp = P.spawn;
+  const mx = P.megaHole.x0;
+  const mz = P.mega.z;
+  run('A_accel', () => p.place(sp.x, sp.z, sp.heading), 3, () => ({ throttle: 1 }));
+  run('A2_boost', () => p.place(sp.x, sp.z, sp.heading), 4, () => ({ throttle: 1, boost: true }));
+  run('C_tabletop', () => sk(-98, -27, E, 30), 3, () => ({ throttle: 1 }));
+  run('D_halfpipe', () => sk(-2, -19, E, 31), 10, () => ({ throttle: 1 }));
+  run('E_bowl', () => sk(72, -4, E + 0.3, 28), 8, () => ({ throttle: 1 }));
+  run('G_rail', () => sk(12, 29, E, 25), 3, (t, pl) => ({ throttle: 1, jumpPressed: pl.grounded && t > 0.3 && t < 0.36 }));
+  run('H_mega', () => { p.place(mx - 116, mz, Math.PI / 2); setV(30); p.boost = 1; }, 7, (t, pl) => ({ throttle: pl.pos.x > mx + 64 ? -1 : 1, boost: pl.pos.x < mx + 54 }));
+  run('H2_megaSlow', () => { p.place(mx - 36, mz, Math.PI / 2); setV(25); p.boost = 0; }, 5, () => ({ throttle: 1 }));
+  run('I_spin360', () => sk(-98, -27, E, 31), 3, (t, pl) => ({ throttle: 1, steer: pl.grounded ? 0 : 1, trickPressed: !pl.grounded && pl.airTime > 0.1 && pl.airTime < 0.13 }));
+  run('J_backflip', () => sk(-2, -19, E, 31), 4, (t, pl) => ({ throttle: pl.grounded ? 1 : -1, downPressed: !pl.grounded && pl.airTime > 0.13 && pl.airTime < 0.16 }));
+  run('K_funbox', () => sk(-14, 18, E, 28), 3, () => ({ throttle: 1 }));
+  run('L_rollers', () => sk(-76, 8, E, 22), 3, () => ({ throttle: 1 }));
+  run('N_return', () => { p.place(mx + 99, mz + 13, -Math.PI / 2); p.boost = 1; }, 5, () => ({ throttle: 1, boost: true }));
+  run('O_wall', () => { p.place(sp.x, sp.z, sp.heading + Math.PI / 2); setV(20); }, 2, () => ({ throttle: 1 }));
+  // Vuelta completa al circuito de la carrera siguiendo la línea: comprueba que las calles son transitables
+  {
+    const R = P.race;
+    const line = [];
+    for (let i = 0; i < R.line.length; i += 2) line.push([R.line[i], R.line[i + 1]]);
+    let k = 1;
+    let bumps = 0;
+    const oBump = g.onBump.bind(g);
+    g.onBump = (s) => { bumps++; oBump(s); };
+    p.place(R.start.x, R.start.z, R.start.heading);
+    let t = 0;
+    let stuck = 0;
+    for (; t < 240 && k < line.length; t += 1 / 60) {
+      let tx = line[k][0], tz = line[k][1];
+      while (k < line.length - 1 && Math.hypot(tx - p.pos.x, tz - p.pos.z) < 10) { k++; tx = line[k][0]; tz = line[k][1]; }
+      if (k === line.length - 1 && Math.hypot(tx - p.pos.x, tz - p.pos.z) < 10) break;
+      let d = Math.atan2(tx - p.pos.x, tz - p.pos.z) - p.heading;
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      p.update(1 / 60, { ...inp0, throttle: Math.abs(d) > 0.6 && p.v > 14 ? -0.3 : 1, steer: d > 0.06 ? -1 : d < -0.06 ? 1 : 0 });
+      stuck = p.speed < 1 ? stuck + 1 : 0;
+      if (stuck > 240) break;
+    }
+    out.Z_race = { end: [+p.pos.x.toFixed(1), +p.pos.y.toFixed(2), +p.pos.z.toFixed(1)], v: +p.v.toFixed(1), maxY: 0, maxV: 0, airS: 0, grindS: 0, events: [{ t: +t.toFixed(1), k, n: line.length, bumps, gold: Math.round(R.length / 27), len: R.length }], trace: '' };
+  }
   return out;
 });
 for (const k in res) {

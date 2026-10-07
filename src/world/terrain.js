@@ -56,6 +56,14 @@ const FN = {
     const s = r - p.r0;
     return p.base + p.R - Math.sqrt(Math.max(0, p.R * p.R - s * s));
   },
+  poly(p, x, z) {
+    const q = p.pts;
+    let c = false;
+    for (let i = 0, j = q.length - 2; i < q.length; j = i, i += 2) {
+      if (q[i + 1] > z !== q[j + 1] > z && x < ((q[j] - q[i]) * (z - q[i + 1])) / (q[j + 1] - q[i + 1]) + q[i]) c = !c;
+    }
+    return c ? p.top : NEG;
+  },
   rcone(p, x, z) {
     const r = Math.hypot(x - p.cx, z - p.cz);
     if (r < p.r0 || r > p.r1) return NEG;
@@ -64,13 +72,18 @@ const FN = {
 };
 
 export class Terrain {
-  constructor(islandHalf) {
+  constructor() {
     this.cells = new Map();
     this.cs = 20;
     this.rails = [];
     this.hit = null;
-    this.islandHalf = islandHalf;
+    this.holes = [];
     this.waterY = -4;
+  }
+
+  // Hueco rectangular en el suelo (una charca): ahí el fondo baja hasta waterY
+  hole(x0, z0, x1, z1) {
+    this.holes.push({ x0, z0, x1, z1 });
   }
 
   _reg(p, ex, ez) {
@@ -129,6 +142,17 @@ export class Terrain {
     const lip = base + R * (1 - Math.cos((angleDeg * Math.PI) / 180));
     return this._reg({ f: FN.bowl, type: 'bowl', cx, cz, r0, R, d, base, lip, vert: angleDeg >= 55 }, r0 + d, r0 + d);
   }
+  // Polígono plano (puntos x, z seguidos)
+  poly(pts, top) {
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (let i = 0; i < pts.length; i += 2) {
+      x0 = Math.min(x0, pts[i]);
+      x1 = Math.max(x1, pts[i]);
+      z0 = Math.min(z0, pts[i + 1]);
+      z1 = Math.max(z1, pts[i + 1]);
+    }
+    return this._reg({ f: FN.poly, type: 'poly', cx: (x0 + x1) / 2, cz: (z0 + z1) / 2, pts, top }, (x1 - x0) / 2, (z1 - z0) / 2);
+  }
   rcone(cx, cz, r0, r1, h0, h1) {
     return this._reg({ f: FN.rcone, type: 'rcone', cx, cz, r0, r1, h0, h1 }, r1, r1);
   }
@@ -139,7 +163,11 @@ export class Terrain {
   }
 
   height(x, z) {
-    let best = Math.abs(x) <= this.islandHalf && Math.abs(z) <= this.islandHalf ? 0 : this.waterY;
+    let best = 0;
+    for (let i = 0; i < this.holes.length; i++) {
+      const h = this.holes[i];
+      if (x > h.x0 && x < h.x1 && z > h.z0 && z < h.z1) best = this.waterY;
+    }
     let hit = null;
     const cs = this.cs;
     const cell = this.cells.get((Math.floor(x / cs) + 512) * 1024 + (Math.floor(z / cs) + 512));

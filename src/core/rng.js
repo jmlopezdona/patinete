@@ -1,4 +1,4 @@
-// Generador pseudoaleatorio con semilla (mulberry32): la ciudad sale siempre igual.
+// Generador pseudoaleatorio con semilla (mulberry32): el pueblo sale siempre igual.
 export function makeRng(seed) {
   let a = seed >>> 0;
   const r = () => {

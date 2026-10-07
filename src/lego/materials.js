@@ -6,11 +6,11 @@ export const legoUniforms = {
   uSunDir: { value: new THREE.Vector2(0.6, 0.4) },
 };
 
-// Material de los ladrillos estáticos (un único InstancedMesh para toda la ciudad).
+// Material de los ladrillos estáticos (mallas instanciadas por sectores) y del suelo por capas.
 // El shader dibuja los studs en las caras superiores y las juntas entre ladrillos
 // en las paredes, usando coordenadas locales de cada pieza.
-export function createBrickMaterial() {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.46, metalness: 0 });
+export function createBrickMaterial(opts = {}) {
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.46, metalness: 0, ...opts });
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = legoUniforms.uNight;
     shader.uniforms.uSunDir = legoUniforms.uSunDir;

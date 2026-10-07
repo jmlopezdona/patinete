@@ -2,12 +2,13 @@
   "name": "juego-patinete",
   "private": true,
   "version": "1.0.0",
-  "description": "Brick City Patinete: un mundo abierto de bloques para recorrer en patinete",
+  "description": "Cobeña en patinete: el pueblo de Cobeña (Madrid) hecho de bloques para recorrerlo en patinete",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "datos": "node tools/osm-cobena.mjs",
     "test:fisica": "node tools/phys.mjs",
     "test:misiones": "node tools/smoke.mjs shots",
     "capturas": "node tools/shot.mjs shots"

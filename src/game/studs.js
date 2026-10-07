@@ -22,7 +22,7 @@ export class Studs {
     this.mesh = new THREE.InstancedMesh(studGeometry(), mat, this.max);
     this.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(this.max * 3), 3);
     this.mesh.frustumCulled = false;
-    this.mesh.castShadow = true;
+    this.mesh.castShadow = false; // son muchos: sin sombra se dibujan la mitad de triángulos
     for (const s of spots) this._add(s.x, s.y, s.z, s.type, false);
     this.nStatic = this.items.length;
     for (let i = this.nStatic; i < this.max; i++) this._add(0, -99, 0, 0, true);

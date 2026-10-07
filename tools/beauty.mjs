@@ -7,7 +7,7 @@ fs.mkdirSync(out, { recursive: true });
 const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new', args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--mute-audio', '--window-size=1440,810'], defaultViewport: { width: 1440, height: 810 } });
 const page = await browser.newPage();
 page.on('pageerror', (e) => console.log('[pageerror]', e.message, e.stack));
-await page.goto('http://localhost:5173/?autostart&q=2' + (process.argv[3] || ''), { waitUntil: 'load' });
+await page.goto((process.env.GAME_URL || 'http://localhost:5173/') + '?autostart&q=2' + (process.argv[3] || ''), { waitUntil: 'load' });
 await page.waitForFunction('window.__game && window.__game.env', { timeout: 60000 });
 await new Promise((r) => setTimeout(r, 800));
 const views = JSON.parse(process.argv[4] || '[]');

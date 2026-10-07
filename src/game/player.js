@@ -5,7 +5,6 @@ import { Builder } from '../lego/builder.js';
 import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
 import { clamp, damp, angDiff } from '../core/rng.js';
-import { ISLAND } from '../world/city.js';
 
 const G = 42;
 const ACC = 22;
@@ -175,7 +174,7 @@ export class Player {
     this.safeT -= dt;
     if (this.safeT <= 0 && this.grounded && this.crashT <= 0) {
       this.safeT = 0.4;
-      if (Math.abs(this.pos.x) < ISLAND - 4 && Math.abs(this.pos.z) < ISLAND - 4 && this.pos.y < 1.2) {
+      if (this.pos.y < 1.2 && this.terrain.height(this.pos.x + 3, this.pos.z) > -1 && this.terrain.height(this.pos.x - 3, this.pos.z) > -1) {
         this.safe = { x: this.pos.x, z: this.pos.z, heading: this.heading };
       }
     }
