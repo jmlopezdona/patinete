@@ -444,39 +444,48 @@ function megaJump(W) {
   W.places.mega = { x: X(150), z, hole: h, islandX: ix };
 }
 
-// ---------- Calle Libertad 17: Adrián, el pequeño batería heavy ----------
+// ---------- La entrada de la Plaza de la Villa: Adrián, el pequeño batería heavy ----------
 
+// A la plaza se entra por la esquina donde se juntan las calles Cid, Madrid y Mayor. El escenario va
+// allí mismo, ya dentro de la plaza y de cara a la fuente.
 function drummer(W) {
   const { batch, terrain } = W;
-  const door = W.doors.find((d) => d.name === 'C/ Libertad 17');
-  if (!door) return;
-  // Su casa es el edificio más cercano al portal; el escenario va delante de la fachada
-  let b = null;
-  let bd = Infinity;
-  for (const k of W.map.buildings) {
-    const d = Math.hypot(k.x - door.x, k.z - door.z);
-    if (d < bd) {
-      bd = d;
-      b = k;
+  const P = W.places.plaza;
+  const street = DATA.names.indexOf('Calle Cid');
+  // El cabo de la calle Cid que da a la plaza, y las calzadas de alrededor para no pisarlas
+  let gate = null;
+  const roads = [];
+  for (const [, width, , name, , r] of DATA.roads) {
+    for (let i = 0; i < r.length; i += 2) {
+      const d = Math.hypot(r[i] - P.x, r[i + 1] - P.z);
+      if (name === street && (!gate || d < gate.d)) gate = { d, x: r[i], z: r[i + 1] };
+      if (i && d < 90) roads.push([r[i - 2], r[i - 1], r[i] - r[i - 2], r[i + 1] - r[i - 1], width / 2 + 1]);
     }
   }
-  const ux = (b.x - door.x) / bd;
-  const uz = (b.z - door.z) / bd;
-  let t = 0;
-  while (t < bd && terrain.height(door.x + ux * (t + 0.5), door.z + uz * (t + 0.5)) < 0.5) t += 0.5;
-  const s = Math.max(5, t - 5.5);
-  const rot = Math.atan2(-ux, -uz); // de cara a la calle
-  // Se corre a un lado si hay un árbol o una valla en medio
-  let f = null;
-  for (const side of [0, 8, -8, 16, -16, 24, -24]) {
-    const c = frame(door.x + ux * s - uz * side, door.z + uz * s + ux * side, rot);
-    let ok = true;
-    for (let lx = -7.5; lx <= 7.5 && ok; lx += 0.75) {
-      for (let lz = -4; lz <= 4.5 && ok; lz += 0.75) ok = free(W, ...c.p(lx, lz));
+  if (!gate || gate.d > 90) return;
+  const onRoad = (x, z) => {
+    for (const [ax, az, dx, dz, half] of roads) {
+      const t = Math.min(1, Math.max(0, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)));
+      if (Math.hypot(x - ax - dx * t, z - az - dz * t) < half) return true;
     }
-    if (ok) {
-      f = c;
-      break;
+    return false;
+  };
+  const ux = (P.x - gate.x) / gate.d;
+  const uz = (P.z - gate.z) / gate.d;
+  const rot = Math.atan2(ux, uz);
+  // Se corre a un lado, o plaza adentro, si hay una calle, un árbol o una valla en medio
+  let f = null;
+  for (const s of [20, 24, 16, 28]) {
+    for (const side of [0, 4, -4, 8, -8]) {
+      const c = frame(gate.x + ux * s - uz * side, gate.z + uz * s + ux * side, rot);
+      let ok = !f;
+      for (let lx = -7.5; lx <= 7.5 && ok; lx += 0.75) {
+        for (let lz = -4; lz <= 4.5 && ok; lz += 0.75) {
+          const q = c.p(lx, lz);
+          ok = free(W, q[0], q[1]) && !onRoad(q[0], q[1]);
+        }
+      }
+      if (ok) f = c;
     }
   }
   if (!f) return;
@@ -486,8 +495,11 @@ function drummer(W) {
   terrain.box(x, z, 9, 7, 0.5, rot);
   fbox(batch, f, 0, 0, -3.3, 9, 6.8, 0.5, C.black, F.SEAMS);
   terrain.box(...f.p(0, -3.3), 9, 0.5, 6.8, rot);
-  const q = f.p(0, -3.02);
-  addSign(W, 'HEAVY METAL', q[0], 5.4, q[1], rot, 8, 1.7, '#1b1d21', '#ffd23a');
+  // El cartel, por las dos caras: por detrás lo ve quien llega de la calle
+  for (const s of [-1, 1]) {
+    const q = f.p(0, -3.3 + s * 0.28);
+    addSign(W, 'HEAVY METAL', q[0], 5.4, q[1], rot + (s > 0 ? 0 : Math.PI), 8, 1.7, '#1b1d21', '#ffd23a');
+  }
   // Torres de altavoces
   for (const sx of [-1, 1]) {
     fbox(batch, f, sx * 5.9, -1, -1.2, 2.4, 6.6, 2.2, C.black, F.SEAMS);
@@ -501,43 +513,38 @@ function drummer(W) {
 
 // ---------- La puerta del parque El Palmeral: allí deja su padre a Emma ----------
 
-// La calle Río Júcar muere en el parque. El coche llega por ella, da la vuelta al fondo y para
-// mirando al oeste, pegado a la acera norte, que es a la que se baja Emma (su punto de salida).
+// Al parque se entra por el lado que da a la Pista Polideportiva, con la avenida Río Guadalquivir por
+// medio. El coche llega por la calzada pegada al parque y para delante de la puerta; Emma se baja a
+// esa acera (su punto de salida) y el padre sigue avenida adelante.
 function parkGate(W) {
   const park = DATA.greens.find(([, name]) => DATA.names[name] === 'Parque El Palmeral');
-  const street = DATA.names.indexOf('Calle Río Júcar');
-  if (!park || street < 0) return;
+  if (!park) return;
   const pts = park[2];
   const n = pts.length / 2;
-  // El cabo de la calle que queda más cerca del parque, hacia dónde apunta y lo larga que es
-  let end = null;
-  let len = 0;
-  for (const [, , , name, , r] of DATA.roads) {
-    if (name !== street) continue;
-    for (let i = 2; i < r.length; i += 2) len += Math.hypot(r[i] - r[i - 2], r[i + 1] - r[i - 1]);
-    for (const [i, j] of [[0, 2], [r.length - 2, r.length - 4]]) {
-      let d = Infinity;
-      for (let k = 0; k < n; k++) d = Math.min(d, Math.hypot(pts[k * 2] - r[i], pts[k * 2 + 1] - r[i + 1]));
-      if (!end || d < end.d) end = { d, x: r[i], z: r[i + 1], h: Math.atan2(r[i] - r[j], r[i + 1] - r[j + 1]) };
-    }
-  }
-  if (!end) return;
-  const f = frame(end.x, end.z, end.h); // X local: a la izquierda de la marcha; Z local: calle adelante
-  // La puerta va donde la calle, prolongada, entra en el parque
-  let t = Infinity;
-  for (let k = 0; k < n; k++) {
-    const a = f.inv(pts[k * 2], pts[k * 2 + 1]);
-    const b = f.inv(pts[((k + 1) % n) * 2], pts[((k + 1) % n) * 2 + 1]);
-    if (a[0] > 0 === b[0] > 0) continue;
-    const z = a[1] + ((b[1] - a[1]) * a[0]) / (a[0] - b[0]);
-    if (z > 0 && z < t) t = z;
-  }
-  if (t > 60) return;
-  // El arco se corre a un lado si un árbol tapa el paso
   const SPAN = 11;
+  // El punto de la linde más cercano a la pista, sin arrimarse a las esquinas del parque
+  const S = DATA.places.soccer;
+  let e = null;
+  for (let k = 0; k < n; k++) {
+    const ax = pts[k * 2];
+    const az = pts[k * 2 + 1];
+    const dx = pts[((k + 1) % n) * 2] - ax;
+    const dz = pts[((k + 1) % n) * 2 + 1] - az;
+    const l = Math.hypot(dx, dz);
+    if (l < SPAN * 4) continue;
+    const t = Math.min(l - SPAN * 2, Math.max(SPAN * 2, ((S.x - ax) * dx + (S.z - az) * dz) / l));
+    const x = ax + (dx / l) * t;
+    const z = az + (dz / l) * t;
+    const d = Math.hypot(x - S.x, z - S.z);
+    if (!e || d < e.d) e = { d, x, z, tx: dx / l, tz: dz / l };
+  }
+  if (!e) return;
+  const s = (e.x - S.x) * e.tz - (e.z - S.z) * e.tx > 0 ? 1 : -1;
+  const edge = frame(e.x, e.z, Math.atan2(s * e.tz, -s * e.tx)); // Z local: parque adentro
+  // El arco se corre a un lado si un árbol tapa el paso
   let g = null;
   for (const side of [0, 3, -3, 6, -6, 9, -9]) {
-    const c = f.sub(side, t);
+    const c = edge.sub(side, 1.5);
     let ok = true;
     for (let lx = -SPAN / 2 - 0.8; lx <= SPAN / 2 + 0.8 && ok; lx += 0.7) {
       for (let lz = -3; lz <= 9 && ok; lz += 0.7) ok = free(W, ...c.p(lx, lz));
@@ -548,6 +555,23 @@ function parkGate(W) {
     }
   }
   if (!g) return;
+  // La calzada que pasa por delante dejando el parque a la derecha de la marcha
+  let road = null;
+  for (const [, width, , , oneway, r] of DATA.roads) {
+    for (let i = 2; i < r.length; i += 2) {
+      let [ax, az, bx, bz] = [r[i - 2], r[i - 1], r[i], r[i + 1]];
+      const l = Math.hypot(bx - ax, bz - az);
+      const side = ((g.x - ax) * (bz - az) - (g.z - az) * (bx - ax)) / l; // > 0: el parque, a la izquierda
+      if (side > 0) {
+        if (oneway) continue;
+        [ax, az, bx, bz] = [bx, bz, ax, az];
+      }
+      const t = ((g.x - ax) * (bx - ax) + (g.z - az) * (bz - az)) / l;
+      if (t < 0 || t > l || (road && Math.abs(side) >= road.d)) continue;
+      road = { d: Math.abs(side), t, l, half: width / 2, f: frame(ax, az, Math.atan2(bx - ax, bz - az)) };
+    }
+  }
+  if (!road || road.d > 30) return;
   arch(W, g.x, g.z, g.rot, SPAN, 9, 'EL PALMERAL', '#237841', C.tan);
   for (const sx of [-1, 1]) {
     const q = g.p(sx * (SPAN / 2 + 3.6), 2.5);
@@ -555,23 +579,23 @@ function parkGate(W) {
     for (let a = 0; a < 6 && ok; a++) ok = free(W, q[0] + Math.cos(a) * 1.6, q[1] + Math.sin(a) * 1.6);
     if (ok) palm(W, q[0], q[1]);
   }
-  const LANE = 3.3; // del eje de la calle al centro de cada carril
-  const TURN = 5.2; // la vuelta se da este trecho antes del final de la calle
-  // Tras la vuelta el coche avanza hasta que la acera a la que se baja Emma quede libre de farolas
-  let roll = 1.3;
+  const f = road.f; // X local: a la izquierda de la marcha; Z local: calzada adelante
+  const LANE = road.half - 3.2; // del eje de la calzada al coche, arrimado al bordillo
+  const KERB = road.half + 1.1; // y a la acera a la que se baja Emma
+  // El coche para pasada la puerta, donde esa acera quede libre de farolas
+  let at = road.t + 10;
   const lampNear = (x, z) => {
     for (let i = 0; i < DATA.lamps.length; i += 4) if (Math.hypot(DATA.lamps[i] - x, DATA.lamps[i + 1] - z) < 7) return true;
     return false;
   };
-  while (roll < 24 && lampNear(...f.p(LANE + 4.3, -TURN - roll + 1.3))) roll += 1;
-  const stop = f.p(LANE, -TURN - roll);
-  const spawn = f.p(LANE + 4.3, -TURN - roll + 1.3);
-  const west = end.h + Math.PI;
+  while (at < road.t + 24 && lampNear(...f.p(-KERB, at + 1.3))) at += 1;
+  const stop = f.p(-LANE, at);
+  const spawn = f.p(-KERB, at + 1.3);
   W.places.homes.emma = {
-    name: 'la puerta del parque El Palmeral', x: g.x, z: g.z,
-    spawn: { x: spawn[0], z: spawn[1], heading: Math.atan2(Math.sin(west), Math.cos(west)) },
-    view: -0.75, // en el menú, la cámara por su derecha: detrás quedan el coche y la puerta del parque
-    drop: { from: f.p(-LANE, -TURN - 40), turn: f.p(0, -TURN), r: LANE, stop, away: f.p(LANE, -Math.min(len - 14, 230)), heading: end.h },
+    name: 'la puerta del parque El Palmeral', x: g.x, z: g.z, rot: g.rot,
+    spawn: { x: spawn[0], z: spawn[1], heading: f.rot },
+    view: -0.75, // en el menú, la cámara por su derecha, desde el parque: detrás quedan el coche y la avenida
+    drop: { from: f.p(-LANE, Math.max(2, at - 55)), stop, away: f.p(-LANE, Math.min(road.l - 14, at + 230)), heading: f.rot },
   };
 }
 
