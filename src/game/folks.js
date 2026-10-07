@@ -41,17 +41,12 @@ export class Folks {
     }
     const D = this.drummer;
     if (D) D.fig.group.visible = D.tag.visible = id !== 'adrian';
-    const J = this.jose;
-    if (J) {
-      J.marker.hidden = id === 'jose';
-      if (id === 'jose') J.fig.group.visible = J.ball.visible = J.tag.visible = false;
-    }
   }
 
   update(dt, p, time, live) {
     if (this.yago && this.away !== 'yago') this.updateYago(dt, p, time, live);
     if (this.drummer) this.updateDrummer(dt, p, time, live);
-    if (this.jose && this.away !== 'jose') this.updateJose(dt, p, time, live);
+    if (this.jose) this.updateJose(dt, p, time, live);
     if (this.joggers) this.updateJoggers(dt, p, time, live);
   }
 

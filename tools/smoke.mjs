@@ -284,10 +284,23 @@ await page.evaluate(() => {
 });
 await shot('s_busqueda');
 await page.evaluate(() => { window.__game.wanted.reset(true); });
+await log('casas', () => {
+  const g = window.__game; const p = g.player; const out = {};
+  const lejos = () => { const sp = g.home.spawn; return +Math.hypot(p.pos.x - sp.x, p.pos.z - sp.z).toFixed(1); };
+  g.state = 'menu';
+  for (const id of ['yago', 'teo', 'adrian', 'josemanuel']) { g.setCharacter(id); out[id] = `${g.home.name} a ${lejos()}`; }
+  g.state = 'play';
+  g.setCharacter('teo');
+  out.enLaPausaSeQueda = lejos() > 100;
+  g.goHome();
+  out.volverACasa = lejos();
+  out.jose = !g.folks.jose.marker.hidden;
+  return out;
+});
 await log('personajes', () => {
   const g = window.__game; const p = g.player; const F = g.folks; const sp = g.world.places.spawn;
   const out = {};
-  for (const id of ['yago', 'teo', 'jose', 'adrian', 'josemanuel']) {
+  for (const id of ['yago', 'teo', 'adrian', 'josemanuel']) {
     g.setCharacter(id);
     p.place(sp.x, sp.z, sp.heading);
     let vm = 0; let ym = 0;
@@ -295,7 +308,7 @@ await log('personajes', () => {
     window.sim(1 / 60, () => ({ jumpPressed: true }));
     window.sim(1.6, (t) => { ym = Math.max(ym, p.pos.y); return { throttle: 1, trickPressed: t > 0.1 && t < 0.13 }; });
     out[id] = [p.veh.kind, +vm.toFixed(0), +ym.toFixed(1), document.getElementById('trick').textContent.split('+')[0]].join(' ');
-    out[id + 'Doble'] = id === 'yago' ? F.yago.root.visible : id === 'jose' ? F.jose.fig.group.visible : id === 'teo' ? g.ball.keeperName : id === 'adrian' ? F.drummer.fig.group.visible : 'no tiene';
+    out[id + 'Doble'] = id === 'yago' ? F.yago.root.visible : id === 'teo' ? g.ball.keeperName : id === 'adrian' ? F.drummer.fig.group.visible : 'no tiene';
   }
   out.guardado = g.save.character;
   return out;

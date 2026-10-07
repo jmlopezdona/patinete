@@ -551,8 +551,11 @@ export function buildLandmarks(W) {
   DATA.places.bricks.forEach(([x, z], i) => {
     if (i !== 6) W.bricks.push({ x, y: W.terrain.height(x, z) + 1.8, z });
   });
+  // Río Júcar 44 es el origen del mapa: de allí sale la carrera. Cada personaje tiene además su casa.
   const sp = DATA.places.spawn;
   W.places.spawn = { x: sp.x, z: sp.z, heading: sp.heading };
+  W.places.home = DATA.places.home;
+  W.places.homes = DATA.places.homes;
   W.places.race = DATA.race;
   W.places.bounds = BOUNDS;
 }

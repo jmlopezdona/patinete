@@ -77,17 +77,7 @@ export class Minimap {
       g.arc(c.x, c.z, c.r, 0, Math.PI * 2);
       g.fill();
     }
-    // La casa de salida, bien visible
-    const h = world.places.home;
-    if (h) {
-      g.fillStyle = '#ff3d8b';
-      g.strokeStyle = '#ffffff';
-      g.lineWidth = 3;
-      g.beginPath();
-      g.arc(h.x, h.z, 9, 0, Math.PI * 2);
-      g.fill();
-      g.stroke();
-    }
+    this.home = null; // la casa del personaje que se lleva
   }
 
   draw(px, pz, yaw, playerYaw, markers, goal, blips = []) {
@@ -108,6 +98,19 @@ export class Minimap {
     g.translate(-(px - X0) * S, -(pz - Z0) * S);
     g.imageSmoothingEnabled = true;
     g.drawImage(this.base, 0, 0);
+    // La casa de salida, bien visible
+    const h = this.home;
+    if (h) {
+      g.scale(S, S);
+      g.translate(-X0, -Z0);
+      g.fillStyle = '#ff3d8b';
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = 3;
+      g.beginPath();
+      g.arc(h.x, h.z, 9, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+    }
     g.restore();
 
     // Marcadores (sin girar el icono)

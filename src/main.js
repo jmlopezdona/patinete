@@ -48,7 +48,7 @@ const TIPS = [
   '⛲ Sube hasta la <b>Plaza de la Villa</b>: allí están la fuente, la iglesia y el ayuntamiento.',
   '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> en la canasta, las corredoras del parque y <b>Adrián</b>, el batería de la calle Libertad.',
   '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar tu vehículo.',
-  '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monopatín, monociclo, bici o Tesla.',
+  '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monopatín, monociclo o bici.',
   '📷 Pulsa <b>T</b> en pleno salto: el <b>modo foto</b> para el tiempo y te deja mover la cámara para sacar la foto.',
 ];
 const params = new URLSearchParams(location.search);
@@ -153,7 +153,7 @@ class Game {
     this.bits = new Bits(scene, 720);
     this.player = new Player(this);
     scene.add(this.player.root);
-    const sp = this.world.places.spawn;
+    const sp = this.home.spawn;
     this.player.place(sp.x, sp.z, sp.heading);
     this.camera3 = new ChaseCamera(this);
     this.studs = new Studs(this, this.world.studs, this.world.bricks);
@@ -318,12 +318,7 @@ class Game {
     });
     $('p-sound').addEventListener('click', () => this.toggleMute());
     $('p-respawn').addEventListener('click', () => {
-      this.missions.abort();
-      this.aliens.release(this.player);
-      this.wanted.reset(true);
-      const sp = this.world.places.spawn;
-      this.player.place(sp.x, sp.z, sp.heading);
-      this.camera3.snap = true;
+      this.goHome();
       this.setPaused(false);
     });
     $('p-menu').addEventListener('click', () => {
@@ -345,10 +340,29 @@ class Game {
     setupInstall($('btn-install'), $('install-hint'));
   }
 
+  // La casa del personaje que se lleva, con su punto de salida a la calle
+  get home() {
+    return this.world.places.homes[this.player.char.id];
+  }
+
+  // Deja al jugador en la puerta de su casa, sin misión ni perseguidores
+  goHome() {
+    this.missions.abort();
+    this.aliens.release(this.player);
+    this.wanted.reset(true);
+    const sp = this.home.spawn;
+    this.player.place(sp.x, sp.z, sp.heading);
+    this.camera3.snap = true;
+  }
+
   // Elige quién sale a la calle: cambia piloto y vehículo, y su doble desaparece del pueblo
   setCharacter(id, silent = false) {
     const ch = characterById(id);
+    const swap = ch !== this.player.char;
     this.player.setCharacter(ch.id, this.save.colors[ch.id]);
+    this.minimap.home = this.home;
+    // Elegido en el menú, cada uno empieza en su casa; en la pausa se cambia sobre la marcha
+    if (swap && this.state === 'menu') this.goHome();
     this.folks.setPlayer(ch.id);
     this.ball.setKeeper(ch.id !== 'teo');
     this.missions.defs.find((d) => d.id === 'soccer').desc = `Márcale a ${this.ball.keeperName} todos los goles que puedas en 60 segundos.`;
@@ -371,7 +385,7 @@ class Game {
     this.camera3.snap = true;
     document.getElementById('menu').classList.add('out');
     this.hud.show(true);
-    this.hud.toast('¡Bienvenido a <b>Cobeña</b>! Sales de casa, en Río Júcar 44. Busca los iconos del mapa para jugar.');
+    this.hud.toast(`¡Bienvenido a <b>Cobeña</b>! Sales de casa, en ${this.home.name}. Busca los iconos del mapa para jugar.`);
     if (this.env.target > 0.5) this.tipI = Math.max(this.tipI, 2);
     setTimeout(() => document.getElementById('keys').classList.add('fade'), 14000);
   }

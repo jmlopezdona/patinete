@@ -60,7 +60,6 @@ export class Aliens {
       { name: 'la Pista Polideportiva', x: P.soccer.cx, z: P.soccer.cz },
       { name: 'la bolera del Recinto Ferial', x: P.bowling.x, z: P.bowling.z - 6 },
       { name: 'el skatepark', x: P.trick.x, z: P.trick.z },
-      { name: 'la puerta de casa', x: P.spawn.x, z: P.spawn.z },
     ].filter((d) => {
       const h = this.T.height(d.x, d.z);
       return h > -1 && h < 6;
@@ -413,8 +412,10 @@ export class Aliens {
   take(p) {
     const g = this.game;
     const u = this.u;
-    let cands = this.drops.filter((d) => Math.hypot(d.x - p.pos.x, d.z - p.pos.z) > 130);
-    if (!cands.length) cands = this.drops;
+    const sp = g.home.spawn;
+    const drops = [...this.drops, { name: 'la puerta de casa', x: sp.x, z: sp.z }];
+    let cands = drops.filter((d) => Math.hypot(d.x - p.pos.x, d.z - p.pos.z) > 130);
+    if (!cands.length) cands = drops;
     const dest = cands[Math.floor(Math.random() * cands.length)];
     const stolen = Math.min(500, Math.floor((g.save.studs * 0.1) / 10) * 10);
     if (stolen > 0) {

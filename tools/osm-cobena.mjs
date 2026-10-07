@@ -36,7 +36,14 @@ const P = (lat, lon) => [(lon - LON0) * MX, -(lat - LAT0) * MZ];
 const M = (east, north) => [east * U, -north * U]; // metros (este, norte) -> juego
 const B = { x0: -1200, z0: -2840, x1: 2600, z1: 840 };
 const inB = (x, z, m = 0) => x > B.x0 + m && x < B.x1 - m && z > B.z0 + m && z < B.z1 - m;
-const HOME_WAY = 663317227;
+// Casas de los personajes: edificio de OSM, calle a la que salen y número del portal. La primera
+// es el origen del mapa.
+const HOMES = [
+  { id: 'josemanuel', way: 663317227, street: 'Calle Río Júcar', n: 44 },
+  { id: 'yago', way: 787857131, street: 'Calle Río Guadiana', n: 17 },
+  { id: 'teo', way: 788577518, street: 'Avenida Río Guadalquivir', n: 39 },
+  { id: 'adrian', way: 671793426, street: 'Calle Libertad', n: 17 },
+];
 const SKATE_WAY = 672252920;
 
 // ---------- Geometría ----------
@@ -243,8 +250,7 @@ const warn = (...a) => console.log('  AVISO:', ...a);
 
 // ---------- Lugares especiales (se reservan antes de colocar nada) ----------
 const skateWay = ways.find((w) => w.id === SKATE_WAY);
-const homeWay = ways.find((w) => w.id === HOME_WAY);
-if (!skateWay || !homeWay) throw new Error('Faltan la parcela del skatepark o la casa en los datos');
+if (!skateWay) throw new Error('Falta la parcela del skatepark en los datos');
 const skatePoly = strip(G(skateWay));
 const skateO = obb(skatePoly);
 // Eje largo en X local apuntando al este; así el borde recto (norte) queda en -Z local
@@ -394,7 +400,6 @@ const labels = [];
 const addrs = [];
 const short = (s) => s.replace(/^Calle /, 'C/ ').replace(/^Avenida /, 'Av. ').replace(/^Travesía /, 'Trv. ').replace(/^Carretera /, 'Ctra. ').replace(/^Plaza /, 'Pza. ').replace(/^Callejón /, 'Cjón. ');
 let buildings = [];
-let homeGroup = -1;
 function addBuilding(poly, t, id) {
   poly = strip(poly);
   if (poly.length < 3) return;
@@ -412,9 +417,10 @@ function addBuilding(poly, t, id) {
   const group = buildings.length;
   const base = { kind, levels: Math.min(levels, 5), label: name ? labels.push(name) - 1 : -1, addr: -1, group, id, open: 0 };
   if (t['addr:housenumber'] && t['addr:street']) base.addr = addrs.push(short(t['addr:street']) + ' ' + t['addr:housenumber']) - 1;
-  if (id === HOME_WAY) {
-    homeGroup = group;
-    base.label = labels.push('Nº 44') - 1;
+  const home = HOMES.find((h) => h.way === id);
+  if (home) {
+    home.group = group;
+    base.label = labels.push('Nº ' + home.n) - 1;
   }
   const long = Math.max(o.w, o.d);
   if (ar / o.ar < 0.72 && long > 22 && kind !== 6 && kind !== 8) {
@@ -893,26 +899,33 @@ for (const an of ANCHORS) {
   cars.push(flat(pts));
 }
 
-// Carrera: vuelta al barrio de los ríos saliendo de casa
-const homeB = buildings.find((b) => b.group === homeGroup);
-if (!homeB) throw new Error('La casa de Río Júcar 44 se ha perdido por el camino');
-const jucar = names.indexOf('Calle Río Júcar');
-let spawn = null;
-for (const s of segs) {
-  if (roads[s[4]].name !== jucar) continue;
-  const q = ptSeg(homeB.x, homeB.z, s[0], s[1], s[2], s[3]);
-  if (!spawn || q[0] < spawn.d) {
-    let dx = s[2] - s[0];
-    let dz = s[3] - s[1];
-    if (dx > 0) {
-      dx = -dx;
-      dz = -dz;
+// Cada personaje sale a su calle, a la altura de su casa y mirando al oeste
+places.homes = {};
+for (const h of HOMES) {
+  const b = buildings.find((k) => k.group === h.group && k.label >= 0);
+  if (!b) throw new Error(`La casa de ${h.street} ${h.n} se ha perdido por el camino`);
+  const street = names.indexOf(h.street);
+  let spawn = null;
+  for (const s of segs) {
+    if (roads[s[4]].name !== street) continue;
+    const q = ptSeg(b.x, b.z, s[0], s[1], s[2], s[3]);
+    if (!spawn || q[0] < spawn.d) {
+      let dx = s[2] - s[0];
+      let dz = s[3] - s[1];
+      if (dx > 0) {
+        dx = -dx;
+        dz = -dz;
+      }
+      spawn = { d: q[0], x: q[1], z: q[2], heading: Math.atan2(dx, dz) };
     }
-    spawn = { d: q[0], x: q[1], z: q[2], heading: Math.atan2(dx, dz) };
   }
+  if (!spawn) throw new Error(`No hay calle por la que salir de ${h.street} ${h.n}`);
+  places.homes[h.id] = { name: `${short(h.street)} ${h.n}`, b: buildings.indexOf(b), x: r1(b.x), z: r1(b.z), spawn: { x: r1(spawn.x), z: r1(spawn.z), heading: +spawn.heading.toFixed(3) } };
 }
-places.spawn = { x: r1(spawn.x), z: r1(spawn.z), heading: +spawn.heading.toFixed(3) };
-places.home = { x: r1(homeB.x), z: r1(homeB.z) };
+// Carrera: vuelta al barrio de los ríos saliendo de Río Júcar 44, la casa que hace de origen
+const { spawn } = places.homes[HOMES[0].id];
+places.spawn = spawn;
+places.home = { x: places.homes[HOMES[0].id].x, z: places.homes[HOMES[0].id].z };
 const RACE_STOPS = [[-300, 110], [-470, -50], [-150, -170], [0, -235]];
 const raceNodes = RACE_STOPS.map((p) => nearestNode(p[0], p[1], (id) => (graph.get(id) || []).some((e) => roads[e.ri].half >= 4)));
 const startNode = nearestNode(spawn.x, spawn.z);
@@ -1008,7 +1021,6 @@ const data = {
   roads: roads.map((r) => [r.cls, r1(r.half * 2), r1(r.sw), r.name, r.oneway ? 1 : 0, flat(r.pts)]),
   // x, z, ancho, fondo, giro (grados), plantas, tipo, fachada, cartel, grupo, caras libres (bits)
   buildings: buildings.flatMap((b) => [r1(b.x), r1(b.z), r1(b.w), r1(b.d), r1((b.rot * 180) / Math.PI), b.levels, b.kind, b.front, b.label, b.group, b.open]),
-  home: buildings.indexOf(homeB),
   walls: walls.map((w) => w),
   pools,
   pitches,
@@ -1033,5 +1045,5 @@ fs.writeFileSync(OUT, '// Generado por tools/osm-cobena.mjs a partir de OpenStre
 console.log(`calles ${roads.length} · edificios ${buildings.length} (eliminados ${dropped}) · vallas ${wallN} · piscinas ${pools.length / 5} · zonas verdes ${greens.length}`);
 console.log(`farolas ${data.lamps.length / 4} · árboles ${data.trees.length / 3} · mobiliario ${data.props.length / 4} · studs ${data.studs.length / 3} · portales ${deliveries.length / 3}`);
 console.log(`coches ${cars.length} circuitos · peatones ${peds.length} paseos · carrera ${race ? race.gates.length + ' controles, ' + race.length + ' u' : 'NO'} · parques infantiles ${playgrounds.length}`);
-console.log(`skatepark: centro ${r1(lot.x)},${r1(lot.z)} giro ${((lot.rot * 180) / Math.PI).toFixed(1)}° ${r1(lot.w)}x${r1(lot.d)} · salida ${JSON.stringify(places.spawn)}`);
+console.log(`skatepark: centro ${r1(lot.x)},${r1(lot.z)} giro ${((lot.rot * 180) / Math.PI).toFixed(1)}° ${r1(lot.w)}x${r1(lot.d)} · salidas ${Object.values(places.homes).map((h) => `${h.name} ${h.spawn.x},${h.spawn.z}`).join(' · ')}`);
 console.log(`${OUT} → ${(json.length / 1024).toFixed(0)} KB`);
