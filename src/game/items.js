@@ -1,10 +1,15 @@
 import * as THREE from 'three';
 import { Builder } from '../lego/builder.js';
-import { goldMetal } from '../lego/materials.js';
+import { goldMetal, plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
 
 const SONIC_R = 46; // hasta dónde llega el timbrazo
 const EVERY = 26; // segundos entre que se gasta un objeto y aparece el siguiente
+const EVERY_DAY = 75; // de día, sin marcianos, salen mucho más de tarde en tarde
+const FOIL_TIME = 20; // lo que el gorro de aluminio te esconde del rayo
+const ROCKET_TIME = 10;
+const ORDER = ['bell', 'foil', 'rocket']; // van saliendo por turnos, para que no repita
+const foilMetal = new THREE.MeshStandardMaterial({ color: 0xd9dee6, roughness: 0.3, metalness: 0.95, flatShading: true });
 
 function bellModel() {
   const b = new Builder();
@@ -16,8 +21,32 @@ function bellModel() {
   return b.mesh(goldMetal);
 }
 
+// Cucurucho arrugado de papel de aluminio: vale para la calle y para la cabeza del piloto
+function foilModel() {
+  const b = new Builder();
+  b.cyl(1.05, 0.14, 0, 0.07, 0, C.white, { seg: 9, r2: 0.95 });
+  b.cyl(0.95, 1.5, 0, 0.85, 0, C.white, { seg: 7, r2: 0.08, ry: 0.4 });
+  b.sphere(0.16, 0.05, 1.62, 0, C.white, { seg: 5, seg2: 4 });
+  return b.mesh(foilMetal);
+}
+
+// Cohete de feria tumbado, con el morro hacia +z (hacia donde mira el patinete)
+function rocketModel() {
+  const b = new Builder();
+  b.cyl(0.42, 1.7, 0, 0, 0, C.red, { axis: 'z', seg: 14 });
+  b.cyl(0.42, 0.8, 0, 0, 1.25, C.white, { axis: 'z', seg: 14, r2: 0.04 });
+  b.cyl(0.3, 0.3, 0, 0, -0.98, C.yellow, { axis: 'z', seg: 12, r2: 0.36 });
+  b.cyl(0.43, 0.2, 0, 0, 0.3, C.white, { axis: 'z', seg: 14 });
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    b.box(0.1, 0.62, 0.7, Math.sin(a) * 0.62, Math.cos(a) * 0.62, -0.6, C.yellow, { r: 0.03, rz: -a });
+  }
+  return b.mesh(plastic);
+}
+
 // Cada objeto: su icono, su nombre, cuándo aparece por la calle y qué hace al gastarlo.
-// `use` devuelve false si no se ha gastado (y entonces se conserva).
+// `use` devuelve false si no se ha gastado (y entonces se conserva). Los que tienen `dur` duran
+// ese rato después de gastarlos: `start` y `end` lo abren y lo cierran, y `tick` va cada frame.
 const KINDS = {
   bell: {
     icon: '🔔', name: 'Timbre sónico', night: true, model: bellModel,
@@ -39,6 +68,68 @@ const KINDS = {
       return true;
     },
   },
+  foil: {
+    icon: '🎩', name: 'Gorro de aluminio', night: true, model: foilModel, dur: FOIL_TIME,
+    tip: 'Póntelo con <b>Q</b> y el rayo del platillo deja de verte un buen rato.',
+    use(items) {
+      const g = items.game;
+      if (!g.aliens.active) {
+        g.hud.toast('🎩 Sin platillo a la vista no hace falta esconderse: guárdalo para esta noche.');
+        return false;
+      }
+      g.sfx.foil();
+      g.hud.big('¡Invisible!', '#d9dee6', 1, true);
+      g.hud.toast(`🎩 Con el gorro puesto el rayo <b>no te detecta</b> durante ${FOIL_TIME} segundos. Los marcianos de a pie sí te ven.`);
+      return true;
+    },
+    start(items, p) {
+      p.foil = true;
+      items.hat.visible = true;
+    },
+    end(items, p) {
+      p.foil = false;
+      items.hat.visible = false;
+      if (items.game.aliens.active) items.game.hud.toast('🎩 El gorro se ha deshecho: el platillo vuelve a verte.');
+    },
+    tick(items, p) {
+      // Va en la cabeza del piloto, que cambia al cambiar de personaje
+      if (items.hat.parent !== p.rider.head) p.rider.head.add(items.hat);
+      if (items.fx.t < 3) items.hat.visible = Math.floor(items.fx.t * 8) % 2 === 0;
+    },
+  },
+  rocket: {
+    icon: '🚀', name: 'Cohete', night: false, model: rocketModel, dur: ROCKET_TIME,
+    tip: 'Enciéndelo con <b>Q</b>: turbo sin gastar durante 10 segundos. Solo se para frenando.',
+    use(items, p) {
+      const g = items.game;
+      g.sfx.rocket();
+      g.camera3.addShake(0.5);
+      g.hud.big('¡Cohete!', '#ff7a1a', 1, true);
+      g.hud.toast(`🚀 ¡Agárrate! <b>Turbo infinito</b> durante ${ROCKET_TIME} segundos.`);
+      g.bits.burst(p.pos.x, p.pos.y + 1.5, p.pos.z, [0xffd23a, 0xff7a1a, 0xffffff], 18, 12, p.pos.y, 0.4);
+      return true;
+    },
+    start(items, p) {
+      p.rocket = true;
+      items.rocket.visible = true;
+    },
+    end(items, p) {
+      p.rocket = false;
+      items.rocket.visible = false;
+    },
+    tick(items, p, dt) {
+      // Va atado a la cola, que cambia de sitio con el vehículo de cada personaje
+      const t = p.veh.tail + 0.1;
+      items.rocket.position.set(0, 1.25, -t);
+      // Chorro de fuego por la tobera, también en el aire
+      items.fireT -= dt;
+      if (items.fireT > 0 || !p.boosting || p.crashT > 0 || p.hidden) return;
+      items.fireT = 0.02;
+      const fx = Math.sin(p.heading);
+      const fz = Math.cos(p.heading);
+      for (let i = 0; i < 2; i++) items.game.bits.spawn(p.pos.x - fx * (t + 1.2), p.pos.y + 1.25, p.pos.z - fz * (t + 1.2), -fx * 11 + (Math.random() - 0.5) * 5, (Math.random() - 0.3) * 4, -fz * 11 + (Math.random() - 0.5) * 5, [0xffd23a, 0xff7a1a, 0xffffff][Math.floor(Math.random() * 3)], 0.5, 0.35, p.pos.y);
+    },
+  },
 };
 
 // Objetos que aparecen por la calle: se recoge uno, se lleva encima y se gasta con Q.
@@ -47,7 +138,10 @@ export class Items {
     this.game = game;
     this.T = game.terrain;
     this.held = null; // el que se lleva encima
+    this.fx = null; // el que está haciendo efecto: { kind, t }
+    this.last = null; // el último que salió a la calle
     this.cd = 6;
+    this.fireT = 0;
     this.blips = [];
     // Solo hay uno por la calle cada vez
     const g = (this.group = new THREE.Group());
@@ -60,6 +154,15 @@ export class Items {
     g.add(this.halo);
     this.drop = { kind: null, mesh: null, x: 0, y: 0, z: 0, t: 0, far: 0, blip: { x: 0, z: 0, icon: '' } };
 
+    // El gorro que se le planta al piloto y el cohete que se le ata al patinete
+    this.hat = foilModel();
+    this.hat.position.y = 0.72;
+    this.hat.scale.setScalar(1.1);
+    this.rocket = rocketModel();
+    this.hat.visible = this.rocket.visible = false;
+    this.hat.castShadow = this.rocket.castShadow = true;
+    game.player.model.add(this.rocket);
+
     // Onda del timbrazo
     const ring = new THREE.RingGeometry(0.86, 1, 48);
     ring.rotateX(-Math.PI / 2);
@@ -67,6 +170,16 @@ export class Items {
     this.wave.visible = this.wave.frustumCulled = false;
     game.scene.add(this.wave);
     this.waveT = 1;
+  }
+
+  // A cuál le toca salir: de día solo los que no necesitan marcianos
+  pick(night) {
+    const i = ORDER.indexOf(this.last);
+    for (let k = 1; k <= ORDER.length; k++) {
+      const kind = ORDER[(i + k) % ORDER.length];
+      if (night || !KINDS[kind].night) return kind;
+    }
+    return null;
   }
 
   // Lo deja en una calle cercana, mejor por delante: los studs marcan por dónde se puede pasar
@@ -86,7 +199,7 @@ export class Items {
         this.group.remove(D.mesh);
         D.mesh.geometry.dispose();
       }
-      D.kind = kind;
+      D.kind = this.last = kind;
       D.mesh = KINDS[kind].model();
       D.x = s.x;
       D.y = h;
@@ -114,9 +227,23 @@ export class Items {
   }
 
   use(p) {
-    if (!KINDS[this.held].use(this, p)) return;
+    const K = KINDS[this.held];
+    if (!K.use(this, p)) return;
+    const g = this.game;
+    if (K.dur) {
+      this.fx = { kind: this.held, t: K.dur };
+      K.start(this, p);
+      g.hud.setItem(K, K.dur);
+    } else g.hud.setItem(null);
     this.held = null;
-    this.cd = EVERY;
+    this.cd = g.aliens.active ? EVERY : EVERY_DAY;
+  }
+
+  // Se acaba (o se corta) el efecto del que estaba en marcha
+  stop(p) {
+    if (!this.fx) return;
+    KINDS[this.fx.kind].end(this, p);
+    this.fx = null;
     this.game.hud.setItem(null);
   }
 
@@ -152,12 +279,23 @@ export class Items {
       if (D.far > 4) {
         this.group.visible = false;
         this.cd = 1;
-      } else if (d < 3.4 && Math.abs(p.pos.y - D.y) < 4 && p.crashT <= 0 && !p.held) this.take(p);
-    } else if (!this.held && night && !p.held) {
-      this.cd -= dt;
-      if (this.cd <= 0) this.cd = this.spawn('bell', p) ? 0 : 1;
+      } else if (d < 3.4 && Math.abs(p.pos.y - D.y) < 4 && p.crashT <= 0 && !p.held && !this.fx) this.take(p);
+    } else if (!this.held && !this.fx && !p.held && (night || !g.missions.active)) {
+      // De noche no se hacen esperar aunque el anterior se gastara de día
+      this.cd = Math.min(this.cd, night ? EVERY : EVERY_DAY) - dt;
+      if (this.cd <= 0) this.cd = this.spawn(this.pick(night), p) ? 0 : 0.3;
     }
     if (this.held && g.input.hit('item') && p.crashT <= 0 && !p.held) this.use(p);
+    if (this.fx) {
+      const F = this.fx;
+      const K = KINDS[F.kind];
+      F.t -= dt;
+      if (F.t <= 0) this.stop(p);
+      else {
+        if (K.tick) K.tick(this, p, dt);
+        g.hud.itemTime(F.t);
+      }
+    }
 
     if (this.waveT < 1) {
       this.waveT = Math.min(1, this.waveT + dt / 0.7);

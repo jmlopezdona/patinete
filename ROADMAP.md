@@ -21,9 +21,7 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 
 ## Objetos
 
-- [ ] **Gorro de papel de aluminio.** El rayo no te detecta durante un rato.
 - [ ] **Baba verde.** Charcos donde derrapas sin control o rebotas.
-- [ ] **Cohete en el patinete.** Turbo infinito durante 10 segundos.
 
 ## Locuras sin alienígenas
 
@@ -32,6 +30,14 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `objetos`)
+
+- [x] **Gorro de papel de aluminio.** Durante 20 segundos el rayo no te detecta: el platillo se
+  queda barriendo por donde te vio la última vez.
+- [x] **Cohete en el patinete.** Turbo infinito durante 10 segundos; también sale de día.
+- [x] **Turnos.** Timbre, gorro y cohete van saliendo uno detrás de otro, y el hueco del HUD
+  enseña lo que le queda al que está en marcha.
 
 ## Ya hecho (rama `robar-platillo`)
 

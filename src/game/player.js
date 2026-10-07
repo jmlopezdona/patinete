@@ -48,6 +48,8 @@ export class Player {
     this.maxY = 0;
     this.boost = 1;
     this.boosting = false;
+    this.rocket = false; // con el cohete encendido el turbo entra solo y no se gasta
+    this.foil = false; // con el gorro de aluminio el rayo abductor no lo detecta
     this.crashT = 0;
     this.sunk = false;
     this.invuln = 0;
@@ -303,12 +305,14 @@ export class Player {
     // Acelerador, freno y turbo
     // Agotado, el turbo no vuelve a entrar hasta que se recarga un poco: si no, con la tecla
     // pulsada entraría y saldría a cada instante, petardeando
-    const boosting = inp.boost && inp.throttle >= 0 && this.boost > (this.boosting ? 0.02 : 0.15);
+    const rocket = this.rocket && !this.frozen && inp.throttle >= 0;
+    const boosting = rocket || (inp.boost && inp.throttle >= 0 && this.boost > (this.boosting ? 0.02 : 0.15));
     if (boosting && !this.boosting) this.game.sfx.boost();
     this.boosting = boosting;
     const S = this.stats;
-    const maxV = (boosting ? S.vboost : S.vmax) * (1 - clamp(this.grade * HILL_SLOW, 0, 0.3));
-    if (boosting) this.boost = Math.max(0, this.boost - h / 3.6);
+    const maxV = (rocket ? S.vboost * 1.12 : boosting ? S.vboost : S.vmax) * (1 - clamp(this.grade * HILL_SLOW, 0, 0.3));
+    if (rocket) this.boost = 1;
+    else if (boosting) this.boost = Math.max(0, this.boost - h / 3.6);
     if (inp.throttle > 0 || boosting) {
       // En rampas empinadas el empuje casi desaparece: manda la inercia
       const grip = Math.max(0.12, Math.cos(Math.min(Math.PI / 2, Math.abs(this.pitch) * 2.2)));

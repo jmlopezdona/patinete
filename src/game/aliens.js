@@ -152,7 +152,7 @@ export class Aliens {
       m.frustumCulled = false;
       scene.add(m);
     }
-    this.u = { state: 'gone', x: 0, y: 0, z: 0, vx: 0, vz: 0, t: 0, dur: 6, sx: 1, sz: 0, beam: 0, meter: 0, hits: 0, heading: 0, blip: { x: 0, z: 0, icon: '🛸' } };
+    this.u = { state: 'gone', x: 0, y: 0, z: 0, lx: 0, lz: 0, vx: 0, vz: 0, t: 0, dur: 6, sx: 1, sz: 0, beam: 0, meter: 0, hits: 0, heading: 0, blip: { x: 0, z: 0, icon: '🛸' } };
   }
 
   // ---------- Oleadas ----------
@@ -297,16 +297,28 @@ export class Aliens {
     let tx = u.x;
     let tz = u.z;
     let yT = HOVER;
+    if (!p.foil) {
+      u.lx = p.pos.x;
+      u.lz = p.pos.z;
+    }
     switch (u.state) {
       case 'arrive':
         if (u.t > 2.6) this.setUfo('hunt');
         break;
       case 'hunt':
-        p.velocity(_v);
-        tx = p.pos.x + _v.x * 0.45;
-        tz = p.pos.z + _v.z * 0.45;
-        vmax = d > 150 ? 48 : Math.min(27, 20.5 + lvl * 1.2);
-        beamOn = d < 60;
+        if (p.foil) {
+          // Con el gorro de aluminio te pierde: barre con el rayo por donde te vio la última vez
+          tx = u.lx + Math.sin(time * 0.9) * 16;
+          tz = u.lz + Math.cos(time * 0.7) * 16;
+          vmax = 15;
+          beamOn = true;
+        } else {
+          p.velocity(_v);
+          tx = p.pos.x + _v.x * 0.45;
+          tz = p.pos.z + _v.z * 0.45;
+          vmax = d > 150 ? 48 : Math.min(27, 20.5 + lvl * 1.2);
+          beamOn = d < 60;
+        }
         if (u.t > 13) this.setUfo('rest');
         break;
       case 'rest':
@@ -390,7 +402,7 @@ export class Aliens {
 
     // ¿Tiene al patinete bajo el rayo?
     if (u.state === 'hunt') {
-      const inBeam = u.beam > 0.6 && d < BEAM_R && p.pos.y < u.y - 4 && p.crashT <= 0 && p.invuln <= 0 && !p.held;
+      const inBeam = u.beam > 0.6 && d < BEAM_R && p.pos.y < u.y - 4 && p.crashT <= 0 && p.invuln <= 0 && !p.held && !p.foil;
       u.meter = clamp(u.meter + (inBeam ? dt / 0.85 : -dt * 1.1), 0, 1);
       if (u.meter >= 1) this.startAbduct(p);
     } else if (u.state !== 'abduct') u.meter = Math.max(0, u.meter - dt * 2);
