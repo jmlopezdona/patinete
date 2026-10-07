@@ -443,7 +443,7 @@ function megaJump(W) {
   W.places.mega = { x: X(150), z, hole: h, islandX: ix };
 }
 
-// ---------- Calle Libertad 17: el pequeño batería heavy ----------
+// ---------- Calle Libertad 17: Adrián, el pequeño batería heavy ----------
 
 function drummer(W) {
   const { batch, terrain } = W;

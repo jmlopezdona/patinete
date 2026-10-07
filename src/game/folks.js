@@ -16,7 +16,7 @@ const shadows = (o) =>
     if (m.isMesh) m.castShadow = true;
   });
 
-// Vecinos con nombre propio: Yago y su monociclo en el skatepark, el pequeño batería heavy
+// Vecinos con nombre propio: Yago y su monociclo en el skatepark, Adrián, el pequeño batería heavy
 // de la calle Libertad, Jose en la canasta y Ana, Cintia y Bea haciendo footing por los parques.
 export class Folks {
   constructor(game) {
@@ -171,7 +171,7 @@ export class Folks {
     Y.tag.position.set(Y.x, P.y + Y.y + hop + (juggle ? 9.4 : 7.4), Y.z);
   }
 
-  // ---------- El pequeño batería heavy de la calle Libertad, 17 ----------
+  // ---------- Adrián, el pequeño batería heavy de la calle Libertad, 17 ----------
   buildDrummer() {
     const P = this.game.world.places.drummer;
     if (!P) return;
@@ -229,8 +229,10 @@ export class Folks {
     }
     root.add(fig.group);
     shadows(root);
-    this.game.scene.add(root);
-    this.drummer = { P, root, fig, cymbals, fx: 0 };
+    const tag = nameTag('Adrián', '#e3000b');
+    tag.position.set(P.x - Math.sin(P.rot) * 1.25, P.y + 6.4, P.z - Math.cos(P.rot) * 1.25);
+    this.game.scene.add(root, tag);
+    this.drummer = { P, root, fig, cymbals, tag, fx: 0 };
     this.markers.push({ x: P.x, z: P.z, icon: '🥁' });
   }
 
@@ -239,7 +241,7 @@ export class Folks {
     const P = D.P;
     const g = this.game;
     const d = Math.hypot(p.pos.x - P.x, p.pos.z - P.z);
-    D.root.visible = d < SEE;
+    D.root.visible = D.tag.visible = d < SEE;
     if (live) g.sfx.drums(clamp(1 - (d - 14) / 80, 0, 1) ** 2);
     if (d >= SEE) return;
     const f = D.fig;

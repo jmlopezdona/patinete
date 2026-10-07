@@ -41,7 +41,7 @@ const TIPS = [
   '🛹 El <b>skatepark</b> está al final de la calle Río Júcar, junto a la rotonda.',
   '🚀 Detrás del skatepark, en el campo, te espera el <b>Mega Salto</b> sobre la charca.',
   '⛲ Sube hasta la <b>Plaza de la Villa</b>: allí están la fuente, la iglesia y el ayuntamiento.',
-  '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> en la canasta, las corredoras del parque y el batería de la calle Libertad.',
+  '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> en la canasta, las corredoras del parque y <b>Adrián</b>, el batería de la calle Libertad.',
   '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar el patinete.',
 ];
 const params = new URLSearchParams(location.search);

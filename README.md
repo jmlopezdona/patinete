@@ -91,7 +91,7 @@ campanario y empieza a soltar marcianos de ladrillo por las calles.
 | --- | --- | --- | --- |
 | 🤹 | **Yago** | Skatepark nuevo, en su pista de circo | Monociclo, malabares, piruetas y reverencia. Si te le echas encima, te salta con una voltereta |
 | 🧤 | **Teo** | Pista Polideportiva | El portero de «Chut a Puerta»: rubio y con gafas |
-| 🥁 | El pequeño batería | Calle Libertad, 17 | Doble bombo y melena al viento. Cuanto más te acercas, más suena |
+| 🥁 | **Adrián** | Calle Libertad, 17 | Doble bombo y melena al viento. Cuanto más te acercas, más suena |
 | 🏀 | **Jose** | Pista de baloncesto más cercana a casa | Tiros en suspensión y entradas a canasta (no las mete todas) |
 | 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de casa | Footing en grupo dando la vuelta a los dos parques |
 
