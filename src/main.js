@@ -4,6 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 import { makeRng } from './core/rng.js';
@@ -244,12 +245,15 @@ class Game {
   }
 
   setupComposer() {
-    const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+    // Sin multimuestreo: en un búfer de coma flotante a densidad retina costaba casi medio fotograma.
+    // Los bordes los suaviza una pasada SMAA sobre la imagen ya con su color final
+    const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType });
     this.composer = new EffectComposer(this.renderer, rt);
     this.composer.addPass(new RenderPass(this.scene, this.camera3.cam));
     this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.16, 0.55, 1.25);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
+    this.composer.addPass(new SMAAPass());
     this.final = new ShaderPass(FinalShader);
     this.composer.addPass(this.final);
     this.env.apply();
