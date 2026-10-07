@@ -357,6 +357,7 @@ function belfry(W, b) {
   fbox(W.batch, f, 0, y, 0, 0.4, 4, 0.4, C.gold, F.GLOW);
   fbox(W.batch, f, 0, y + 2.4, 0, 2.2, 0.4, 0.4, C.gold, F.GLOW);
   W.terrain.box(b.x, b.z, s + 0.6, s + 0.6, H, b.rot);
+  W.places.belfry = { x: b.x, z: b.z, top: y + 4 };
 }
 
 function shed(W, b, rnd) {
@@ -558,6 +559,8 @@ function court(W, x, z, w, d, rot, sport) {
       fbox(batch, f, gx - s * 0.2, 5.6, 0, 0.3, 2.4, 3.6, C.white, 0);
       fbox(batch, f, gx - s * 1.0, 5.8, 0, 1.2, 0.2, 1.2, C.orange, 0);
       W.terrain.cyl(...f.p(gx + s * 1.2, 0), 0.6, 7);
+      const q = f.p(gx - s * 1.0, 0);
+      W.places.hoops.push({ x: q[0], z: q[1], y: 5.9, nx: -s * f.c, nz: s * f.s, half: d / 2, len: w });
     } else if (sport === 3) {
       if (s > 0) fbox(batch, f, 0, 0.16, 0, 0.3, 1.8, d + 1.6, C.white, F.SEAMS);
     } else {

@@ -44,7 +44,7 @@ export class Missions {
       { id: 'tricks', name: 'Rey del Skatepark', icon: '🛹', color: 0xfe8a18, x: P.trick.marker.x, z: P.trick.marker.z, desc: '75 segundos para encadenar tus mejores trucos.', unit: (v) => `${Math.round(v)} pts` },
       { id: 'bowling', name: 'Bolos Gigantes', icon: '🎳', color: 0x2f7dff, x: P.bowling.x - 5.5, z: P.bowling.z + 1.5, desc: 'Tú eres la bola: derriba los 10 bolos en dos tiradas.', unit: (v) => `${v} bolos` },
       { id: 'pizza', name: 'Pizza Exprés', icon: '🍕', color: 0xe23b2a, x: P.pizza.x, z: P.pizza.z, desc: 'Reparte 5 pizzas por las calles de Cobeña antes de que se enfríen.', lower: true, unit: (v) => fmt(v) },
-      { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Marca todos los goles que puedas en 60 segundos.', unit: (v) => `${v} goles` },
+      { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Márcale a Teo todos los goles que puedas en 60 segundos.', unit: (v) => `${v} goles` },
     ];
     this.state = 'idle';
     this.cur = null;
@@ -412,11 +412,11 @@ export class Missions {
     return {
       update: () => {
         const left = 60 - this.time;
-        g.hud.mission(`⚽ ${this.def.name}`, `${this.goals} ${this.goals === 1 ? 'gol' : 'goles'}`, `⏱ ${fmt(left)} · Portería del este · Oro: 5 goles`);
+        g.hud.mission(`⚽ ${this.def.name}`, `${this.goals} ${this.goals === 1 ? 'gol' : 'goles'}`, `⏱ ${fmt(left)} · Portería de Teo (este) · Oro: 5 goles`);
         if (left <= 0) {
           const n = this.goals;
           const stars = n >= 5 ? 3 : n >= 3 ? 2 : n >= 1 ? 1 : 0;
-          this.finish(stars, n, [`Goles: <b>${n}</b>`, stars === 0 ? 'Empuja el balón con el patinete hacia la portería del portero.' : 'Golpea el balón de lado para esquivar al portero.']);
+          this.finish(stars, n, [`Goles: <b>${n}</b>`, stars === 0 ? 'Empuja el balón con el patinete hacia la portería de Teo.' : 'Golpea el balón de lado para que Teo no llegue.']);
         }
       },
       cleanup: () => g.ball.reset(),

@@ -150,6 +150,75 @@ await log('noche + mega salto', () => {
 await shot('s_mega_noche');
 await log('noche ciudad', () => { const g = window.__game; g.player.place(g.world.places.spawn.x, g.world.places.spawn.z, g.world.places.spawn.heading); g.camera3.snap = true; window.sim(1.5, () => ({ throttle: 1 })); return { bricks: g.save.bricks.length }; });
 await shot('s_noche');
+await log('vecinos', () => {
+  const g = window.__game; const F = g.folks; const P = g.world.places;
+  g.env.night = g.env.target = 0; g.env.apply();
+  // Yago salta por encima si el patinete se le echa encima
+  const Y = F.yago;
+  g.player.place(Y.x - 12, Y.z, Math.PI / 2); g.player.v = 25;
+  let jumped = false;
+  window.sim(1.2, () => { jumped = jumped || Y.air; return { throttle: 1 }; });
+  // Jose: un par de minutos de tiros y entradas
+  const J = F.jose;
+  g.player.place(J.H.x + J.H.nx * 30, J.H.z + J.H.nz * 30, 0);
+  window.sim(60);
+  // Las corredoras dan la vuelta sin quedarse atascadas
+  const R = F.joggers; const q = {}; F.pathAt(R.s + 30, q);
+  g.player.place(q.x + 20, q.z + 20, 0);
+  window.sim(20);
+  const spread = Math.max(...R.list.map((j) => Math.hypot(j.x - R.list[0].x, j.z - R.list[0].z)));
+  return { marcadores: F.markers.map((m) => m.icon).join(''), yagoSalta: jumped, joseTiros: J.n, joseCanastas: J.made, corredorasJuntas: +spread.toFixed(1), bateria: !!P.drummer, teo: g.ball.keeper.group.children.some((c) => c.isSprite) };
+});
+await shot('s_vecinos');
+await log('marcianos: culetazo', () => {
+  const g = window.__game; const A = g.aliens; const p = g.player;
+  const sp = g.world.places.spawn;
+  g.save.studs = 2000; g.save.invasions = 0;
+  p.place(sp.x, sp.z, sp.heading);
+  g.env.night = g.env.target = 1; g.env.apply();
+  window.sim(4);
+  const goal = A.wave.goal;
+  // Embestir por la espalda a un marciano despistado
+  const a = A.aliens.find((x) => x.state !== 'off' && x.state !== 'drop');
+  for (const o of A.aliens) if (o !== a) o.cd = 99;
+  a.state = 'wander'; a.t = 9; a.dirT = a.heading; a.cd = 0;
+  p.place(a.x - Math.sin(a.heading) * 9, a.z - Math.cos(a.heading) * 9, a.heading); p.v = 28; p.invuln = 0;
+  window.sim(0.6, () => ({ throttle: 1 }));
+  const flew = a.state === 'fly';
+  window.sim(3);
+  return { oleada: goal, vuela: flew, culetazos: A.wave.count, contador: document.getElementById('aliens').textContent, revienta: a.state === 'off' || a.state === 'drop' };
+});
+await shot('s_marcianos');
+await log('marcianos: rayo y fuga', () => {
+  const g = window.__game; const A = g.aliens; const p = g.player; const u = A.u;
+  for (const o of A.aliens) o.cd = 99;
+  p.invuln = 0; A.setUfo('hunt'); u.x = p.pos.x; u.z = p.pos.z; u.beam = 1; u.vx = u.vz = 0;
+  let n = 0; while (u.state === 'hunt' && n++ < 300) window.sim(1 / 60);
+  const held = p.held;
+  // Machacar el salto para soltarse
+  n = 0; while (u.state === 'abduct' && n++ < 300) window.sim(1 / 60, () => (n % 6 === 0 ? { keys: ['Space'] } : {}));
+  const free = !p.held && u.state === 'stun';
+  n = 0; while (!p.grounded && n++ < 300) window.sim(1 / 60);
+  return { atrapado: held, suelto: free, enElSuelo: p.grounded, castañazo: p.crashT > 0 };
+});
+await log('marcianos: abducción', () => {
+  const g = window.__game; const A = g.aliens; const p = g.player; const u = A.u;
+  const st = g.save.studs;
+  p.invuln = 0; A.setUfo('hunt'); u.x = p.pos.x; u.z = p.pos.z; u.beam = 1; u.vx = u.vz = 0;
+  let n = 0; while (u.state !== 'carry' && n++ < 900) window.sim(1 / 60);
+  const dest = A.carry && A.carry.dest.name;
+  n = 0; while ((u.state === 'carry' || !p.grounded) && n++ < 900) window.sim(1 / 60);
+  return { destino: dest, zona: g.zoneName(p.pos.x, p.pos.z), robados: st - g.save.studs, visible: !p.hidden, enElSuelo: p.grounded };
+});
+await shot('s_abducido');
+await log('marcianos: victoria', () => {
+  const g = window.__game; const A = g.aliens; const p = g.player;
+  const st = g.save.studs;
+  A.wave.count = A.wave.goal - 1;
+  A.score(p, g.time, null, 500);
+  window.sim(6);
+  return { rechazada: g.save.invasions, premio: g.save.studs - st, amanece: g.env.target === 0, platillo: A.u.state, marcianos: A.aliens.filter((a) => a.state !== 'off').length };
+});
 await log('estado', () => { const g = window.__game; return { studs: g.save.studs, stars: g.save.stars, calls: g.renderer.info.render.calls, tris: g.renderer.info.render.triangles, programs: g.renderer.info.programs.length, geos: g.renderer.info.memory.geometries, tex: g.renderer.info.memory.textures }; });
 if (errors.length) console.log('\nERRORES:\n' + [...new Set(errors)].slice(0, 20).join('\n'));
 else console.log('\nSin errores de consola.');

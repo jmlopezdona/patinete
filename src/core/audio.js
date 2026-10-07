@@ -35,7 +35,29 @@ export class Sfx {
     this.roll = this._loop('lowpass', 300, 0.8);
     this.wind = this._loop('bandpass', 900, 0.6);
     this.grindL = this._loop('bandpass', 2600, 4);
+    // Zumbido del platillo: un tono con vibrato que se acelera cuando te apunta el rayo
+    const uo = ctx.createOscillator();
+    uo.type = 'triangle';
+    uo.frequency.value = 170;
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 6;
+    const lg = ctx.createGain();
+    lg.gain.value = 36;
+    lfo.connect(lg);
+    lg.connect(uo.frequency);
+    const ug = ctx.createGain();
+    ug.gain.value = 0;
+    uo.connect(ug);
+    ug.connect(this.sfxBus);
+    uo.start();
+    lfo.start();
+    this.ufoL = { o: uo, lfo, g: ug };
+    this.drumBus = ctx.createGain();
+    this.drumBus.gain.value = 0;
+    this.drumBus.connect(this.master);
+    this.drumVol = 0;
     this._startMusic();
+    this._startDrums();
   }
 
   _loop(type, freq, q) {
@@ -207,6 +229,139 @@ export class Sfx {
   }
   ui() {
     this.tone(880, 0.06, 'triangle', 0.1);
+  }
+
+  // ---------- Marcianos ----------
+  ufo(vol, tense) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.ufoL.g.gain.setTargetAtTime(vol * (tense ? 0.16 : 0.09), t, 0.12);
+    this.ufoL.o.frequency.setTargetAtTime(tense ? 330 : 170, t, 0.15);
+    this.ufoL.lfo.frequency.setTargetAtTime(tense ? 13 : 6, t, 0.15);
+  }
+  invasion() {
+    [220, 208, 196, 185, 175].forEach((f, i) => this.tone(f, 0.34, 'sawtooth', 0.1, 0.94, i * 0.26));
+    this.tone(880, 1.4, 'sine', 0.08, 0.5, 0.1);
+  }
+  alienSpot() {
+    this.tone(900, 0.08, 'square', 0.05, 1.6);
+    this.tone(1350, 0.11, 'square', 0.05, 1.3, 0.08);
+  }
+  alienLand() {
+    this.tone(520, 0.14, 'sine', 0.1, 0.4);
+  }
+  culetazo(turbo) {
+    this.tone(turbo ? 110 : 140, 0.26, 'sine', 0.5, 3.4);
+    this.noise(0.09, 0.32, 1700, 1);
+    this.tone(1500, 0.42, 'triangle', 0.09, 0.3, 0.06);
+    if (turbo) this.tone(2200, 0.5, 'sine', 0.06, 0.25, 0.1);
+  }
+  alienPop() {
+    this.bricks(4);
+    this.tone(480, 0.16, 'triangle', 0.1, 0.4);
+  }
+  zap() {
+    this.tone(1300, 0.32, 'sawtooth', 0.12, 0.12);
+    this.noise(0.28, 0.22, 3200, 2, 'bandpass', 0, 0.3);
+    [660, 590, 520].forEach((f, i) => this.tone(f, 0.1, 'square', 0.06, 0.9, 0.36 + i * 0.11));
+  }
+  beamGrab() {
+    this.tone(200, 0.7, 'sawtooth', 0.1, 4);
+    this.tone(400, 0.7, 'sine', 0.1, 3, 0.05);
+  }
+  mash(k) {
+    this.tone(500 + Math.min(1, k) * 700, 0.06, 'triangle', 0.1);
+  }
+  escape() {
+    this.tone(520, 0.12, 'square', 0.09, 2);
+    this.tone(1040, 0.26, 'square', 0.09, 1.5, 0.1);
+  }
+  abducted() {
+    [300, 400, 533, 711, 948, 1264].forEach((f, i) => this.tone(f, 0.26, 'sine', 0.13, 1.5, i * 0.11));
+  }
+
+  // ---------- Vecinos ----------
+  bounce(vol = 1) {
+    this.tone(170, 0.09, 'sine', 0.22 * vol, 0.5);
+    this.noise(0.03, 0.08 * vol, 900, 1);
+  }
+  swish(vol = 1) {
+    this.noise(0.22, 0.16 * vol, 4200, 1.5, 'bandpass', 0, 0.4);
+  }
+  clang(vol = 1) {
+    this.tone(620, 0.16, 'square', 0.07 * vol, 0.9);
+    this.tone(930, 0.2, 'triangle', 0.06 * vol, 0.95);
+  }
+  ole() {
+    [660, 880, 1100].forEach((f, i) => this.tone(f, 0.12, 'triangle', 0.1, 1.2, i * 0.07));
+  }
+  // Batería heavy: suena más cuanto más cerca estás (y tapa la musiquilla)
+  drums(vol) {
+    if (!this.ctx || Math.abs(vol - this.drumVol) < 0.01) return;
+    this.drumVol = vol;
+    const t = this.ctx.currentTime;
+    this.drumBus.gain.setTargetAtTime(vol * 0.85, t, 0.12);
+    this.musicBus.gain.setTargetAtTime(0.34 * (1 - vol * 0.9), t, 0.2);
+  }
+
+  _startDrums() {
+    const ctx = this.ctx;
+    const step = 60 / 168 / 4;
+    let i = 0;
+    let next = ctx.currentTime + 0.1;
+    const hit = (t, freq, dur, vol, type) => {
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(f);
+      f.connect(g);
+      g.connect(this.drumBus);
+      src.start(t, Math.random());
+      src.stop(t + dur + 0.02);
+    };
+    const thump = (t, f0, f1, dur, vol) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.8);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g);
+      g.connect(this.drumBus);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    };
+    const tick = () => {
+      if (this.drumVol < 0.01 || ctx.state !== 'running') {
+        next = ctx.currentTime + 0.1;
+        return;
+      }
+      while (next < ctx.currentTime + 0.25) {
+        const b = i % 16;
+        const bar = Math.floor(i / 16) % 4;
+        if (bar === 3 && b >= 8) {
+          // Redoble por los timbales para rematar la frase
+          const f = [330, 330, 270, 270, 210, 210, 150, 150][b - 8];
+          thump(next, f, f * 0.55, 0.16, 0.5);
+          if (b % 2 === 0) thump(next, 150, 42, 0.11, 0.7);
+        } else {
+          if (b % 8 === 4) {
+            hit(next, 1900, 0.14, 0.5, 'bandpass');
+            thump(next, 220, 160, 0.08, 0.3);
+          } else thump(next, 150, 42, 0.11, 0.75); // doble bombo sin descanso
+          if (b % 2 === 0) hit(next, 8000, 0.04, 0.12, 'highpass');
+        }
+        if (b === 0 && bar === 0) hit(next, 5200, 0.9, 0.3, 'highpass');
+        next += step;
+        i++;
+      }
+    };
+    this.drumTimer = setInterval(tick, 60);
   }
 
   // Música: secuenciador sencillo con bajo, arpegio y batería

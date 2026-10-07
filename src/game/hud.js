@@ -7,7 +7,10 @@ export class Hud {
       hud: $('hud'), studs: $('studs'), bricks: $('bricks'), stars: $('stars'), kmh: $('kmh'), boost: $('boostfill'), speedo: $('speedo'),
       prompt: $('prompt'), mission: $('mission'), mTitle: $('m-title'), mMain: $('m-main'), mSub: $('m-sub'), big: $('big'), toasts: $('toasts'),
       trick: $('trick'), results: $('results'), zone: $('zone'), studBox: $('studbox'),
+      alienBox: $('alienbox'), aliens: $('aliens'), abduct: $('abduct'), abductFill: $('abductfill'), beam: $('beamwarn'),
     };
+    this.lastBeam = 0;
+    this.lastAbduct = null;
     this.shown = 0;
     this.targetStuds = 0;
     this.bigT = 0;
@@ -36,6 +39,33 @@ export class Hud {
   }
   setStars(n, total) {
     this.el.stars.textContent = `${n}/${total}`;
+  }
+
+  // Contador de la invasión (null lo esconde)
+  setAliens(n, total) {
+    const b = this.el.alienBox;
+    b.classList.toggle('hidden', n == null);
+    if (n == null) return;
+    this.el.aliens.textContent = `${n}/${total}`;
+    b.classList.remove('pop');
+    void b.offsetWidth;
+    b.classList.add('pop');
+  }
+
+  // Barra para soltarse del rayo abductor (null la esconde)
+  abduct(k) {
+    if (k === this.lastAbduct) return;
+    this.lastAbduct = k;
+    this.el.abduct.classList.toggle('hidden', k == null);
+    if (k != null) this.el.abductFill.style.transform = `scaleX(${k.toFixed(3)})`;
+  }
+
+  // Aviso en los bordes de la pantalla cuando el rayo te está cogiendo
+  beam(k) {
+    k = Math.round(k * 20) / 20;
+    if (k === this.lastBeam) return;
+    this.lastBeam = k;
+    this.el.beam.style.opacity = k;
   }
 
   prompt(html) {
@@ -113,7 +143,7 @@ export class Hud {
   update(dt, kmh, boost, boosting) {
     if (this.shown !== this.targetStuds) {
       const d = this.targetStuds - this.shown;
-      this.shown += Math.abs(d) < 3 ? d : Math.ceil(d * Math.min(1, dt * 9));
+      this.shown += Math.abs(d) < 3 ? d : Math.sign(d) * Math.ceil(Math.abs(d) * Math.min(1, dt * 9));
       this.el.studs.textContent = Math.round(this.shown).toLocaleString('es-ES');
     }
     const k = Math.round(kmh);

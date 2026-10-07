@@ -90,7 +90,7 @@ export class Minimap {
     }
   }
 
-  draw(px, pz, yaw, playerYaw, markers, goal) {
+  draw(px, pz, yaw, playerYaw, markers, goal, blips = []) {
     const g = this.ctx;
     const sz = this.size;
     const zoom = 0.82;
@@ -139,6 +139,29 @@ export class Minimap {
         g.font = '13px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
         g.fillText(m.icon, x, y + 1);
         g.globalAlpha = 1;
+      });
+    }
+    // Marcianos (puntos verdes) y platillo
+    for (const b of blips) {
+      put(b.x, b.z, (x, y, out) => {
+        if (b.ufo) {
+          g.globalAlpha = out ? 0.8 : 1;
+          g.fillStyle = '#12202e';
+          g.beginPath();
+          g.arc(x, y, 9, 0, Math.PI * 2);
+          g.fill();
+          g.font = '12px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+          g.fillText('🛸', x, y + 1);
+          g.globalAlpha = 1;
+        } else if (!out) {
+          g.fillStyle = '#8dff6a';
+          g.strokeStyle = '#12202e';
+          g.lineWidth = 1.5;
+          g.beginPath();
+          g.arc(x, y, 3.6, 0, Math.PI * 2);
+          g.fill();
+          g.stroke();
+        }
       });
     }
     if (goal) {

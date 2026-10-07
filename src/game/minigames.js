@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Builder } from '../lego/builder.js';
 import { addPin, ballGeometry } from '../lego/models.js';
-import { createMinifig } from '../lego/minifig.js';
+import { createMinifig, nameTag } from '../lego/minifig.js';
 import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
 import { BASE } from '../world/city.js';
@@ -161,7 +161,12 @@ export class Ball {
     this.vel = new THREE.Vector3();
     this.floor = BASE + 0.1 + this.r;
     this.wait = 0;
-    this.keeper = createMinifig({ torso: C.lime, arms: C.lime, legs: C.black, hair: 'cap', hairColor: C.black, face: 'cool', print: 'star', printColor: '#1b1d21' });
+    // Teo, el portero: rubio y con gafas
+    this.keeper = createMinifig({ torso: C.lime, arms: C.lime, legs: C.black, hair: 'hair', hairColor: 0xf0d27a, face: 'glasses', print: 'star', printColor: '#1b1d21' });
+    this.keeper.group.scale.setScalar(0.9);
+    const tag = nameTag('Teo', '#a5ca18');
+    tag.position.y = 6.9;
+    this.keeper.group.add(tag);
     this.keeper.group.rotation.y = -Math.PI / 2;
     this.keeper.armL.rotation.z = 1.3;
     this.keeper.armR.rotation.z = -1.3;

@@ -48,6 +48,9 @@ export class Player {
     this.sunk = false;
     this.invuln = 0;
     this.frozen = false;
+    this.held = false; // en manos del rayo abductor: la posición la mueve el platillo
+    this.hidden = false;
+    this.dropped = false; // caída desde el platillo: no cuenta como truco
     this.safe = { x: 0, z: 0, heading: 0 };
     this.safeT = 0;
     this.free = { x: 0, z: 0 };
@@ -123,6 +126,8 @@ export class Player {
     this.spin = this.flip = this.visYaw = this.visFlip = 0;
     this.crashT = 0;
     this.sunk = false;
+    this.held = false;
+    this.hidden = false;
     this.model.visible = true;
     this.visY = this.pos.y;
     this.safe = { x, z, heading };
@@ -150,6 +155,10 @@ export class Player {
       this.crashT -= dt;
       if (this.crashT <= 0) this.recover();
       this.updateVisual(dt, inp);
+      return;
+    }
+    if (this.held) {
+      this.updateVisual(dt, this.game.input.neutral);
       return;
     }
     if (this.frozen) inp = this.game.input.neutral;
@@ -556,8 +565,10 @@ export class Player {
         height: this.maxY - Math.min(this.launchY, this.pos.y),
         sketchy,
         crashed,
+        dropped: this.dropped,
       });
     }
+    this.dropped = false;
     this.whips = 0;
     this.grindTime = 0;
     this.spinAbs = 0;
@@ -734,6 +745,6 @@ export class Player {
     r.head.rotation.x = -0.2;
     r.head.rotation.y = -inp.steer * 0.35;
     // Parpadeo al reaparecer
-    if (this.crashT <= 0) this.model.visible = this.invuln > 0 ? Math.floor(this.time * 14) % 2 === 0 : true;
+    if (this.crashT <= 0) this.model.visible = !this.hidden && (this.invuln > 0 ? Math.floor(this.time * 14) % 2 === 0 : true);
   }
 }

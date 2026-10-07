@@ -7,13 +7,14 @@ const faceCache = new Map();
 const printCache = new Map();
 let headGeo = null;
 
-function faceTexture(kind) {
-  if (faceCache.has(kind)) return faceCache.get(kind);
+function faceTexture(kind, skin = C.skin) {
+  const key = kind + skin;
+  if (faceCache.has(key)) return faceCache.get(key);
   const cv = document.createElement('canvas');
   cv.width = 512;
   cv.height = 256;
   const g = cv.getContext('2d');
-  g.fillStyle = hexCss(C.skin);
+  g.fillStyle = hexCss(skin);
   g.fillRect(0, 0, 512, 256);
   g.fillStyle = '#16181c';
   g.strokeStyle = '#16181c';
@@ -28,7 +29,20 @@ function faceTexture(kind) {
     g.fill();
     g.fillStyle = '#16181c';
   };
-  if (kind === 'cool') {
+  if (kind === 'alien') {
+    // Ojos almendrados enormes y boquita de marciano
+    for (const sx of [-1, 1]) {
+      g.fillStyle = '#16181c';
+      g.beginPath();
+      g.ellipse(256 + sx * 31, 110, 23, 34, sx * 0.5, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = '#fff';
+      g.beginPath();
+      g.ellipse(256 + sx * 25, 94, 6, 9, sx * 0.5, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = '#16181c';
+  } else if (kind === 'cool') {
     g.beginPath();
     g.roundRect(256 - 52, 96, 44, 34, 8);
     g.roundRect(256 + 8, 96, 44, 34, 8);
@@ -45,8 +59,61 @@ function faceTexture(kind) {
     eye(256 - 27, 114);
     eye(256 + 27, 114);
   }
+  if (kind === 'glasses' || kind === 'senor') {
+    // Gafas: redondas de colores para los chavales, de pasta rectangular para los señores
+    g.lineWidth = 6;
+    g.strokeStyle = kind === 'senor' ? '#3a3f47' : '#c91a09';
+    for (const sx of [-1, 1]) {
+      g.beginPath();
+      if (kind === 'senor') g.roundRect(256 + sx * 30 - 25, 91, 50, 42, 9);
+      else g.arc(256 + sx * 30, 113, 26, 0, Math.PI * 2);
+      g.stroke();
+      g.beginPath();
+      g.moveTo(256 + sx * 56, 106);
+      g.lineTo(256 + sx * 118, 100);
+      g.stroke();
+    }
+    g.beginPath();
+    g.moveTo(256 - 5, 108);
+    g.lineTo(256 + 5, 108);
+    g.stroke();
+    g.strokeStyle = '#16181c';
+  }
+  if (kind === 'senor' || kind === 'rock') {
+    // Cejas: canosas y tranquilas, o de roquero enfadado
+    g.lineWidth = 7;
+    g.strokeStyle = kind === 'senor' ? '#8a8f95' : '#16181c';
+    for (const sx of [-1, 1]) {
+      g.beginPath();
+      g.moveTo(256 + sx * 46, kind === 'senor' ? 78 : 76);
+      g.lineTo(256 + sx * 14, kind === 'senor' ? 74 : 92);
+      g.stroke();
+    }
+    g.strokeStyle = '#16181c';
+  }
+  if (kind === 'lady') {
+    g.lineWidth = 4;
+    for (const sx of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        g.beginPath();
+        g.moveTo(256 + sx * (27 + i * 5), 101);
+        g.lineTo(256 + sx * (31 + i * 8), 89 + i * 3);
+        g.stroke();
+      }
+    }
+  }
   g.lineWidth = 7;
-  if (kind === 'grin') {
+  if (kind === 'alien') {
+    g.beginPath();
+    g.ellipse(256, 166, 11, 7, 0, 0, Math.PI * 2);
+    g.fill();
+  } else if (kind === 'lady') {
+    g.strokeStyle = '#c91a09';
+    g.lineWidth = 9;
+    g.beginPath();
+    g.ellipse(256, 138, 27, 38, 0, Math.PI * 0.18, Math.PI * 0.82);
+    g.stroke();
+  } else if (kind === 'grin' || kind === 'rock') {
     g.beginPath();
     g.ellipse(256, 152, 30, 32, 0, 0, Math.PI);
     g.closePath();
@@ -61,7 +128,7 @@ function faceTexture(kind) {
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
-  faceCache.set(kind, tex);
+  faceCache.set(key, tex);
   return tex;
 }
 
@@ -115,6 +182,12 @@ function printTexture(kind, color) {
     }
     g.closePath();
     g.fill();
+  } else if (kind[0] === '#') {
+    // Dorsal
+    g.font = '800 86px Fredoka, "Arial Rounded MT Bold", sans-serif';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(kind.slice(1), 64, 68);
   } else if (kind === 'pizza') {
     g.beginPath();
     g.moveTo(64, 112);
@@ -151,6 +224,7 @@ export function createMinifig(o = {}) {
   const arms = o.arms ?? torso;
   const hairType = o.hair ?? 'hair';
   const hairColor = o.hairColor ?? C.brown;
+  const skin = o.skin ?? C.skin;
   const group = new THREE.Group();
 
   const mkLeg = (sx) => {
@@ -173,7 +247,7 @@ export function createMinifig(o = {}) {
   for (let i = 0; i < tp.count; i++) if (tp.getY(i) > 0) tp.setX(i, tp.getX(i) * 0.76);
   tg.computeVertexNormals();
   body.add(tg, torso, 0, 2.92, 0);
-  body.cyl(0.33, 0.2, 0, 3.78, 0, C.skin, { seg: 12 });
+  body.cyl(0.33, 0.2, 0, 3.78, 0, skin, { seg: 12 });
   const bodyMesh = body.mesh(plastic);
   group.add(bodyMesh);
 
@@ -188,7 +262,7 @@ export function createMinifig(o = {}) {
 
   const head = new THREE.Group();
   head.position.set(0, 3.86, 0);
-  const hm = new THREE.Mesh(getHeadGeo(), new THREE.MeshStandardMaterial({ map: faceTexture(o.face ?? 'smile'), roughness: 0.5 }));
+  const hm = new THREE.Mesh(getHeadGeo(), new THREE.MeshStandardMaterial({ map: faceTexture(o.face ?? 'smile', skin), roughness: 0.5 }));
   hm.rotation.y = Math.PI;
   hm.castShadow = true;
   head.add(hm);
@@ -204,8 +278,23 @@ export function createMinifig(o = {}) {
   } else if (hairType === 'hair') {
     hb.add(new THREE.SphereGeometry(0.72, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.76, 0);
     hb.box(1.3, 0.72, 0.42, 0, 0.52, -0.5, hairColor, { r: 0.18 });
+  } else if (hairType === 'ponytail') {
+    hb.add(new THREE.SphereGeometry(0.72, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.76, 0);
+    hb.box(1.3, 0.5, 0.42, 0, 0.62, -0.5, hairColor, { r: 0.18 });
+    hb.sphere(0.3, 0, 0.92, -0.86, hairColor, { seg: 10, seg2: 8 });
+    hb.box(0.34, 1.05, 0.3, 0, 0.38, -1.02, hairColor, { r: 0.14, rx: 0.25 });
+  } else if (hairType === 'long') {
+    // Melena heavy hasta los hombros
+    hb.add(new THREE.SphereGeometry(0.74, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.76, 0);
+    hb.box(1.44, 1.7, 0.46, 0, 0.1, -0.5, hairColor, { r: 0.2 });
+    for (const sx of [-1, 1]) hb.box(0.3, 1.5, 0.9, sx * 0.68, 0.16, -0.12, hairColor, { r: 0.14 });
+  } else if (hairType === 'antenna') {
+    for (const sx of [-1, 1]) {
+      hb.cyl(0.07, 1.0, sx * 0.42, 1.5, 0, skin, { rz: -sx * 0.3, seg: 8 });
+      hb.sphere(0.2, sx * 0.57, 2.02, 0, hairColor, { seg: 10, seg2: 8 });
+    }
   } else {
-    hb.stud(0, 1.05, 0, C.skin);
+    hb.stud(0, 1.05, 0, skin);
   }
   head.add(hb.mesh(plastic));
   group.add(head);
@@ -216,8 +305,8 @@ export function createMinifig(o = {}) {
     const b = new Builder();
     b.sphere(0.3, 0, 0, 0, arms);
     b.cyl(0.25, 1.15, sx * 0.1, -0.55, 0, arms, { rz: sx * 0.17, seg: 12 });
-    b.cyl(0.2, 0.36, sx * 0.2, -1.22, 0, C.skin, { seg: 10 });
-    b.cyl(0.25, 0.3, sx * 0.2, -1.46, 0.02, C.skin, { axis: 'x', seg: 12 });
+    b.cyl(0.2, 0.36, sx * 0.2, -1.22, 0, skin, { seg: 10 });
+    b.cyl(0.25, 0.3, sx * 0.2, -1.46, 0.02, skin, { axis: 'x', seg: 12 });
     g.add(b.mesh(plastic));
     group.add(g);
     return g;
@@ -225,5 +314,30 @@ export function createMinifig(o = {}) {
   const armL = mkArm(1);
   const armR = mkArm(-1);
 
-  return { group, legL, legR, armL, armR, head, colors: [legs, torso, C.skin, hairColor, arms] };
+  return { group, legL, legR, armL, armR, head, colors: [legs, torso, skin, hairColor, arms] };
+}
+
+// Cartelito con el nombre que flota sobre la cabeza de los vecinos
+export function nameTag(name, color = '#ffd23a') {
+  const cv = document.createElement('canvas');
+  cv.width = 256;
+  cv.height = 80;
+  const g = cv.getContext('2d');
+  g.fillStyle = 'rgba(14, 26, 40, 0.84)';
+  g.beginPath();
+  g.roundRect(5, 8, 246, 64, 32);
+  g.fill();
+  g.lineWidth = 5;
+  g.strokeStyle = color;
+  g.stroke();
+  g.font = '700 42px Fredoka, "Arial Rounded MT Bold", sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillStyle = '#ffffff';
+  g.fillText(name, 128, 43);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false, fog: false }));
+  sp.scale.set(4.6, 1.44, 1);
+  return sp;
 }

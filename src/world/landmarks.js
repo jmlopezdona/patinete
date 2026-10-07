@@ -233,6 +233,15 @@ function skatepark(W) {
   addRail(W, ...P(-58, -7.4), ...P(-42, -7.4), B + 0.95, C.lgray);
   for (let i = 0; i < 6; i++) stud(26 + i * 5, B + 3.2, 29);
 
+  // 7. La pista de circo de Yago y su monociclo
+  const yg = P(37, 15);
+  for (const [rr, col] of [[6.7, C.red], [6.1, C.yellow]]) {
+    const ring = new THREE.TorusGeometry(rr, 0.12, 6, 48);
+    ring.rotateX(Math.PI / 2);
+    geo.add(ring, col, yg[0], B + 0.05, yg[1]);
+  }
+  W.places.yago = { x: yg[0], z: yg[1], y: B, r: 4.4 };
+
   arch(W, ...P(-84, -12), L.rot + Math.PI / 2, 20, 11, 'SKATEPARK', '#fe8a18', C.purple);
   for (const [lx, lz] of [[93, 26], [95, -31], [-99, -31]]) {
     fbox(batch, L, lx, B, lz, 5, 0.9, 5, C.brown, F.STUDS);
@@ -434,6 +443,59 @@ function megaJump(W) {
   W.places.mega = { x: X(150), z, hole: h, islandX: ix };
 }
 
+// ---------- Calle Libertad 17: el pequeño batería heavy ----------
+
+function drummer(W) {
+  const { batch, terrain } = W;
+  const door = W.doors.find((d) => d.name === 'C/ Libertad 17');
+  if (!door) return;
+  // Su casa es el edificio más cercano al portal; el escenario va delante de la fachada
+  let b = null;
+  let bd = Infinity;
+  for (const k of W.map.buildings) {
+    const d = Math.hypot(k.x - door.x, k.z - door.z);
+    if (d < bd) {
+      bd = d;
+      b = k;
+    }
+  }
+  const ux = (b.x - door.x) / bd;
+  const uz = (b.z - door.z) / bd;
+  let t = 0;
+  while (t < bd && terrain.height(door.x + ux * (t + 0.5), door.z + uz * (t + 0.5)) < 0.5) t += 0.5;
+  const s = Math.max(5, t - 5.5);
+  const rot = Math.atan2(-ux, -uz); // de cara a la calle
+  // Se corre a un lado si hay un árbol o una valla en medio
+  let f = null;
+  for (const side of [0, 8, -8, 16, -16, 24, -24]) {
+    const c = frame(door.x + ux * s - uz * side, door.z + uz * s + ux * side, rot);
+    let ok = true;
+    for (let lx = -7.5; lx <= 7.5 && ok; lx += 0.75) {
+      for (let lz = -4; lz <= 4.5 && ok; lz += 0.75) ok = free(W, ...c.p(lx, lz));
+    }
+    if (ok) {
+      f = c;
+      break;
+    }
+  }
+  if (!f) return;
+  const { x, z } = f;
+  fbox(batch, f, 0, 0, 0, 9, 0.5, 7, C.black, F.STUDS);
+  terrain.box(x, z, 9, 7, 0.5, rot);
+  fbox(batch, f, 0, 0, -3.3, 9, 6.8, 0.5, C.black, F.SEAMS);
+  terrain.box(...f.p(0, -3.3), 9, 0.5, 6.8, rot);
+  const q = f.p(0, -3.02);
+  addSign(W, 'HEAVY METAL', q[0], 5.4, q[1], rot, 8, 1.7, '#1b1d21', '#ffd23a');
+  // Torres de altavoces
+  for (const sx of [-1, 1]) {
+    fbox(batch, f, sx * 5.9, 0, -1.2, 2.4, 5.6, 2.2, C.black, F.SEAMS);
+    for (const y of [0.5, 3.1]) fbox(batch, f, sx * 5.9, y, -0.06, 1.8, 1.9, 0.12, C.dgray, 0);
+    terrain.box(...f.p(sx * 5.9, -1.2), 2.4, 2.2, 5.6, rot);
+  }
+  terrain.cyl(x, z, 2.6, 3.2); // la batería no se atraviesa
+  W.places.drummer = { x, z, rot, y: 0.5 };
+}
+
 // ---------- Parques infantiles ----------
 
 function playground(W, gx, gz) {
@@ -478,6 +540,7 @@ export function buildLandmarks(W) {
   bowling(W);
   soccer(W);
   megaJump(W);
+  drummer(W);
   for (const [x, z] of DATA.playgrounds) playground(W, x, z);
   oldSkate(W);
   // Ladrillos dorados escondidos por el pueblo: campanario, estanque del Mirador, colegio,

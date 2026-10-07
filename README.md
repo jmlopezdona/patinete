@@ -39,7 +39,8 @@ tableta o un móvil (hay controles táctiles) con la dirección «Network» que 
 | Giros en el aire | `A` / `D` | Stick |
 | Backflip / frontflip | pulsar `S` / `W` en el aire | — |
 | Empezar minijuego | `E` | Y |
-| Día / noche | `N` | — |
+| Día / noche (de noche: ¡marcianos!) | `N` | — |
+| Soltarse del rayo abductor | machacar `Espacio` | A |
 | Cámara cerca / lejos | `C` | Select |
 | Color del patinete | `V` | — |
 | Recolocarse | `R` | — |
@@ -65,6 +66,37 @@ Para hacer *grind*, salta y cae sobre una barandilla del skatepark.
   en ladrillos, studs de plata, oro y azules, y **12 ladrillos dorados** escondidos.
 - El indicador de zona muestra el nombre de la calle por la que vas.
 
+### La noche de los marcianos
+
+Pulsa `N` (o «Día / noche» en la pausa) y, en cuanto oscurece, un platillo baja por el lado del
+campanario y empieza a soltar marcianos de ladrillo por las calles.
+
+- **Culetazo**: llevan una diana en el culo. Embístelos **por la espalda** y salen volando hasta
+  reventar en ladrillos y studs. Si no te han visto venir, ni se enteran.
+- **De frente te pillan**: calambrazo, 100 studs por los suelos (se pueden recoger) y risas marcianas.
+- **El turbo los asusta**: mientras lo usas huyen despavoridos enseñando la diana. Con turbo el
+  golpe es un *superculetazo*.
+- También valen el **pisotón** (caerles encima) y el **tailwhip marciano** (`F` en el aire junto a uno).
+  Los golpes seguidos suben el multiplicador: doble, triple… culetazo galáctico.
+- **Rayo abductor**: el platillo te sigue con un círculo de luz. Si te quedas debajo te sube:
+  machaca `Espacio` para soltarte. Si no, te lleva volando a otra punta del pueblo (la Isla del
+  Tesoro, la fuente de la plaza, la bolera…) y te birla unos studs.
+- Cada noche hay que echar a una **oleada** (8 marcianos la primera, 4 más cada vez). Al
+  conseguirlo el platillo huye, amanece y te llevas el premio. No hay «game over».
+- Los puntos verdes del minimapa son marcianos; el 🛸, el platillo. Durante los minijuegos se esconden.
+
+### Vecinos con nombre propio
+
+| | Quién | Dónde | Qué hace |
+| --- | --- | --- | --- |
+| 🤹 | **Yago** | Skatepark nuevo, en su pista de circo | Monociclo, malabares, piruetas y reverencia. Si te le echas encima, te salta con una voltereta |
+| 🧤 | **Teo** | Pista Polideportiva | El portero de «Chut a Puerta»: rubio y con gafas |
+| 🥁 | El pequeño batería | Calle Libertad, 17 | Doble bombo y melena al viento. Cuanto más te acercas, más suena |
+| 🏀 | **Jose** | Pista de baloncesto más cercana a casa | Tiros en suspensión y entradas a canasta (no las mete todas) |
+| 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de casa | Footing en grupo dando la vuelta a los dos parques |
+
+Todos salen en el minimapa con su icono.
+
 ### Minijuegos (acércate al icono y pulsa `E`)
 
 | | Minijuego | Dónde | Objetivo |
@@ -88,11 +120,13 @@ se guarda en el navegador.
   casas, vallas y mobiliario), `landmarks.js` (skatepark y demás lugares especiales) y `terrain.js`
   (terreno analítico: rampas, quarter pipes, bowls… que usa la física).
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
-  entorno día/noche, HUD y minimapa.
+  entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo y rayo) y
+  `folks.js`, los vecinos con nombre.
 - `src/core/` — entrada (teclado, mando, táctil), audio sintetizado con WebAudio y utilidades.
 - `tools/` — utilidades de desarrollo que abren el juego en Chrome sin cabeza para simular la
   física, recorrer los minijuegos y sacar capturas (necesitan `npm run dev` en marcha y Google
-  Chrome instalado en la ruta habitual de macOS).
+  Chrome instalado en la ruta habitual de macOS). `npm run test:misiones` también prueba la invasión y
+  a los vecinos, y `node tools/probe.mjs '<js>' [captura.png]` evalúa una expresión dentro del juego.
 
 ### Regenerar el callejero
 

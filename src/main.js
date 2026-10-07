@@ -27,17 +27,21 @@ import { Missions } from './game/missions.js';
 import { Environment } from './game/env.js';
 import { Hud } from './game/hud.js';
 import { Minimap } from './game/minimap.js';
+import { Aliens } from './game/aliens.js';
+import { Folks } from './game/folks.js';
 
 const SAVE_KEY = 'cobena-patinete-v1';
 const QUALITY_NAMES = ['Bajos', 'Medios', 'Altos'];
 const TIPS = [
   '💨 Mantén <b>Mayús</b> para usar el turbo. Se recarga con studs y trucos.',
   '🗺️ Los iconos del minimapa son minijuegos: acércate y pulsa <b>E</b>.',
+  '👽 Dicen que de noche pasan cosas muy raras en Cobeña… pulsa <b>N</b> si te atreves.',
   '🧱 Embiste bancos, papeleras y buzones: sueltan studs.',
   '🛹 En el aire: <b>A</b>/<b>D</b> giran, <b>F</b> hace un tailwhip y <b>S</b> un backflip.',
   '🛹 El <b>skatepark</b> está al final de la calle Río Júcar, junto a la rotonda.',
   '🚀 Detrás del skatepark, en el campo, te espera el <b>Mega Salto</b> sobre la charca.',
   '⛲ Sube hasta la <b>Plaza de la Villa</b>: allí están la fuente, la iglesia y el ayuntamiento.',
+  '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> en la canasta, las corredoras del parque y el batería de la calle Libertad.',
   '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar el patinete.',
 ];
 const params = new URLSearchParams(location.search);
@@ -98,7 +102,7 @@ class Game {
   }
 
   loadSave() {
-    const def = { studs: 0, bricks: [], stars: {}, best: {}, color: 0, muted: false };
+    const def = { studs: 0, bricks: [], stars: {}, best: {}, color: 0, muted: false, aliens: 0, invasions: 0 };
     try {
       return { ...def, ...JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') };
     } catch {
@@ -148,7 +152,10 @@ class Game {
     this.ball = new Ball(this, this.world.places.soccer);
     this.missions = new Missions(this);
     this.env = new Environment(this, this.world.lamps);
+    this.aliens = new Aliens(this);
+    this.folks = new Folks(this);
     this.minimap = new Minimap(document.getElementById('minimap'), this.world);
+    this.markers = [...this.missions.defs, ...this.folks.markers];
 
     this.setupComposer();
     this.applyQuality();
@@ -173,7 +180,7 @@ class Game {
     const W = (this.world = {
       batch: new BrickBatch(), geo: new Builder(), terrain: new Terrain(), rng: this.rng,
       signs: [], props: [], lamps: [], doors: [], studs: [], bricks: [], pedPaths: [], extras: [], spectators: [], splash: [],
-      places: {}, map: { blocks: [], buildings: [], circles: [], pitches: [] },
+      places: { hoops: [] }, map: { blocks: [], buildings: [], circles: [], pitches: [] },
     });
     this.terrain = W.terrain;
     buildTown(W);
@@ -275,6 +282,7 @@ class Game {
     $('p-sound').addEventListener('click', () => this.toggleMute());
     $('p-respawn').addEventListener('click', () => {
       this.missions.abort();
+      this.aliens.release(this.player);
       const sp = this.world.places.spawn;
       this.player.place(sp.x, sp.z, sp.heading);
       this.camera3.snap = true;
@@ -283,6 +291,8 @@ class Game {
     $('p-menu').addEventListener('click', () => {
       this.missions.abort();
       this.setPaused(false);
+      this.sfx.ufo(0, false);
+      this.sfx.drums(0);
       this.state = 'menu';
       this.hud.show(false);
       $('menu').classList.remove('out');
@@ -303,6 +313,7 @@ class Game {
     document.getElementById('menu').classList.add('out');
     this.hud.show(true);
     this.hud.toast('¡Bienvenido a <b>Cobeña</b>! Sales de casa, en Río Júcar 44. Busca los iconos del mapa para jugar.');
+    if (this.env.target > 0.5) this.tipI = Math.max(this.tipI, 2);
     setTimeout(() => document.getElementById('keys').classList.add('fade'), 14000);
   }
 
@@ -393,7 +404,7 @@ class Game {
       const p = this.player.pos;
       for (let i = 0; i < 6; i++) this.bits.spawn(p.x, p.y + 0.2, p.z, (Math.random() - 0.5) * 9, 2 + Math.random() * 3, (Math.random() - 0.5) * 9, 0xd9dde0, 0.35, 0.5, p.y);
     }
-    if (r.crashed) return;
+    if (r.crashed || r.dropped) return;
     const parts = [];
     let pts = 0;
     if (r.spins >= 1) {
@@ -478,6 +489,7 @@ class Game {
       c.updateProjectionMatrix();
       this.player.updateVisual(dt, this.input.neutral);
       this.traffic.update(dt, this.player, this.time);
+      this.folks.update(dt, this.player, this.time, false);
       this.studs.update(dt, this.player);
       this.missions.update(dt, this.time);
     }
@@ -515,7 +527,7 @@ class Game {
       this.save.color = p.colorIdx;
       this.dirty = true;
     }
-    if (input.hit('reset') && p.crashT <= 0) {
+    if (input.hit('reset') && p.crashT <= 0 && !p.held) {
       p.place(p.safe.x, p.safe.z, p.safe.heading);
       this.camera3.snap = true;
     }
@@ -530,6 +542,8 @@ class Game {
     this.props.update(dt, p);
     this.studs.update(dt, p);
     this.traffic.update(dt, p, this.time);
+    this.aliens.update(dt, p, this.time);
+    this.folks.update(dt, p, this.time, true);
     const inBowl = this.missions.active && this.missions.def && this.missions.def.id === 'bowling';
     this.pins.update(dt, p, inBowl);
     this.ball.update(dt, p, this.time, (side) => this.missions.goal(side));
@@ -566,7 +580,7 @@ class Game {
     this.hud.update(dt, p.speed * 1.6, p.boost, p.boosting);
     if (this.frame % 2 === 0) {
       const m = this.missions;
-      this.minimap.draw(p.pos.x, p.pos.z, this.camera3.yaw, p.heading, m.active ? [] : m.defs, m.goalPos);
+      this.minimap.draw(p.pos.x, p.pos.z, this.camera3.yaw, p.heading, m.active ? [] : this.markers, m.goalPos, this.aliens.blips);
     }
     if (this.frame % 20 === 0) {
       const z = this.zoneName(p.pos.x, p.pos.z);
