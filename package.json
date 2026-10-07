@@ -1,0 +1,22 @@
+{
+  "name": "juego-patinete",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Brick City Patinete: un mundo abierto de bloques para recorrer en patinete",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:fisica": "node tools/phys.mjs",
+    "test:misiones": "node tools/smoke.mjs shots",
+    "capturas": "node tools/shot.mjs shots"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.12.0",
+    "vite": "^8.3.3"
+  }
+}

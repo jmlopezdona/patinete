@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1591d8" />
+    <title>Brick City · Patinete</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='10' width='26' height='18' rx='3' fill='%231591d8'/%3E%3Crect x='7' y='5' width='7' height='6' rx='2' fill='%231591d8'/%3E%3Crect x='18' y='5' width='7' height='6' rx='2' fill='%231591d8'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <!-- Interfaz de juego -->
+    <div id="hud" class="hidden">
+      <div id="stats">
+        <div class="stat" id="studbox"><i class="coin"></i><span id="studs">0</span></div>
+        <div class="stat small"><i class="gbrick"></i><span id="bricks">0/12</span></div>
+        <div class="stat small"><i class="star">★</i><span id="stars">0/15</span></div>
+      </div>
+
+      <div id="mission" class="hidden">
+        <div id="m-title"></div>
+        <div id="m-main"></div>
+        <div id="m-sub"></div>
+      </div>
+
+      <div id="mapwrap">
+        <canvas id="minimap"></canvas>
+        <div id="zone">Plaza Central</div>
+      </div>
+
+      <div id="speedo">
+        <div class="num"><span id="kmh">0</span><small>km/h</small></div>
+        <div class="bar"><div id="boostfill"></div></div>
+        <label>TURBO</label>
+      </div>
+
+      <div id="trick"></div>
+      <div id="prompt" class="hidden"></div>
+      <div id="big"></div>
+      <div id="toasts"></div>
+      <div id="results" class="hidden"></div>
+
+      <div id="keys">
+        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> mover</span>
+        <span><kbd>Espacio</kbd> saltar</span>
+        <span><kbd>Mayús</kbd> turbo</span>
+        <span><kbd>F</kbd> tailwhip</span>
+        <span><kbd>E</kbd> misión</span>
+        <span><kbd>Esc</kbd> pausa</span>
+      </div>
+
+      <div id="touch">
+        <div id="stick"><div id="knob"></div></div>
+        <button class="tb" id="tb-pause" data-act="pause">II</button>
+        <div id="tbuttons">
+          <button class="tb sm" data-act="action">E</button>
+          <button class="tb sm" data-act="trick">Truco</button>
+          <button class="tb" data-act="boost">Turbo</button>
+          <button class="tb big" data-act="jump">Salto</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menú principal -->
+    <div id="menu">
+      <div class="menu-inner">
+        <div class="logo">
+          <div class="logo-row">
+            <b style="--c:#e3000b">B</b><b style="--c:#ffcf00">R</b><b style="--c:#1591d8">I</b><b style="--c:#00a650">C</b><b style="--c:#ff7a1a">K</b>
+            <i></i>
+            <b style="--c:#1591d8">C</b><b style="--c:#e3000b">I</b><b style="--c:#00a650">T</b><b style="--c:#ffcf00">Y</b>
+          </div>
+          <div class="logo-sub">PATINETE</div>
+          <p class="tagline">Una ciudad entera de ladrillos para recorrer sobre tu patinete.</p>
+        </div>
+
+        <div class="menu-buttons">
+          <button id="btn-play" class="brick-btn primary" disabled>Cargando…</button>
+          <button id="btn-reset" class="brick-btn ghost">Borrar progreso</button>
+        </div>
+
+        <div class="menu-cards">
+          <div class="card photo">
+            <img src="patinete-real.jpg" alt="El patinete real hecho con piezas" />
+            <div>
+              <h4>Tu patinete, dentro del juego</h4>
+              <p>El modelo 3D está construido pieza a pieza a partir de las fotos: largueros azules, losetas grises, horquilla blanca y manillar en T.</p>
+            </div>
+          </div>
+          <div class="card">
+            <h4>Qué hacer en Brick City</h4>
+            <ul>
+              <li>🛹 Skatepark con half-pipe, bowl, barandillas y mesa de salto</li>
+              <li>🏁 Carrera urbana · 🍕 Reparto de pizzas</li>
+              <li>🎳 Bolos gigantes · ⚽ Fútbol con portero</li>
+              <li>🚀 Mega salto a la Isla del Tesoro</li>
+              <li>🟡 Studs por todas partes y 12 ladrillos dorados ocultos</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>Controles</h4>
+            <ul class="controls">
+              <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / flechas — conducir</li>
+              <li><kbd>Espacio</kbd> saltar · <kbd>Mayús</kbd> turbo</li>
+              <li>En el aire: <kbd>A</kbd><kbd>D</kbd> giros · <kbd>F</kbd> tailwhip · <kbd>S</kbd> backflip</li>
+              <li><kbd>E</kbd> misión · <kbd>N</kbd> día/noche · <kbd>C</kbd> cámara · <kbd>V</kbd> color</li>
+              <li><kbd>R</kbd> recolocar · <kbd>M</kbd> sonido · <kbd>Esc</kbd> pausa</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="menu-foot">Juego de fans hecho con WebGL. No es un producto oficial de ninguna marca de juguetes.</div>
+    </div>
+
+    <!-- Pausa -->
+    <div id="pause" class="hidden">
+      <div class="card">
+        <h2>Pausa</h2>
+        <button class="brick-btn primary" id="p-resume">Continuar</button>
+        <button class="brick-btn" id="p-abort">Abandonar misión</button>
+        <button class="brick-btn" id="p-night">Día / noche</button>
+        <button class="brick-btn" id="p-quality">Gráficos: Altos</button>
+        <button class="brick-btn" id="p-sound">Sonido: Sí</button>
+        <button class="brick-btn" id="p-respawn">Volver a la plaza</button>
+        <button class="brick-btn ghost" id="p-menu">Menú principal</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
