@@ -19,10 +19,6 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 - [ ] **Chut a Puerta contra los marcianos.** El portero es un marciano con cuatro brazos (Teo se
   toma la noche libre).
 
-## Objetos
-
-- [ ] **Baba verde.** Charcos donde derrapas sin control o rebotas.
-
 ## Locuras sin alienígenas
 
 - [ ] **Gallinas.** Si atropellas una, te persiguen todas.
@@ -30,6 +26,11 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `baba-verde`)
+
+- [x] **Baba verde.** Los marcianos dejan charcos al caer del platillo y al reventar: rodando por
+  encima derrapas sin control, cayendo encima de un salto rebotas, y ellos también resbalan.
 
 ## Ya hecho (rama `objetos`)
 
