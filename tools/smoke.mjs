@@ -288,19 +288,19 @@ await log('casas', () => {
   const g = window.__game; const p = g.player; const out = {};
   const lejos = () => { const sp = g.home.spawn; return +Math.hypot(p.pos.x - sp.x, p.pos.z - sp.z).toFixed(1); };
   g.state = 'menu';
-  for (const id of ['yago', 'teo', 'adrian', 'emma', 'iker', 'leo', 'josemanuel']) { g.setCharacter(id); out[id] = `${g.home.name} a ${lejos()}`; }
+  for (const id of ['yago', 'teo', 'adrian', 'emma', 'iker', 'leo', 'jose']) { g.setCharacter(id); out[id] = `${g.home.name} a ${lejos()}`; }
   g.state = 'play';
   g.setCharacter('teo');
   out.enLaPausaSeQueda = lejos() > 100;
   g.goHome();
   out.volverACasa = lejos();
-  out.jose = !g.folks.jose.marker.hidden;
+  out.canasta = !g.folks.jose.marker.hidden;
   return out;
 });
 await log('personajes', () => {
   const g = window.__game; const p = g.player; const F = g.folks; const sp = g.world.places.spawn;
   const out = {};
-  for (const id of ['yago', 'teo', 'adrian', 'emma', 'iker', 'leo', 'josemanuel']) {
+  for (const id of ['yago', 'teo', 'adrian', 'emma', 'iker', 'leo', 'jose']) {
     g.setCharacter(id);
     p.place(sp.x, sp.z, sp.heading);
     let vm = 0; let ym = 0;
@@ -355,9 +355,9 @@ await log('emma', () => {
   window.sim(22);
   out.seVa = [D.state, D.van.group.visible].join(' ');
   g.state = 'menu';
-  g.setCharacter('josemanuel');
+  g.setCharacter('jose');
   g.setCharacter('emma');
-  g.setCharacter('josemanuel');
+  g.setCharacter('jose');
   out.cambioEnElMenu = [D.state, p.hidden].join(' ');
   g.state = 'play';
   out.parque = g.zoneName(E.x, E.z);

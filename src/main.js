@@ -118,7 +118,7 @@ class Game {
   }
 
   loadSave() {
-    const def = { studs: 0, bricks: [], stars: {}, best: {}, colors: {}, character: 'josemanuel', muted: false, aliens: 0, invasions: 0 };
+    const def = { studs: 0, bricks: [], stars: {}, best: {}, colors: {}, character: 'jose', muted: false, aliens: 0, invasions: 0 };
     try {
       return { ...def, ...JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') };
     } catch {
