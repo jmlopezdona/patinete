@@ -1,16 +1,17 @@
 import { C } from '../lego/colors.js';
-import { scooterVehicle, createEScooter, createSkateboard, createUnicycle, createBike, createSkates } from '../lego/vehicles.js';
+import { scooterVehicle, createEScooter, createKickScooter, createSkateboard, createUnicycle, createBike, createSkates } from '../lego/vehicles.js';
 
 export const COLORS = [C.azure, C.red, C.lime, C.orange, C.magenta, C.yellow, C.purple, C.white];
 
 // Personajes entre los que se puede elegir. Cada uno sale de su casa (cobena-data: places.homes;
-// Emma, que no es de Cobeña, de la puerta del parque donde la deja su padre, e Iker, que no para
-// quieto, de una calle cualquiera) y lleva su vehículo y su forma de moverse:
+// Emma, que no es de Cobeña, de la puerta del parque donde la deja su padre, Iker, que no para
+// quieto, de una calle cualquiera, y Leo, de la puerta del centro de salud) y lleva su vehículo y su
+// forma de moverse:
 // acc = aceleración, vmax / vboost = velocidad punta sin y con turbo, jump = impulso del salto,
 // turn = agilidad al girar, spin = velocidad de giro en el aire.
 export const CHARACTERS = [
   {
-    id: 'josemanuel', name: 'Jose Manuel', icon: '🛴', vehicle: 'Patinete', blurb: 'El de siempre: equilibrado y con el mejor tailwhip.',
+    id: 'josemanuel', name: 'Jose Manuel', icon: '🏀', vehicle: 'Patinete', blurb: 'El de siempre: equilibrado y con el mejor tailwhip.',
     look: { legs: C.sandBlue, torso: 0x1c1b30, arms: C.yellow, hair: 'messy', hairColor: 0x2f1e17, face: 'smile', glasses: 'square', brows: 0x2a1a12, shirt: { front: 'adva-delante', back: 'adva-atras', long: true } },
     scale: 1, color: 0, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
     build: (color) => scooterVehicle(color),
@@ -55,6 +56,14 @@ export const CHARACTERS = [
     scale: 0.9, color: 5, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
     build: (color) => createEScooter(color),
     stats: { acc: 26, vmax: 39, vboost: 55, jump: 14, turn: 2.8, spin: 7 },
+    cam: 1,
+  },
+  {
+    id: 'leo', name: 'Leo', icon: '🎾', vehicle: 'Patinete', blurb: 'De blanco de arriba abajo: sale de la puerta del centro de salud. Su patinete es el de toda la vida: ligero, arranca rápido y salta mucho.',
+    look: { torso: 0xf4f3ee, arms: 0xf4f3ee, legs: 0xf4f3ee, hair: 'swept', hairColor: 0x1b130e, hairTips: 0x33231a, face: 'grin', glasses: 'square', brows: 0x1b130e },
+    scale: 0.9, color: 2, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
+    build: (color) => createKickScooter(color),
+    stats: { acc: 24, vmax: 30, vboost: 46, jump: 16.5, turn: 3.3, spin: 8.2 },
     cam: 1,
   },
 ];

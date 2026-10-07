@@ -600,6 +600,40 @@ function parkGate(W) {
   };
 }
 
+// ---------- La puerta del centro de salud (el consultorio local): de allí sale Leo ----------
+
+function clinicDoor(W) {
+  const A = DATA.buildings;
+  const label = DATA.labels.indexOf('CONSULTORIO LOCAL');
+  for (let i = 0; label >= 0 && i < A.length; i += 11) {
+    if (A[i + 8] !== label) continue;
+    // Delante de la fachada del cartel, de espaldas a la puerta
+    const a = (A[i + 7] * Math.PI) / 2;
+    const out = (A[i + 7] % 2 === 0 ? A[i + 3] : A[i + 2]) / 2 + 4.5;
+    const f = frame(A[i], A[i + 1], A[i + 4] * RAD);
+    const [x, z] = f.p(Math.sin(a) * out, Math.cos(a) * out);
+    W.places.homes.leo = { name: 'la puerta del centro de salud', x: A[i], z: A[i + 1], spot: true, spawn: { x, z, heading: f.rot + a } };
+    return;
+  }
+}
+
+// ---------- La pista de tenis: Leo pelotea allí contra la máquina lanzapelotas ----------
+
+function tennis(W) {
+  const k = DATA.pitches.find((p) => p[5] === 3);
+  if (!k) return;
+  let [x, z, w, d, rot] = k;
+  rot *= RAD;
+  // Como en la pista (cobena.js: court): el eje largo es la X local y la red la cruza por el centro
+  if (w < d) {
+    [w, d] = [d, w];
+    rot += Math.PI / 2;
+  }
+  const machine = [-w / 2 + 5, 2];
+  W.terrain.cyl(...frame(x, z, rot).p(...machine), 1.4, 3.2);
+  W.places.tennis = { x, z, rot, w, d, machine };
+}
+
 // ---------- Parques infantiles ----------
 
 function playground(W, gx, gz) {
@@ -659,6 +693,8 @@ export function buildLandmarks(W) {
   // Iker no sale de casa: cada vez aparece en un punto distinto del callejero
   W.places.homes = { ...DATA.places.homes, iker: roamSpot() };
   parkGate(W);
+  clinicDoor(W);
+  tennis(W);
   W.places.race = DATA.race;
   W.places.bounds = BOUNDS;
 }

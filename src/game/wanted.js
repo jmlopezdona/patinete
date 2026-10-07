@@ -235,7 +235,7 @@ export class Wanted {
     p.respawnAt = { x: sp.x, z: sp.z, heading: sp.heading };
     g.sfx.slap();
     g.hud.big('¡Zapatillazo!', PINK, 1.6);
-    g.hud.toast(`👵 La abuela te manda <b>${g.home.drop || g.home.roam ? `de vuelta a ${g.home.name}` : 'castigado a casa'}</b>${lost ? ` y te requisa <b>${lost.toLocaleString('es-ES')}</b> studs de la paga` : ''}.`);
+    g.hud.toast(`👵 La abuela te manda <b>${g.home.drop || g.home.roam || g.home.spot ? `de vuelta a ${g.home.name}` : 'castigado a casa'}</b>${lost ? ` y te requisa <b>${lost.toLocaleString('es-ES')}</b> studs de la paga` : ''}.`);
     if (G.state !== 'off') this.setState(G, 'gloat');
     this.reset();
   }
