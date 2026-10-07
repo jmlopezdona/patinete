@@ -158,7 +158,7 @@ await log('vecinos', () => {
   g.player.place(Y.x - 12, Y.z, Math.PI / 2); g.player.v = 25;
   let jumped = false;
   window.sim(1.2, () => { jumped = jumped || Y.air; return { throttle: 1 }; });
-  // Jose: un par de minutos de tiros y entradas
+  // El padre de Jose: un par de minutos de tiros y entradas
   const J = F.jose;
   g.player.place(J.H.x + J.H.nx * 30, J.H.z + J.H.nz * 30, 0);
   window.sim(60);
@@ -314,7 +314,7 @@ await log('personajes', () => {
   return out;
 });
 await shot('s_personajes');
-// La canasta: Jose tira solo si se lleva a Jose Manuel; con otro personaje, padre e hijo juegan juntos
+// La canasta: el padre tira solo si se lleva a Jose; con otro personaje, padre e hijo juegan juntos
 await log('canasta', () => {
   const g = window.__game; const p = g.player; const J = g.folks.jose; const H = J.H; const out = {};
   const jugadas = () => Object.keys(J.seen).sort().join(' ');

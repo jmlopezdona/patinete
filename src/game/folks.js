@@ -29,7 +29,7 @@ const shadows = (o) =>
   });
 
 // Vecinos con nombre propio: Yago y su monociclo en el skatepark, Adrián, el pequeño batería heavy
-// de la plaza, Jose y su hijo Jose Manuel en la canasta, Ana, Cintia y Bea haciendo footing
+// de la plaza, Jose y su padre en la canasta, Ana, Cintia y Bea haciendo footing
 // por los parques, Emma, de visita, haciéndose selfies en El Palmeral, Iker, que no para de dar
 // vueltas por el pueblo con su patinete eléctrico, y Leo, de blanco, que pelotea en la pista de tenis.
 export class Folks {
@@ -56,7 +56,7 @@ export class Folks {
     }
     const D = this.drummer;
     if (D) D.fig.group.visible = D.tag.visible = id !== 'adrian';
-    // Sin Jose Manuel, su padre se queda tirando solo
+    // Sin Jose, su padre se queda tirando solo
     const J = this.jose;
     if (J && J.kid.away !== (id === 'josemanuel')) {
       J.kid.away = id === 'josemanuel';
@@ -543,7 +543,7 @@ export class Folks {
     }
   }
 
-  // ---------- Jose y Jose Manuel, padre e hijo en la canasta ----------
+  // ---------- Jose y su padre en la canasta ----------
   buildJose() {
     const W = this.game.world;
     const home = W.places.home || W.places.spawn;
@@ -560,7 +560,7 @@ export class Folks {
       return { name, fig, tag, k: scale, x: 0, z: 0, y: 0, heading: 0, walk: 0, drib: 0, thud: false, moving: false, to: null, speed: 0, look: null, bounce: false, jump: null, follow: 0, push: 0, cheer: 0, away: false };
     };
     const ch = characterById('josemanuel');
-    const dad = baller('Jose', { torso: C.white, arms: C.skin, legs: C.blue, hair: 'none', face: 'senor', print: '#23', printColor: '#c91a09' }, 1, '#e8731a');
+    const dad = baller('Padre de Jose', { torso: C.white, arms: C.skin, legs: C.blue, hair: 'none', face: 'senor', print: '#23', printColor: '#c91a09' }, 1, '#e8731a');
     const kid = baller(ch.name, ch.look, ch.scale, '#' + COLORS[ch.color].toString(16).padStart(6, '0'));
     const ball = new THREE.Mesh(new THREE.SphereGeometry(0.56, 16, 12), new THREE.MeshStandardMaterial({ color: 0xe8731a, roughness: 0.6 }));
     ball.castShadow = true;
@@ -581,8 +581,8 @@ export class Folks {
     return { x: H.x + H.nx * dist + J.tx * side, z: H.z + H.nz * dist + J.tz * side };
   }
 
-  // Saque de fondo: cada uno a su sitio y el balón a las manos de Jose. Al empezar, y cuando
-  // Jose Manuel se va de paseo o vuelve a la pista.
+  // Saque de fondo: cada uno a su sitio y el balón a las manos del padre de Jose. Al empezar, y cuando
+  // Jose se va de paseo o vuelve a la pista.
   resetJose() {
     const J = this.jose;
     for (const [P, side] of [[J.dad, -3], [J.kid, 4]]) {
