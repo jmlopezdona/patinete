@@ -87,10 +87,10 @@ Al elegirlo en el menú, el personaje aparece en la puerta de su casa; en la pau
 la marcha, sin moverse del sitio. «Volver a casa» y el castigo de la abuela llevan a la casa del
 que se lleve en ese momento.
 
-A Emma, que viene de fuera, la trae su padre: al elegirla en el menú el monovolumen llega por la
-calle Río Júcar, da la vuelta al fondo y para junto a la puerta del parque El Palmeral; ella se
-baja con los patines puestos y, al empezar la partida, el padre se despide con la mano y se va.
-Su «casa» es esa puerta.
+A Emma, que viene de fuera, la trae su padre: al elegirla en el menú el monovolumen gris oscuro
+llega por la avenida Río Guadalquivir y para junto a la puerta del parque El Palmeral, enfrente de
+la Pista Polideportiva; ella se baja con los patines puestos y, al empezar la partida, el padre se
+despide con la mano y sigue avenida adelante. Su «casa» es esa puerta.
 
 Mientras llevas a un personaje, su doble desaparece del pueblo: Yago deja libre la pista de circo,
 la batería de Adrián se queda sola y callada, a Teo lo sustituye otro portero, Emma deja de
@@ -101,8 +101,8 @@ cada vehículo se cambia con `V` y se guarda por separado.
 
 - **Las casas de los personajes**: Río Júcar, 44; Río Guadiana, 17; Río Guadalquivir, 39 y Libertad, 17.
   Llevan cartel con el número y banderín, y la del que se lleva sale marcada en el minimapa.
-- **Parque El Palmeral**, pegado a Río Júcar, 44: su puerta, con arco y palmeras, está donde muere
-  la calle.
+- **Parque El Palmeral**, pegado a Río Júcar, 44: su puerta, con arco y palmeras, está en el lado
+  que da a la Pista Polideportiva, con la avenida Río Guadalquivir por medio.
 - **Skatepark nuevo**, en su parcela junto a la rotonda: half-pipe, bowl circular, funbox con
   barandilla, mesa de salto, rollers y raíles.
 - **Plaza de la Villa** con el ayuntamiento, la iglesia de San Cipriano y su campanario, y la fuente
@@ -165,7 +165,7 @@ peatones también cuenta) y aparece la primera estrella bajo el minimapa:
 | --- | --- | --- | --- |
 | 🤹 | **Yago** | Skatepark nuevo, en su pista de circo | Monociclo, malabares, piruetas y reverencia. Si te le echas encima, te salta con una voltereta |
 | 🧤 | **Teo** | Pista Polideportiva | El portero de «Chut a Puerta»: rizos, gafas redondas y la camiseta de Argentina con sus tres estrellas |
-| 🥁 | **Adrián** | Calle Libertad, 17 | Doble bombo y flequillo a tazón. Cuanto más te acercas, más suena |
+| 🥁 | **Adrián** | Entrada de la Plaza de la Villa, de cara a la fuente | Doble bombo y flequillo a tazón. Cuanto más te acercas, más suena |
 | 🏀 | **Jose** y **Jose Manuel** | Pista de baloncesto más cercana a Río Júcar, 44 | Padre e hijo echando unas canastas: rueda de pases (de pecho y picados), pase y corte, alley-oops, mates colgándose del aro, triples y entradas. No las meten todas, y los canastones se celebran. Si llevas tú a Jose Manuel, su padre se queda tirando solo |
 | 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de Río Júcar, 44 | Footing en grupo dando la vuelta a los dos parques |
 | 🤳 | **Emma** | Parque El Palmeral, pasada la puerta | Selfies sin parar, con sus patines: posa, dispara, mira la foto y cambia de ángulo, rodeada de corazones. Si te acercas, se gira para sacarte de fondo |

@@ -26,7 +26,7 @@ const shadows = (o) =>
   });
 
 // Vecinos con nombre propio: Yago y su monociclo en el skatepark, Adrián, el pequeño batería heavy
-// de la calle Libertad, Jose y su hijo Jose Manuel en la canasta, Ana, Cintia y Bea haciendo footing
+// de la plaza, Jose y su hijo Jose Manuel en la canasta, Ana, Cintia y Bea haciendo footing
 // por los parques y Emma, de visita, haciéndose selfies en El Palmeral.
 export class Folks {
   constructor(game) {
@@ -193,7 +193,7 @@ export class Folks {
     Y.tag.position.set(Y.x, P.y + Y.y + hop + (juggle ? 9.4 : 7.4), Y.z);
   }
 
-  // ---------- Adrián, el pequeño batería heavy de la calle Libertad, 17 ----------
+  // ---------- Adrián, el pequeño batería heavy, a la entrada de la Plaza de la Villa ----------
   buildDrummer() {
     const P = this.game.world.places.drummer;
     if (!P) return;
@@ -1058,8 +1058,8 @@ export class Folks {
     const gate = g.world.places.homes.emma;
     if (!gate) return;
     // Pasada la puerta, en un claro del parque por el que no pasen las corredoras
-    const ux = -Math.sin(gate.spawn.heading);
-    const uz = -Math.cos(gate.spawn.heading);
+    const ux = Math.sin(gate.rot);
+    const uz = Math.cos(gate.rot);
     const R = this.joggers;
     const crowded = (x, z) => {
       if (!R) return false;

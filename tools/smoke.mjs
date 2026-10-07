@@ -167,7 +167,7 @@ await log('vecinos', () => {
   g.player.place(q.x + 20, q.z + 20, 0);
   window.sim(20);
   const spread = Math.max(...R.list.map((j) => Math.hypot(j.x - R.list[0].x, j.z - R.list[0].z)));
-  return { marcadores: F.markers.map((m) => m.icon).join(''), yagoSalta: jumped, joseTiros: J.n, joseCanastas: J.made, corredorasJuntas: +spread.toFixed(1), bateria: !!P.drummer, teo: g.ball.keeper.group.children.some((c) => c.isSprite) };
+  return { marcadores: F.markers.map((m) => m.icon).join(''), yagoSalta: jumped, joseTiros: J.n, joseCanastas: J.made, corredorasJuntas: +spread.toFixed(1), bateriaALaFuente: +Math.hypot(P.drummer.x - P.plaza.x, P.drummer.z - P.plaza.z).toFixed(0), teo: g.ball.keeper.group.children.some((c) => c.isSprite) };
 });
 await shot('s_vecinos');
 await log('marcianos: culetazo', () => {
@@ -337,7 +337,8 @@ await log('canasta', () => {
   return out;
 });
 await shot('s_canasta');
-// Emma: en el menú la trae su padre en coche y se baja; de vecina, selfies y corazones en El Palmeral
+// Emma: en el menú la trae su padre en coche a la puerta de El Palmeral, frente a la pista, y se baja;
+// de vecina, selfies y corazones en el parque
 await log('emma', () => {
   const g = window.__game; const p = g.player; const D = g.dropoff; const E = g.folks.emma; const out = {};
   const menu = (secs) => { for (let i = 0; i < secs * 60; i++) D.update(1 / 60, false); };
@@ -360,6 +361,9 @@ await log('emma', () => {
   out.cambioEnElMenu = [D.state, p.hidden].join(' ');
   g.state = 'play';
   out.parque = g.zoneName(E.x, E.z);
+  const gate = g.world.places.homes.emma; const S = g.world.places.soccer;
+  out.puertaALaPista = +Math.hypot(gate.x - S.cx, gate.z - S.cz).toFixed(0);
+  out.emmaALaPuerta = +Math.hypot(E.x - gate.x, E.z - gate.z).toFixed(0);
   p.place(E.x + 9, E.z + 4, 0);
   window.sim(6);
   out.selfies = [E.fig.group.visible, E.n > 0, E.hearts.filter((h) => h.t > 0).length > 2].join(' ');

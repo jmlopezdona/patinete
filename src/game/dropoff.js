@@ -5,10 +5,11 @@ import { COLORS } from './characters.js';
 import { clamp, damp } from '../core/rng.js';
 import { lift, grade } from '../world/relief.js';
 
-const T_DRIVE = 4.4; // lo que tarda en llegar y dar la vuelta
+const T_DRIVE = 4.4; // lo que tarda en llegar
 const T_DOOR = 0.45;
 const T_HOP = 0.6;
 const SLIDE = 2.25; // lo que corre la puerta al abrirse
+const GRAY = 0x4d5156; // el coche del padre es gris oscuro
 
 // Emma no vive en Cobeña: elegida en el menú, su padre la trae en coche hasta la puerta del parque,
 // ella se baja y el coche espera allí hasta que empieza la partida. Entonces se despide y se va.
@@ -20,7 +21,7 @@ export class Dropoff {
     this.s = 0;
     this.v = 0;
     this.x = this.z = this.heading = 0;
-    const van = (this.van = createMinivan(C.medAzure));
+    const van = (this.van = createMinivan(GRAY));
     van.group.rotation.order = 'YXZ';
     van.group.traverse((o) => {
       if (o.isMesh && !o.material.transparent) o.castShadow = true;
@@ -71,6 +72,7 @@ export class Dropoff {
     this.game.player.hidden = true;
     this.state = 'drive';
     this.t = this.v = this.s = 0;
+    this.total = Math.hypot(this.P.stop[0] - this.P.from[0], this.P.stop[1] - this.P.from[1]);
     this.van.door.position.set(0, 0, 0);
     this.van.group.scale.setScalar(1);
     this.van.group.visible = true;
@@ -95,36 +97,18 @@ export class Dropoff {
     this.van.door.position.set(0, 0, 0);
     this.x = P.stop[0];
     this.z = P.stop[1];
-    this.heading = P.heading + Math.PI;
+    this.heading = P.heading;
     this.state = 'leave';
     this.t = this.v = 0;
     this.game.sfx.honk();
   }
 
-  // Coloca el coche a `s` unidades de camino: recta de llegada, media vuelta y recta hasta parar
+  // Coloca el coche a `s` unidades de camino por la recta de llegada
   pose(s) {
     const P = this.P;
-    const ux = Math.sin(P.heading);
-    const uz = Math.cos(P.heading);
-    // Los carriles van a P.r del eje de la calle: el de llegada, a la derecha de la marcha (-uz, ux)
-    const l0 = Math.sqrt(Math.max(0, (P.turn[0] - P.from[0]) ** 2 + (P.turn[1] - P.from[1]) ** 2 - P.r * P.r));
-    const l2 = Math.PI * P.r;
-    if (s < l0) {
-      this.x = P.from[0] + ux * s;
-      this.z = P.from[1] + uz * s;
-      this.heading = P.heading;
-    } else if (s < l0 + l2) {
-      const a = (s - l0) / P.r;
-      this.x = P.turn[0] + P.r * (-uz * Math.cos(a) + ux * Math.sin(a));
-      this.z = P.turn[1] + P.r * (ux * Math.cos(a) + uz * Math.sin(a));
-      this.heading = P.heading + a;
-    } else {
-      const k = s - l0 - l2;
-      this.x = P.turn[0] + uz * P.r - ux * k;
-      this.z = P.turn[1] - ux * P.r - uz * k;
-      this.heading = P.heading + Math.PI;
-    }
-    this.total = l0 + l2 + Math.hypot(P.stop[0] - (P.turn[0] + uz * P.r), P.stop[1] - (P.turn[1] - ux * P.r));
+    this.x = P.from[0] + Math.sin(P.heading) * s;
+    this.z = P.from[1] + Math.cos(P.heading) * s;
+    this.heading = P.heading;
   }
 
   update(dt, live) {
@@ -143,7 +127,7 @@ export class Dropoff {
     dad.head.rotation.y = 0;
 
     if (this.state === 'drive') {
-      // Llega lanzado y va frenando: la media vuelta la da ya despacio
+      // Llega lanzado y va frenando hasta parar delante de la puerta del parque
       const k = clamp(this.t / T_DRIVE, 0, 1);
       const s = this.total * (1 - (1 - k) ** 2.3);
       moved = s - this.s;
@@ -189,7 +173,7 @@ export class Dropoff {
         dad.armR.rotation.z = -0.35 + Math.sin(this.t * 11) * 0.3;
       }
     } else if (this.state === 'leave') {
-      // Calle abajo hasta el final, frenando si se le cruza alguien, y allí desaparece
+      // Avenida adelante hasta el final, frenando si se le cruza alguien, y allí desaparece
       const fx = Math.sin(this.heading);
       const fz = Math.cos(this.heading);
       let target = 15;
