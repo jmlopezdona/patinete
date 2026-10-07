@@ -32,6 +32,21 @@ npm run preview    # la sirve en local para probarla
 El servidor de desarrollo también escucha en la red local, así que se puede abrir desde una
 tableta o un móvil (hay controles táctiles) con la dirección «Network» que muestra Vite.
 
+## Instalar en el móvil
+
+El juego es una aplicación web instalable (PWA): instalado se abre **a pantalla completa, sin la
+barra del navegador**, con su icono en la pantalla de inicio.
+
+- **Android (Chrome)**: en el menú principal aparece el botón «📲 Instalar». También vale el menú
+  ⋮ del navegador → «Instalar aplicación» o «Añadir a pantalla de inicio». Se abre en horizontal.
+- **iPhone y iPad (Safari)**: botón **Compartir** → «Añadir a pantalla de inicio» (el menú del
+  juego lo recuerda con un aviso). Ahí la orientación no se bloquea: hay que girar el móvil.
+- Después de abrirlo una vez con conexión, **arranca también sin ella**. Cuando hay red siempre se
+  carga la última versión publicada.
+
+Hace falta servirlo por HTTPS (GitHub Pages lo hace) o desde `localhost`. El service worker solo
+se registra en la versión compilada (`npm run build` y `npm run preview`), no con `npm run dev`.
+
 ## Controles
 
 | Acción | Teclado | Mando |
@@ -178,6 +193,10 @@ se guarda en el navegador.
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
   `characters.js` define los personajes elegibles y sus estadísticas.
 - `src/core/` — entrada (teclado, mando, táctil), audio sintetizado con WebAudio y utilidades.
+  `install.js` registra el service worker y pone el botón de instalar.
+- `public/` — `manifest.webmanifest` (nombre, iconos, pantalla completa y horizontal) y `sw.js`,
+  el service worker: la red manda siempre que la hay y lo ya cargado queda guardado para jugar sin
+  conexión. Los iconos de `public/icons` se dibujan con `npm run iconos`.
 - `tools/` — utilidades de desarrollo que abren el juego en Chrome sin cabeza para simular la
   física, recorrer los minijuegos y sacar capturas (necesitan `npm run dev` en marcha y Google
   Chrome instalado en la ruta habitual de macOS). `npm run test:misiones` también prueba la invasión,

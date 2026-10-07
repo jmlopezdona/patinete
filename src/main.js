@@ -8,6 +8,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 import { makeRng } from './core/rng.js';
 import { Input } from './core/input.js';
+import { setupInstall } from './core/install.js';
 import { Sfx } from './core/audio.js';
 import { BrickBatch } from './lego/batch.js';
 import { Builder } from './lego/builder.js';
@@ -330,6 +331,7 @@ class Game {
       if (document.hidden && this.state === 'play') this.setPaused(true);
     });
     $('p-sound').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
+    setupInstall($('btn-install'), $('install-hint'));
   }
 
   // Elige quién sale a la calle: cambia piloto y vehículo, y su doble desaparece del pueblo

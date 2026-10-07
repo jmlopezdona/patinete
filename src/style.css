@@ -620,10 +620,10 @@ kbd {
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   padding: 4vh max(4vw, 20px);
   background: linear-gradient(100deg, rgba(8, 18, 32, 0.9) 0%, rgba(8, 18, 32, 0.62) 42%, rgba(8, 18, 32, 0) 78%);
   overflow-y: auto;
+  touch-action: pan-y; /* en pantallas bajas el menú no cabe entero: que se pueda deslizar */
   transition: opacity 0.5s, visibility 0s;
 }
 #menu.out {
@@ -634,6 +634,7 @@ kbd {
 }
 .menu-inner {
   width: min(600px, 100%);
+  margin: auto 0; /* centrado si cabe; si no, empieza arriba y no se corta el logo */
   display: flex;
   flex-direction: column;
   gap: 2.4vh;
@@ -770,6 +771,19 @@ kbd {
 .menu-buttons .ghost {
   width: auto;
   white-space: nowrap;
+}
+#install-hint {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  max-width: min(300px, 40vw);
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  background: var(--panel);
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
 }
 .menu-cards {
   display: flex;
@@ -976,7 +990,8 @@ body.touch #speedo .num {
   }
 }
 @media (max-height: 620px) {
-  .menu-cards {
+  .menu-cards,
+  .tagline {
     display: none;
   }
 }
