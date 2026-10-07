@@ -317,6 +317,19 @@ export class Sfx {
   abducted() {
     [300, 400, 533, 711, 948, 1264].forEach((f, i) => this.tone(f, 0.26, 'sine', 0.13, 1.5, i * 0.11));
   }
+  // El platillo va a por un vecino
+  sos() {
+    [0, 0.16, 0.32].forEach((d) => this.tone(1180, 0.1, 'square', 0.06, 1, d));
+    this.tone(700, 0.5, 'sine', 0.08, 1.6, 0.5);
+  }
+  rescue() {
+    [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, 0.16, 'triangle', 0.13, 1, i * 0.07));
+    this.noise(0.25, 0.2, 2600, 1, 'bandpass', 0, 0.4);
+  }
+  moo() {
+    this.tone(165, 0.3, 'sawtooth', 0.07, 0.85);
+    this.tone(140, 0.7, 'sawtooth', 0.09, 0.7, 0.26);
+  }
 
   // ---------- Nivel de búsqueda ----------
   wanted(stars) {

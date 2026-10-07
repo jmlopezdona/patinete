@@ -38,7 +38,7 @@ export class Traffic {
       mesh.castShadow = true;
       mesh.rotation.order = 'YXZ';
       const idx = Math.floor((at + rng() * 0.3) * path.length) % path.length;
-      const car = { mesh, path, idx, x: path[idx][0], z: path[idx][1], heading: 0, speed: 0, cruise: kind === 'bus' || kind === 'truck' ? 11 : rng.range(13, 17), hl: model.len / 2, hw: model.width / 2, honk: 0 };
+      const car = { mesh, kind, taken: false, path, idx, x: path[idx][0], z: path[idx][1], heading: 0, speed: 0, cruise: kind === 'bus' || kind === 'truck' ? 11 : rng.range(13, 17), hl: model.len / 2, hw: model.width / 2, honk: 0 };
       const nx = path[(idx + 1) % path.length];
       car.heading = Math.atan2(nx[0] - car.x, nx[1] - car.z);
       game.scene.add(mesh);
@@ -59,7 +59,7 @@ export class Traffic {
         face: rng.pick(['smile', 'smile', 'grin', 'cool', 'wink']), print: rng.pick([null, 'tie', 'stripes', 'buttons', 'star']), printColor: rng.pick(['#ffffff', '#1b1d21', '#f7d117']),
       });
       game.scene.add(fig.group);
-      this.peds.push({ fig, loop, s: rng() * loop.len, seg: 0, dir: rng.chance(0.5) ? 1 : -1, speed: rng.range(2.2, 3.6), ph: rng() * 6, fly: 0, vy: 0, y: 0, x: 0, z: 0, off: rng.range(-0.7, 0.7), cd: 0 });
+      this.peds.push({ fig, loop, s: rng() * loop.len, seg: 0, dir: rng.chance(0.5) ? 1 : -1, speed: rng.range(2.2, 3.6), ph: rng() * 6, fly: 0, vy: 0, y: 0, x: 0, z: 0, off: rng.range(-0.7, 0.7), cd: 0, taken: false });
     }
   }
 
@@ -81,6 +81,7 @@ export class Traffic {
     const pAlive = player.crashT <= 0;
     // --- Coches ---
     for (const c of this.cars) {
+      if (c.taken) continue; // en el rayo del platillo: lo mueve la invasión
       const fx = Math.sin(c.heading);
       const fz = Math.cos(c.heading);
       let target = c.cruise;
@@ -98,7 +99,7 @@ export class Traffic {
         }
       }
       for (const o of this.cars) {
-        if (o === c) continue;
+        if (o === c || o.taken) continue;
         const dx = o.x - c.x;
         const dz = o.z - c.z;
         const f = dx * fx + dz * fz;
@@ -169,6 +170,7 @@ export class Traffic {
     // --- Peatones ---
     const T = this.game.terrain;
     for (const p of this.peds) {
+      if (p.taken) continue;
       const L = p.loop;
       if (p.fly <= 0) {
         p.s += p.dir * p.speed * dt;

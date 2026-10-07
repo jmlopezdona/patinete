@@ -33,6 +33,7 @@ import { Environment } from './game/env.js';
 import { Hud } from './game/hud.js';
 import { Minimap } from './game/minimap.js';
 import { Aliens } from './game/aliens.js';
+import { Cows } from './game/cows.js';
 import { Folks } from './game/folks.js';
 import { Dropoff } from './game/dropoff.js';
 import { Wanted } from './game/wanted.js';
@@ -167,6 +168,7 @@ class Game {
     this.ball = new Ball(this, this.world.places.soccer);
     this.missions = new Missions(this);
     this.env = new Environment(this, this.world.lamps);
+    this.cows = new Cows(this);
     this.aliens = new Aliens(this);
     this.folks = new Folks(this);
     this.dropoff = new Dropoff(this);
@@ -682,6 +684,7 @@ class Game {
     this.props.update(dt, p);
     this.studs.update(dt, p);
     this.traffic.update(dt, p, this.time);
+    this.cows.update(dt, p, this.time);
     this.aliens.update(dt, p, this.time);
     this.wanted.update(dt, p, this.time);
     this.folks.update(dt, p, this.time, true);

@@ -20,6 +20,8 @@ const BIT_COLORS = [SKIN, 0xb6ff5a, 0x4b9f4a, C.purple, C.white];
 const KICK_NAMES = ['¡Culetazo!', '¡Doble culetazo!', '¡Triple culetazo!', '¡Lluvia de marcianos!', '¡Culetazo galáctico!'];
 const BEAM_COLD = new THREE.Color(0x7dff9a);
 const BEAM_HOT = new THREE.Color(0xff5ad1);
+const SNATCH_EVERY = 24; // segundos entre un intento de llevarse a un vecino y el siguiente
+const CAR_NAMES = { car: 'un coche', taxi: 'un taxi', bus: 'el autobús', police: 'el coche patrulla', truck: 'un camión', icecream: 'el camión de los helados' };
 
 const _v = new THREE.Vector3();
 
@@ -29,7 +31,8 @@ function glowMaterial(color, opacity) {
 
 // La noche de los marcianos: al anochecer llega un platillo con su tropa.
 // Los marcianos te persiguen de frente, pero por la espalda (o asustados por el turbo)
-// se van de un culetazo. El rayo del platillo te abduce si te quedas debajo.
+// se van de un culetazo. El rayo del platillo te abduce si te quedas debajo, y cuando no va
+// a por ti se lleva a un vecino, un coche o una vaca: se les suelta cruzando el rayo de un salto.
 export class Aliens {
   constructor(game) {
     this.game = game;
@@ -45,6 +48,10 @@ export class Aliens {
     this.dawnT = 0;
     this.esc = 0;
     this.carry = null;
+    this.vic = null; // a quién se está llevando el platillo
+    this.falling = null; // el que cae tras soltarlo
+    this.lost = []; // los que ya tiene dentro
+    this.snatchCd = 0;
     this.hints = [];
     this.blips = [];
 
@@ -141,7 +148,7 @@ export class Aliens {
   startWave() {
     const g = this.game;
     const level = g.save.invasions || 0;
-    this.wave = { level, goal: Math.min(28, 8 + level * 4), count: 0 };
+    this.wave = { level, goal: Math.min(28, 8 + level * 4), count: 0, saved: 0 };
     this.combo = 0;
     g.hud.big('¡Invasión!', GREEN, 1.8);
     g.sfx.invasion();
@@ -169,6 +176,7 @@ export class Aliens {
     this.setUfo('arrive');
     this.ufo.visible = true;
     this.spawnT = 1.5;
+    this.snatchCd = 14;
     g.hud.setAliens(this.wave.count, this.wave.goal);
   }
 
@@ -177,6 +185,7 @@ export class Aliens {
     this.release(p);
     for (const a of this.aliens) this.beamUp(a);
     if (this.u.state !== 'gone' && this.u.state !== 'leave') this.setUfo('leave');
+    this.giveBack();
     g.hud.setAliens(null);
     g.hud.abduct(null);
     g.hud.beam(0);
@@ -185,7 +194,7 @@ export class Aliens {
   victory() {
     const g = this.game;
     const W = this.wave;
-    const reward = 3000 + W.level * 1000;
+    const reward = 3000 + W.level * 1000 + W.saved * 500;
     this.cleared = true;
     this.dawnT = 4.5;
     g.save.invasions = W.level + 1;
@@ -194,7 +203,7 @@ export class Aliens {
     g.hud.big('¡Cobeña salvada!', GREEN, 2.6);
     g.sfx.fanfare();
     g.confetti();
-    g.hud.toast(`🏆 ¡Invasión rechazada! Premio: <b>${reward.toLocaleString('es-ES')}</b> studs. Volverán otra noche… con refuerzos.`);
+    g.hud.toast(`🏆 ¡Invasión rechazada! Premio: <b>${reward.toLocaleString('es-ES')}</b> studs${W.saved ? `, con <b>${W.saved * 500}</b> por los rescates` : ''}. Volverán otra noche… con refuerzos.`);
   }
 
   setUfo(state) {
@@ -235,6 +244,7 @@ export class Aliens {
     }
     this.grabCd -= dt;
     this.updateUfo(dt, p, time);
+    this.updateRescue(dt, p, time);
     this.updateAliens(dt, p, time);
 
     this.blips.length = 0;
@@ -248,6 +258,11 @@ export class Aliens {
       this.u.blip.x = this.u.x;
       this.u.blip.z = this.u.z;
       this.blips.push(this.u.blip);
+    }
+    if (this.vic) {
+      this.vic.blip.x = this.vic.x;
+      this.vic.blip.z = this.vic.z;
+      this.blips.push(this.vic.blip);
     }
   }
 
@@ -263,6 +278,7 @@ export class Aliens {
     const d = Math.hypot(dx, dz);
     let beamOn = false;
     let vmax = 0;
+    let gain = 1.4;
     let tx = u.x;
     let tz = u.z;
     let yT = HOVER;
@@ -284,7 +300,15 @@ export class Aliens {
         tz = p.pos.z + u.sz * 45;
         vmax = 30;
         yT = HOVER + 9;
-        if (u.t > u.dur) this.setUfo('hunt');
+        if (u.t > u.dur) this.setUfo(this.pickVictim(p) ? 'snatch' : 'hunt');
+        break;
+      case 'snatch':
+        // Se pega a su presa (más apretado que a ti, o a un coche no lo alcanza nunca)
+        tx = this.vic.x;
+        tz = this.vic.z;
+        vmax = 38;
+        gain = 4;
+        beamOn = this.vic.lifting || Math.hypot(tx - u.x, tz - u.z) < 25;
         break;
       case 'stun':
         yT = HOVER + 4;
@@ -316,7 +340,7 @@ export class Aliens {
       const ex = tx - u.x;
       const ez = tz - u.z;
       const ed = Math.hypot(ex, ez) || 1;
-      const sp = Math.min(vmax, ed * 1.4);
+      const sp = Math.min(vmax, ed * gain);
       u.vx = damp(u.vx, (ex / ed) * sp, 2.2, dt);
       u.vz = damp(u.vz, (ez / ed) * sp, 2.2, dt);
       u.x += u.vx * dt;
@@ -333,7 +357,8 @@ export class Aliens {
     } else if (u.state !== 'abduct') u.meter = Math.max(0, u.meter - dt * 2);
     g.hud.beam(u.state === 'abduct' ? 1 : u.meter);
 
-    // Aspecto
+    // Aspecto: el rayo se pone al rojo según te va cogiendo a ti o subiendo a su presa
+    const heat = Math.max(u.meter, this.vic && this.vic.lifting ? this.vic.k : 0);
     u.beam = damp(u.beam, beamOn ? 1 : 0, 6, dt);
     const wob = u.state === 'stun' || u.state === 'leave' ? Math.sin(time * 15) * 0.2 : 0;
     this.ufo.position.set(u.x, u.y + Math.sin(time * 2.1) * 0.5, u.z);
@@ -346,17 +371,17 @@ export class Aliens {
       const top = u.y - 2;
       this.beam.position.set(u.x, top, u.z);
       this.beam.scale.set(1, Math.max(1, top - roof), 1);
-      this.beamMat.color.lerpColors(BEAM_COLD, BEAM_HOT, u.meter);
-      this.beamMat.opacity = u.beam * (0.16 + u.meter * 0.12 + Math.sin(time * 9) * 0.025);
+      this.beamMat.color.lerpColors(BEAM_COLD, BEAM_HOT, heat);
+      this.beamMat.opacity = u.beam * (0.16 + heat * 0.12 + Math.sin(time * 9) * 0.025);
       this.spot.position.set(u.x, roof + 0.15, u.z);
       lift(u.x, u.z);
       this.spot.rotation.set(-Math.atan(grade.z), 0, Math.atan(grade.x));
       this.spotMat.color.copy(this.beamMat.color);
-      this.spotMat.opacity = u.beam * (0.2 + u.meter * 0.2);
+      this.spotMat.opacity = u.beam * (0.2 + heat * 0.2);
     }
     this.light.intensity = u.beam * 22;
     const near = clamp(1 - Math.hypot(d, u.y - p.pos.y) / 150, 0, 1);
-    g.sfx.ufo(near, u.meter > 0.05 || u.state === 'abduct');
+    g.sfx.ufo(near, heat > 0.05 || u.state === 'abduct');
   }
 
   startAbduct(p) {
@@ -476,6 +501,164 @@ export class Aliens {
     p.dropped = true;
     p.launch(0, 3, 0, null);
     p.invuln = 2.2;
+  }
+
+  // ---------- Rescate de vecinos ----------
+  // Elige a quién llevarse: alguien a quien te dé tiempo a llegar. Las vacas le pierden.
+  pickVictim(p) {
+    if (this.snatchCd > 0 || this.falling) return false;
+    const g = this.game;
+    const near = (o) => {
+      const d = Math.hypot(o.x - p.pos.x, o.z - p.pos.z);
+      return !o.taken && d > 30 && d < 220;
+    };
+    const cows = g.cows.list.filter(near);
+    const cars = g.traffic.cars.filter(near);
+    const peds = g.traffic.peds.filter((o) => near(o) && o.fly <= 0 && Math.abs(this.T.height(o.x, o.z)) < 0.8);
+    let kind = 'ped';
+    let from = peds;
+    if (cows.length && Math.random() < 0.6) [kind, from] = ['cow', cows];
+    else if (cars.length && (!peds.length || Math.random() < 0.3)) [kind, from] = ['car', cars];
+    else if (!peds.length) [kind, from] = ['cow', cows];
+    if (!from.length) return false;
+    const ref = from[Math.floor(Math.random() * from.length)];
+    const lvl = this.wave ? this.wave.level : 0;
+    this.vic = {
+      kind, ref, obj: kind === 'ped' ? ref.fig.group : kind === 'car' ? ref.mesh : ref.group,
+      name: kind === 'ped' ? 'un vecino' : kind === 'car' ? CAR_NAMES[ref.kind] : 'una vaca',
+      x: ref.x, z: ref.z, gy: 0, h: 0, vy: 0, k: 0, heading: 0, spin: 0, lifting: false, rise: Math.min(3.4, 2.3 + lvl * 0.15), blip: { x: ref.x, z: ref.z, icon: '🆘' },
+    };
+    this.snatchCd = SNATCH_EVERY;
+    g.sfx.sos();
+    g.hud.toast(g.save.rescues
+      ? `🆘 ¡El platillo va a por <b>${this.vic.name}</b>!`
+      : `🆘 ¡El platillo va a por <b>${this.vic.name}</b>! <b>Salta</b> y cruza el rayo por el aire para cortarlo.`);
+    return true;
+  }
+
+  updateRescue(dt, p, time) {
+    const g = this.game;
+    const u = this.u;
+    const v = this.vic;
+    this.snatchCd -= dt;
+    if (v && u.state !== 'snatch') {
+      // El platillo se va (amanece, empieza un minijuego...): lo que tuviera en el rayo, al suelo
+      this.vic = null;
+      if (v.lifting) this.falling = v;
+    } else if (v && !v.lifting) {
+      const r = v.ref;
+      v.x = r.x;
+      v.z = r.z;
+      if (u.t > 12 || (v.kind === 'ped' && r.fly > 0)) {
+        this.vic = null;
+        this.setUfo('hunt');
+      } else if (Math.hypot(u.x - v.x, u.z - v.z) < (v.kind === 'car' ? 5 : 3)) {
+        r.taken = true;
+        v.lifting = true;
+        v.gy = v.kind === 'ped' ? this.T.height(v.x, v.z) : 0;
+        v.heading = v.obj.rotation.y;
+        g.hud.big('¡Socorro!', '#ffd23a', 1.1, true);
+        if (Math.hypot(p.pos.x - v.x, p.pos.z - v.z) < 150) g.sfx.beamGrab();
+      }
+    } else if (v) {
+      v.h += v.rise * dt;
+      v.k = clamp(v.h / (u.y - 4.5 - v.gy), 0, 1);
+      v.x = damp(v.x, u.x, 4, dt);
+      v.z = damp(v.z, u.z, 4, dt);
+      v.spin += dt * (1.5 + v.k * 5);
+      this.pose(v, time);
+      if (Math.random() < dt * 20) {
+        const a = Math.random() * TAU;
+        g.bits.spawn(u.x + Math.cos(a) * 3, v.gy + v.h, u.z + Math.sin(a) * 3, 0, 9 + Math.random() * 6, 0, 0xb6ff5a, 0.3, 0.6, v.gy);
+      }
+      // Mientras sube a otro el rayo no te coge: cruzarlo por el aire lo corta
+      const d = Math.hypot(p.pos.x - u.x, p.pos.z - u.z);
+      if (!p.grounded && !p.held && p.crashT <= 0 && d < BEAM_R && p.pos.y > v.gy + 1 && p.pos.y < u.y - 2) this.rescue(p, v);
+      else if (v.k >= 1) this.swallow(v);
+    }
+
+    const f = this.falling;
+    if (!f) return;
+    f.vy -= G * dt;
+    f.h += f.vy * dt;
+    f.k = damp(f.k, 0, 5, dt);
+    f.x = damp(f.x, f.ref.x, 5, dt);
+    f.z = damp(f.z, f.ref.z, 5, dt);
+    f.spin += dt * 7;
+    if (f.h > 0) {
+      this.pose(f, time);
+      return;
+    }
+    this.falling = null;
+    this.restore(f);
+    g.bits.burst(f.x, f.gy + 0.8, f.z, [0xb6ff5a, 0xffffff, 0xd9dde0], 12, 8, f.gy, 0.4);
+    if (Math.hypot(p.pos.x - f.x, p.pos.z - f.z) > 110) return;
+    if (f.kind === 'ped') g.sfx.land(9);
+    else g.sfx.bump();
+    if (f.kind === 'cow') g.cows.moo(0);
+  }
+
+  // Colgando del rayo: gira, patalea y encoge al entrar en el platillo
+  pose(v, time) {
+    const o = v.obj;
+    o.visible = true;
+    o.scale.setScalar(v.k > 0.8 ? lerp(1, 0.3, (v.k - 0.8) / 0.2) : 1);
+    o.position.set(v.x, v.gy + v.h, v.z);
+    o.rotation.set(Math.sin(time * 3) * 0.25, v.heading + v.spin, Math.cos(time * 2.3) * 0.25);
+    if (v.kind !== 'ped') return;
+    const f = v.ref.fig;
+    const s = Math.sin(time * 16);
+    f.armL.rotation.x = -2.7 + s * 0.4;
+    f.armR.rotation.x = -2.7 - s * 0.4;
+    f.legL.rotation.x = s * 0.6;
+    f.legR.rotation.x = -s * 0.6;
+  }
+
+  rescue(p, v) {
+    const g = this.game;
+    const high = p.pos.y - v.gy > 6;
+    const pts = high ? 2500 : 1500;
+    this.vic = null;
+    this.falling = v;
+    v.vy = 0;
+    if (this.wave) this.wave.saved++;
+    g.save.rescues = (g.save.rescues || 0) + 1;
+    g.addStuds(pts / 10);
+    p.boost = 1;
+    g.hud.trick(high ? '¡Rescate aéreo!' : '¡Rescate!', pts, 1);
+    g.hud.big(v.kind === 'cow' ? '¡Vaca a salvo!' : v.kind === 'car' ? '¡A salvo!' : '¡Vecino a salvo!', '#ffd23a', 1.2, true);
+    g.bits.burst(p.pos.x, p.pos.y + 1.5, p.pos.z, [0xb6ff5a, 0xfff27a, 0xffffff], 18, 12, v.gy, 0.5);
+    g.sfx.rescue();
+    g.camera3.addShake(0.35);
+    this.setUfo('stun');
+  }
+
+  // Tarde: ya está dentro del platillo, y ahí se queda hasta que se marche
+  swallow(v) {
+    const g = this.game;
+    this.vic = null;
+    v.obj.visible = false;
+    this.lost.push(v);
+    g.sfx.abducted();
+    g.hud.toast(`👽 ¡Tarde! <b>${v.name[0].toUpperCase()}${v.name.slice(1)}</b> ya va dentro del platillo. Echa a los marcianos para que suelte su botín.`);
+    this.setUfo('rest');
+  }
+
+  restore(v) {
+    v.ref.taken = false;
+    v.obj.visible = true;
+    v.obj.scale.setScalar(1);
+    v.obj.position.set(v.ref.x, v.gy, v.ref.z);
+    v.obj.rotation.set(0, v.heading, 0);
+  }
+
+  // Al irse, el platillo deja a todos donde los cogió
+  giveBack() {
+    const n = this.lost.length;
+    if (!n) return;
+    for (const v of this.lost) this.restore(v);
+    this.lost.length = 0;
+    this.game.hud.toast(n > 1 ? `🛸 El platillo suelta a los <b>${n}</b> que se había llevado.` : '🛸 El platillo suelta al que se había llevado.');
   }
 
   // ---------- Marcianos a pie ----------
