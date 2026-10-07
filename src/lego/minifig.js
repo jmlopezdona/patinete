@@ -9,8 +9,20 @@ const shirtCache = new Map();
 const shirtGeos = {};
 let headGeo = null;
 
-function faceTexture(kind, skin = C.skin) {
-  const key = kind + skin;
+// Estrella de cinco puntas centrada en (x, y)
+function starPath(g, x, y, r) {
+  g.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    const k = i % 2 ? r * 0.435 : r;
+    g.lineTo(x + Math.cos(a) * k, y + Math.sin(a) * k);
+  }
+  g.closePath();
+}
+
+// glasses: 'square' o 'round' le pone gafas negras a cualquier cara; brows: color de unas cejas pobladas
+function faceTexture(kind, skin = C.skin, glasses = null, brows = null) {
+  const key = [kind, skin, glasses, brows].join();
   if (faceCache.has(key)) return faceCache.get(key);
   const cv = document.createElement('canvas');
   cv.width = 512;
@@ -62,14 +74,15 @@ function faceTexture(kind, skin = C.skin) {
     eye(256 + 27, 114);
   }
   const pasta = kind === 'senor' || kind === 'abuela';
-  if (kind === 'glasses' || pasta) {
-    // Gafas: redondas de colores para los chavales, de pasta rectangular para los mayores
-    g.lineWidth = 6;
-    g.strokeStyle = pasta ? '#3a3f47' : '#c91a09';
+  const frame = glasses ?? (pasta ? 'square' : null);
+  if (frame) {
+    // Gafas redondas o rectangulares: de pasta gris las de los mayores, negras y gordas las de los chavales
+    g.lineWidth = pasta ? 6 : 8;
+    g.strokeStyle = pasta ? '#3a3f47' : '#16181c';
     for (const sx of [-1, 1]) {
       g.beginPath();
-      if (pasta) g.roundRect(256 + sx * 30 - 25, 91, 50, 42, 9);
-      else g.arc(256 + sx * 30, 113, 26, 0, Math.PI * 2);
+      if (frame === 'square') g.roundRect(256 + sx * 30 - 25, 91, 50, 42, 9);
+      else g.ellipse(256 + sx * 30, 115, 23, 31, 0, 0, Math.PI * 2);
       g.stroke();
       g.beginPath();
       g.moveTo(256 + sx * 56, 106);
@@ -90,6 +103,17 @@ function faceTexture(kind, skin = C.skin) {
       g.beginPath();
       g.moveTo(256 + sx * 46, kind === 'senor' ? 78 : kind === 'abuela' ? 68 : 76);
       g.lineTo(256 + sx * 14, kind === 'senor' ? 74 : kind === 'abuela' ? 86 : 92);
+      g.stroke();
+    }
+    g.strokeStyle = '#16181c';
+  } else if (brows != null) {
+    g.lineWidth = 9;
+    g.strokeStyle = hexCss(brows);
+    const by = frame === 'square' ? 82 : 76;
+    for (const sx of [-1, 1]) {
+      g.beginPath();
+      g.moveTo(256 + sx * 52, by);
+      g.quadraticCurveTo(256 + sx * 32, by - 12, 256 + sx * 12, by - 2);
       g.stroke();
     }
     g.strokeStyle = '#16181c';
@@ -128,6 +152,12 @@ function faceTexture(kind, skin = C.skin) {
     g.fill();
     g.fillStyle = '#fff';
     g.fillRect(256 - 22, 153, 44, 9);
+  } else if (kind === 'smirk') {
+    // Media sonrisa de lado
+    g.beginPath();
+    g.moveTo(256 - 28, 164);
+    g.quadraticCurveTo(256 + 6, 184, 256 + 30, 154);
+    g.stroke();
   } else {
     g.beginPath();
     g.ellipse(256, 136, 31, 42, 0, Math.PI * 0.14, Math.PI * 0.86);
@@ -182,13 +212,7 @@ function printTexture(kind, color) {
       g.fill();
     }
   } else if (kind === 'star') {
-    g.beginPath();
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
-      const r = i % 2 ? 20 : 46;
-      g.lineTo(64 + Math.cos(a) * r, 60 + Math.sin(a) * r);
-    }
-    g.closePath();
+    starPath(g, 64, 60, 46);
     g.fill();
   } else if (kind === 'police') {
     // Banda de cuadros reflectantes y placa
@@ -227,10 +251,66 @@ function printTexture(kind, color) {
   return tex;
 }
 
-// Foto de una camiseta de verdad (public/camisetas), recortada en cuadrado
+// Camiseta de la selección argentina: rayas albicelestes y, por delante, el escudo con sus tres estrellas
+function argentinaShirt(front) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 512;
+  const g = cv.getContext('2d');
+  g.scale(2, 2);
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, 256, 256);
+  g.fillStyle = hexCss(C.celeste);
+  for (const x of [0, 102, 204]) g.fillRect(x, 0, 52, 256);
+  g.strokeStyle = '#1d2f5a';
+  g.lineWidth = 9;
+  g.lineJoin = 'round';
+  g.beginPath();
+  if (front) {
+    g.moveTo(92, -4);
+    g.lineTo(128, 30);
+    g.lineTo(164, -4);
+  } else {
+    g.moveTo(88, 2);
+    g.lineTo(168, 2);
+  }
+  g.stroke();
+  if (front) {
+    g.lineWidth = 6;
+    g.strokeStyle = '#a3760c';
+    g.beginPath();
+    g.moveTo(155, 88);
+    g.lineTo(205, 88);
+    g.lineTo(205, 122);
+    g.quadraticCurveTo(205, 146, 180, 158);
+    g.quadraticCurveTo(155, 146, 155, 122);
+    g.closePath();
+    g.fillStyle = '#ffffff';
+    g.fill();
+    g.save();
+    g.clip();
+    g.fillStyle = hexCss(C.celeste);
+    g.fillRect(155, 88, 17, 80);
+    g.fillRect(188, 88, 17, 80);
+    g.restore();
+    g.stroke();
+    g.fillStyle = '#f5b921';
+    g.lineWidth = 4;
+    for (const [x, y] of [[154, 68], [180, 58], [206, 68]]) {
+      starPath(g, x, y, 13);
+      g.stroke();
+      g.fill();
+    }
+  }
+  return new THREE.CanvasTexture(cv);
+}
+
+const DRAWN_SHIRTS = { argentina: () => argentinaShirt(true), 'argentina-atras': () => argentinaShirt(false) };
+
+// Camiseta para pegar en el torso: la foto de una de verdad (public/camisetas), recortada en cuadrado,
+// o una de las pintadas a mano
 function shirtTexture(name) {
   if (shirtCache.has(name)) return shirtCache.get(name);
-  const tex = new THREE.TextureLoader().load(`camisetas/${name}.jpg`);
+  const tex = DRAWN_SHIRTS[name] ? DRAWN_SHIRTS[name]() : new THREE.TextureLoader().load(`camisetas/${name}.jpg`);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
   shirtCache.set(name, tex);
@@ -330,11 +410,13 @@ export function createMinifig(o = {}) {
 
   const head = new THREE.Group();
   head.position.set(0, 3.86, 0);
-  const hm = new THREE.Mesh(getHeadGeo(), new THREE.MeshStandardMaterial({ map: faceTexture(o.face ?? 'smile', skin), roughness: 0.5 }));
+  const hm = new THREE.Mesh(getHeadGeo(), new THREE.MeshStandardMaterial({ map: faceTexture(o.face ?? 'smile', skin, o.glasses, o.brows), roughness: 0.5 }));
   hm.rotation.y = Math.PI;
   hm.castShadow = true;
   head.add(hm);
   const hb = new Builder();
+  // Pelo muy corto pegado a los lados y a la nuca, por debajo del peinado
+  const shortSides = (color, y0, y1) => hb.add(new THREE.CylinderGeometry(0.64, 0.64, y1 - y0, 20, 1, true, 1.3, Math.PI * 2 - 2.6), color, 0, (y0 + y1) / 2, 0);
   if (hairType === 'helmet') {
     hb.add(new THREE.SphereGeometry(0.76, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.74, 0);
     hb.cyl(0.78, 0.12, 0, 0.74, 0, hairColor, { seg: 20 });
@@ -361,6 +443,46 @@ export function createMinifig(o = {}) {
     hb.add(new THREE.SphereGeometry(0.74, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.76, 0);
     hb.box(1.44, 1.7, 0.46, 0, 0.1, -0.5, hairColor, { r: 0.2 });
     for (const sx of [-1, 1]) hb.box(0.3, 1.5, 0.9, sx * 0.68, 0.16, -0.12, hairColor, { r: 0.14 });
+  } else if (hairType === 'messy') {
+    // Pelo revuelto y con volumen: mechones por arriba y flequillo despeinado sobre la frente
+    hb.add(new THREE.SphereGeometry(0.75, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.78, 0);
+    hb.box(1.36, 0.8, 0.46, 0, 0.5, -0.5, hairColor, { r: 0.2 });
+    for (const sx of [-1, 1]) hb.box(0.26, 0.5, 0.74, sx * 0.63, 0.66, -0.14, hairColor, { r: 0.12 });
+    for (const [x, y, z, r] of [[-0.3, 1.2, 0.28, 0.4], [0.32, 1.24, 0.2, 0.42], [0, 1.3, -0.14, 0.44], [-0.44, 1.1, -0.24, 0.38], [0.46, 1.08, -0.28, 0.38], [0.04, 1.14, -0.5, 0.4]]) {
+      hb.sphere(r, x, y, z, hairColor, { seg: 12, seg2: 10, sy: 0.7 });
+    }
+    for (const [x, h, rz] of [[-0.56, 0.4, 0.42], [-0.4, 0.5, 0.26], [-0.2, 0.42, 0.34], [-0.02, 0.52, -0.12], [0.18, 0.4, -0.36], [0.36, 0.5, -0.2], [0.55, 0.4, -0.44]]) {
+      hb.cyl(0.03, h, x, 1.3 - h / 2, Math.sqrt(0.5 - x * x), hairColor, { r2: 0.2, rz, seg: 8 });
+    }
+  } else if (hairType === 'curly') {
+    // Rizos apelotonados arriba, que caen sobre la frente, y los lados cortos
+    const curl = o.hairTips ?? hairColor;
+    hb.add(new THREE.SphereGeometry(0.68, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.8, 0);
+    shortSides(hairColor, 0.44, 0.86);
+    for (let i = 0; i < 30; i++) {
+      const pol = Math.acos(1 - (i + 0.5) / 30) * 0.98;
+      const a = i * 2.4;
+      const r = 0.2 + ((i * 7) % 5) * 0.015;
+      hb.sphere(r, 0.6 * Math.sin(pol) * Math.cos(a), 1 + 0.42 * Math.cos(pol), 0.04 + 0.62 * Math.sin(pol) * Math.sin(a), i % 3 ? hairColor : curl, { seg: 8, seg2: 6 });
+    }
+  } else if (hairType === 'bowl') {
+    // Corte a tazón: flequillo recto y desfilado, que se va aclarando hacia las puntas, y rapado por debajo
+    const tips = o.hairTips ?? hairColor;
+    const R = 0.75;
+    const bowl = new THREE.SphereGeometry(R, 24, 8, 0, Math.PI * 2, 0, Math.PI * 0.5).toNonIndexed();
+    const bp = bowl.attributes.position;
+    const fade = [];
+    for (let i = 0; i < bp.count; i++) {
+      fade.push(THREE.MathUtils.smoothstep(0.5 - bp.getY(i) / R, 0, 0.5));
+      if (bp.getY(i) < 1e-4 && Math.round((Math.atan2(bp.getX(i), bp.getZ(i)) / Math.PI) * 12) & 1) bp.setY(i, -0.08);
+    }
+    hb.add(bowl, hairColor, 0, 0.62, 0, -0.2, 0, 0.06);
+    const bc = hb.parts.at(-1).attributes.color;
+    const dark = new THREE.Color(hairColor);
+    const light = new THREE.Color(tips);
+    fade.forEach((t, i) => bc.setXYZ(i, ...dark.clone().lerp(light, t)));
+    hb.cyl(R - 0.01, 0.06, 0, 0.62, 0, tips, { rx: -0.2, rz: 0.06, seg: 24 });
+    shortSides(hairColor, 0.3, 0.7);
   } else if (hairType === 'antenna') {
     for (const sx of [-1, 1]) {
       hb.cyl(0.07, 1.0, sx * 0.42, 1.5, 0, skin, { rz: -sx * 0.3, seg: 8 });

@@ -6,6 +6,7 @@ export const C = {
   darkRed: 0x7a1414,
   blue: 0x0055bf,
   azure: 0x1591d8,
+  celeste: 0x74acdf,
   medAzure: 0x36aebf,
   yellow: 0xf7d117,
   orange: 0xfe8a18,
