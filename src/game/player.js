@@ -781,8 +781,8 @@ export class Player {
       v.front.rotation.y = this.steerVis * 0.6;
       v.rear.rotation.x += roll;
       v.front.rotation.x += roll;
-      // Empujones con el pie mientras coge velocidad
-      const pushing = driving && inp.throttle > 0 && this.v < 20 && this.v > -1 && !this.boosting;
+      // Empujones con el pie mientras coge velocidad (el eléctrico tira solo, con los dos pies en la tabla)
+      const pushing = driving && !v.electric && inp.throttle > 0 && this.v < 20 && this.v > -1 && !this.boosting;
       this.kick = pushing ? this.kick + dt * (6 + this.v * 0.25) : damp(this.kick, Math.round(this.kick / TAU) * TAU, 10, dt);
       const kp = Math.max(0, Math.sin(this.kick));
       r.group.position.set(-kp * 0.05, v.seatY - this.squash * 0.28 + hop, v.seatZ);

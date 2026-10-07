@@ -216,6 +216,13 @@ export class Sfx {
     this.tone(392, 0.22, 'square', 0.08);
     this.tone(494, 0.22, 'square', 0.08);
   }
+
+  // El timbre del patinete eléctrico
+  bell() {
+    this.tone(1900, 0.22, 'triangle', 0.13);
+    this.tone(2400, 0.3, 'triangle', 0.1, 0, 0.12);
+  }
+
   ouch() {
     this.tone(700, 0.18, 'triangle', 0.14, 0.5);
     this.tone(500, 0.12, 'triangle', 0.1, 1.4, 0.16);

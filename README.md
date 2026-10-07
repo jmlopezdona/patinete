@@ -82,6 +82,7 @@ sale de su casa, lleva su vehículo y se conduce distinto:
 | 🤹 | **Yago** | Calle Río Guadiana, 17 | Monociclo | Gira sobre una moneda y salta más que nadie, pero corre menos | Pirueta |
 | 🧤 | **Teo** | Avenida Río Guadalquivir, 39 | Bicicleta | Más velocidad punta y buenos saltos | Tailwhip |
 | 🤳 | **Emma** | No vive en Cobeña: la puerta del parque El Palmeral | Patines | Arranca y gira como nadie; con turbo se agacha con las manos a la espalda | Espagat |
+| ⚡ | **Iker** | No para en casa: una calle cualquiera, distinta cada vez | Patinete eléctrico | El que más corre, sin dar una patada; a cambio pesa, y salta y gira peor | Tailwhip |
 
 Al elegirlo en el menú, el personaje aparece en la puerta de su casa; en la pausa se cambia sobre
 la marcha, sin moverse del sitio. «Volver a casa» y el castigo de la abuela llevan a la casa del
@@ -92,9 +93,14 @@ llega por la avenida Río Guadalquivir y para junto a la puerta del parque El Pa
 la Pista Polideportiva; ella se baja con los patines puestos y, al empezar la partida, el padre se
 despide con la mano y sigue avenida adelante. Su «casa» es esa puerta.
 
+Iker no sale de ninguna casa: al elegirlo en el menú aparece en un punto al azar del callejero, en
+mitad de una calle y por su carril, y ese punto hace de «casa» hasta que se le vuelve a elegir o se
+pulsa «Volver a casa», que lo manda a otra calle.
+
 Mientras llevas a un personaje, su doble desaparece del pueblo: Yago deja libre la pista de circo,
 la batería de Adrián se queda sola y callada, a Teo lo sustituye otro portero, Emma deja de
-hacerse selfies en el parque y Jose se queda tirando solo a canasta, sin Jose Manuel. El color de
+hacerse selfies en el parque, Iker ya no se cruza contigo por las calles y Jose se queda tirando
+solo a canasta, sin Jose Manuel. El color de
 cada vehículo se cambia con `V` y se guarda por separado.
 
 ## Qué hay en Cobeña
@@ -169,6 +175,7 @@ peatones también cuenta) y aparece la primera estrella bajo el minimapa:
 | 🏀 | **Jose** y **Jose Manuel** | Pista de baloncesto más cercana a Río Júcar, 44 | Padre e hijo echando unas canastas: rueda de pases (de pecho y picados), pase y corte, alley-oops, mates colgándose del aro, triples y entradas. No las meten todas, y los canastones se celebran. Si llevas tú a Jose Manuel, su padre se queda tirando solo |
 | 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de Río Júcar, 44 | Footing en grupo dando la vuelta a los dos parques |
 | 🤳 | **Emma** | Parque El Palmeral, pasada la puerta | Selfies sin parar, con sus patines: posa, dispara, mira la foto y cambia de ángulo, rodeada de corazones. Si te acercas, se gira para sacarte de fondo |
+| ⚡ | **Iker** | Por todo el pueblo, sin parar | Da vueltas por las calles con su patinete eléctrico, por su carril y eligiendo camino en cada cruce. Corre más que los coches; si te tiene delante, frena y toca el timbre |
 
 Todos salen en el minimapa con su icono.
 
@@ -233,7 +240,8 @@ se guarda en el navegador.
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
   `characters.js` define los personajes elegibles y sus estadísticas (sus casas y puntos de salida
-  van en el callejero, en `places.homes`; la puerta del parque de Emma la pone `landmarks.js`), y
+  van en el callejero, en `places.homes`; la puerta del parque de Emma la pone `landmarks.js` y el
+  punto al azar de Iker sale de `world/streets.js`, el grafo de calles por el que también circula), y
   `dropoff.js` es el coche que la trae. `photo.js` es el modo foto:
   cámara libre, filtros (van en la pasada final de `main.js`) y la captura a mayor resolución.
 - `src/core/` — entrada (teclado, mando, táctil), audio sintetizado con WebAudio y utilidades.

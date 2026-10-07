@@ -1,11 +1,11 @@
 import { C } from '../lego/colors.js';
-import { scooterVehicle, createSkateboard, createUnicycle, createBike, createSkates } from '../lego/vehicles.js';
+import { scooterVehicle, createEScooter, createSkateboard, createUnicycle, createBike, createSkates } from '../lego/vehicles.js';
 
 export const COLORS = [C.azure, C.red, C.lime, C.orange, C.magenta, C.yellow, C.purple, C.white];
 
 // Personajes entre los que se puede elegir. Cada uno sale de su casa (cobena-data: places.homes;
-// Emma, que no es de Cobeña, de la puerta del parque donde la deja su padre) y lleva su vehículo y
-// su forma de moverse:
+// Emma, que no es de Cobeña, de la puerta del parque donde la deja su padre, e Iker, que no para
+// quieto, de una calle cualquiera) y lleva su vehículo y su forma de moverse:
 // acc = aceleración, vmax / vboost = velocidad punta sin y con turbo, jump = impulso del salto,
 // turn = agilidad al girar, spin = velocidad de giro en el aire.
 export const CHARACTERS = [
@@ -47,6 +47,14 @@ export const CHARACTERS = [
     scale: 0.9, color: 4, trick: 'Espagat', alienTrick: '¡Espagat marciano!',
     build: (color) => createSkates(color),
     stats: { acc: 25, vmax: 29, vboost: 45, jump: 16, turn: 3.8, spin: 9 },
+    cam: 1,
+  },
+  {
+    id: 'iker', name: 'Iker', icon: '⚡', vehicle: 'Patinete eléctrico', blurb: 'No para quieto: sale de una calle cualquiera. Su patinete eléctrico es lo que más corre, pero pesa: salta y gira peor.',
+    look: { torso: 0x17181c, arms: 0x17181c, legs: 0x2b2d33, hair: 'crop', hairColor: 0x17110d, hairTips: 0x33271f, face: 'smile', brows: 0x17110d },
+    scale: 0.9, color: 5, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
+    build: (color) => createEScooter(color),
+    stats: { acc: 26, vmax: 39, vboost: 55, jump: 14, turn: 2.8, spin: 7 },
     cam: 1,
   },
 ];

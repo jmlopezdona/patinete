@@ -18,6 +18,7 @@ import { Terrain } from './world/terrain.js';
 import { buildTown, zoneAt, BOUNDS } from './world/cobena.js';
 import { buildLandmarks } from './world/landmarks.js';
 import { lift } from './world/relief.js';
+import { roamSpot } from './world/streets.js';
 import { Player } from './game/player.js';
 import { CHARACTERS, characterById } from './game/characters.js';
 import { ChaseCamera } from './game/camera.js';
@@ -47,9 +48,9 @@ const TIPS = [
   '🛹 El <b>skatepark</b> está al final de la calle Río Júcar, junto a la rotonda.',
   '🚀 Detrás del skatepark, en el campo, te espera el <b>Mega Salto</b> sobre la charca.',
   '⛲ Sube hasta la <b>Plaza de la Villa</b>: allí están la fuente, la iglesia y el ayuntamiento.',
-  '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> y <b>Jose Manuel</b> en la canasta, las corredoras del parque, <b>Emma</b> y sus selfies en El Palmeral y <b>Adrián</b>, el batería de la Plaza de la Villa.',
+  '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> y <b>Jose Manuel</b> en la canasta, las corredoras del parque, <b>Emma</b> y sus selfies en El Palmeral, <b>Adrián</b>, el batería de la Plaza de la Villa, e <b>Iker</b>, que no para de dar vueltas con su patinete eléctrico.',
   '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar tu vehículo.',
-  '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monopatín, monociclo, bici o patines.',
+  '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monopatín, monociclo, bici, patines o patinete eléctrico.',
   '📷 Pulsa <b>T</b> en pleno salto: el <b>modo foto</b> para el tiempo y te deja mover la cámara para sacar la foto.',
 ];
 const params = new URLSearchParams(location.search);
@@ -352,6 +353,8 @@ class Game {
     this.missions.abort();
     this.aliens.release(this.player);
     this.wanted.reset(true);
+    // Quien no tiene casa de la que salir aparece cada vez en una calle distinta
+    if (this.home.roam) Object.assign(this.home, roamSpot());
     const sp = this.home.spawn;
     this.player.place(sp.x, sp.z, sp.heading);
     this.camera3.snap = true;
@@ -365,7 +368,7 @@ class Game {
     const ch = characterById(id);
     const swap = ch !== this.player.char;
     this.player.setCharacter(ch.id, this.save.colors[ch.id]);
-    this.minimap.home = this.home;
+    this.minimap.home = this.home.roam ? null : this.home;
     // Elegido en el menú, cada uno empieza en su casa; en la pausa se cambia sobre la marcha
     if (swap && this.state === 'menu') this.goHome();
     this.folks.setPlayer(ch.id);
@@ -391,7 +394,7 @@ class Game {
     document.getElementById('menu').classList.add('out');
     this.hud.show(true);
     this.dropoff.leave();
-    this.hud.toast(`¡Bienvenido a <b>Cobeña</b>! ${this.home.drop ? 'Tu padre te deja en' : 'Sales de casa, en'} ${this.home.name}. Busca los iconos del mapa para jugar.`);
+    this.hud.toast(`¡Bienvenido a <b>Cobeña</b>! ${this.home.drop ? 'Tu padre te deja en' : this.home.roam ? 'Hoy apareces en' : 'Sales de casa, en'} ${this.home.name}. Busca los iconos del mapa para jugar.`);
     if (this.env.target > 0.5) this.tipI = Math.max(this.tipI, 2);
     setTimeout(() => document.getElementById('keys').classList.add('fade'), 14000);
   }
@@ -684,13 +687,16 @@ class Game {
     this.missions.update(dt, this.time);
     this.bits.update(dt);
 
-    // Efectos: llamas del turbo y salpicaduras del estanque
+    // Efectos: llamas (o chispas) del turbo y salpicaduras del estanque
     this.fx -= dt;
     if (this.fx <= 0 && p.crashT <= 0) {
       this.fx = 0.03;
       const fx = Math.sin(p.heading);
       const fz = Math.cos(p.heading);
-      if (p.boosting && p.grounded) {
+      if (p.boosting && p.grounded && p.veh.electric) {
+        // El eléctrico no quema nada: del motor saltan chispas azules
+        for (let i = 0; i < 2; i++) this.bits.spawn(p.pos.x - fx * p.veh.tail, p.pos.y + 0.6, p.pos.z - fz * p.veh.tail, -fx * 3 + (Math.random() - 0.5) * 9, 2 + Math.random() * 5, -fz * 3 + (Math.random() - 0.5) * 9, Math.random() < 0.6 ? 0x6fd8ff : 0xffffff, 0.3, 0.3, p.pos.y);
+      } else if (p.boosting && p.grounded) {
         this.bits.spawn(p.pos.x - fx * p.veh.tail, p.pos.y + 0.5, p.pos.z - fz * p.veh.tail, -fx * 6 + (Math.random() - 0.5) * 4, 1 + Math.random() * 3, -fz * 6 + (Math.random() - 0.5) * 4, Math.random() < 0.5 ? 0xffd23a : 0xff7a1a, 0.4, 0.4, p.pos.y);
       }
       if (p.grounded && p.speed > 5) {

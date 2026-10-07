@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Builder, profileGeo } from './builder.js';
 import { C } from './colors.js';
 import { plastic, rubber, textTexture } from './materials.js';
-import { createScooter, WHEEL_R, STEER_Z, DECK_Y } from './scooter.js';
+import { createScooter, WHEEL_R, STEER_Z, DECK_Y, BAR_Y } from './scooter.js';
 
 // Vehículos del jugador. Todos miran hacia +Z con el origen en el suelo y comparten interfaz:
 //   group    malla completa
@@ -13,6 +13,8 @@ import { createScooter, WHEEL_R, STEER_Z, DECK_Y } from './scooter.js';
 //   cargo    dónde se apilan las pizzas del reparto
 //   tail     distancia del centro a la cola (llamas del turbo)
 
+const headlight = new THREE.MeshStandardMaterial({ color: 0xfff6d0, emissive: 0xffe9a0, emissiveIntensity: 1.6, roughness: 0.3 });
+const taillight = new THREE.MeshStandardMaterial({ color: 0xff2a1a, emissive: 0xc01208, emissiveIntensity: 1.2, roughness: 0.3 });
 const glass = new THREE.MeshStandardMaterial({ color: 0x9fd8f2, transparent: true, opacity: 0.34, roughness: 0.06, metalness: 0.2, side: THREE.DoubleSide });
 
 // Tubo entre dos puntos del plano YZ (cuadros de bici)
@@ -38,6 +40,87 @@ export function scooterVehicle(color, scale = 1) {
   const s = createScooter(color);
   s.group.scale.setScalar(scale);
   return { ...s, kind: 'scooter', wheelR: WHEEL_R * scale, steerZ: STEER_Z * scale, seatY: DECK_Y * scale, seatZ: -0.5 * scale, cargo: [0, 1.5 * scale, -2.2 * scale], tail: 2.8 * scale, lean: 1 };
+}
+
+// Patinete eléctrico: tabla ancha y negra con la batería dentro, ruedas gordas con el motor en el
+// buje de delante, guardabarros, columna alta con la pantalla en el manillar, faro y piloto trasero.
+// Mismas medidas que el patinete de siempre, así el piloto va igual de colocado.
+export function createEScooter(color = C.yellow) {
+  const group = new THREE.Group();
+  const WZ_R = -2.35;
+  const WZ_F = 2.45;
+  const b = new Builder();
+  // Tabla con la batería, lija por encima y un filo de color a cada lado
+  b.box(1.5, 0.46, 3.5, 0, DECK_Y - 0.26, -0.25, C.black, { r: 0.12 });
+  b.box(1.24, 0.05, 3.0, 0, DECK_Y - 0.02, -0.25, C.dgray);
+  for (const sx of [-1, 1]) {
+    b.box(0.1, 0.16, 3.2, sx * 0.76, DECK_Y - 0.2, -0.25, color, { r: 0.04 });
+    // Horquilla trasera y delantera
+    b.box(0.16, 0.36, 1.25, sx * 0.5, WHEEL_R + 0.02, WZ_R + 0.38, C.black, { r: 0.06 });
+    b.box(0.16, 1.5, 0.3, sx * 0.48, WHEEL_R + 0.62, WZ_F - 0.1, C.black, { r: 0.06, rx: -0.2 });
+  }
+  // Guardabarros trasero (también hace de freno) con el piloto, y el delantero
+  b.box(0.62, 0.12, 1.5, 0, WHEEL_R + 0.84, WZ_R - 0.12, color, { r: 0.05, rx: 0.34 });
+  b.box(0.62, 0.12, 0.7, 0, WHEEL_R + 0.44, WZ_R - 0.98, color, { r: 0.05, rx: 1.0 });
+  b.box(0.62, 0.12, 1.2, 0, WHEEL_R + 0.86, WZ_F + 0.1, color, { r: 0.05, rx: -0.2 });
+  // Cuello que sube de la tabla a la dirección, con la bisagra de plegado
+  b.box(0.5, 0.5, 1.5, 0, DECK_Y + 0.28, STEER_Z - 0.42, C.black, { r: 0.12, rx: -0.62 });
+  b.box(0.62, 0.5, 0.62, 0, 1.72, STEER_Z, C.dgray, { r: 0.12 });
+  b.cyl(0.12, 0.74, 0, 1.72, STEER_Z, color, { axis: 'x', seg: 10 });
+  // Pata de cabra recogida
+  b.box(0.1, 0.1, 0.9, -0.72, DECK_Y - 0.5, -0.5, C.lgray, { r: 0.04 });
+  group.add(b.mesh(plastic));
+
+  // Dirección: columna negra con un anillo de color, manillar con puños, pantalla y faro
+  const steer = new THREE.Group();
+  steer.position.set(0, 0, STEER_Z);
+  const s = new Builder();
+  s.cyl(0.21, BAR_Y - 1.9, 0, (BAR_Y + 1.9) / 2, 0, C.black, { seg: 14 });
+  s.cyl(0.24, 0.3, 0, 2.5, 0, color, { seg: 14 });
+  s.cyl(0.11, 3.0, 0, BAR_Y, 0, C.black, { axis: 'x', seg: 10 });
+  for (const sx of [-1, 1]) {
+    s.cyl(0.18, 0.72, sx * 1.2, BAR_Y, 0, C.dgray, { axis: 'x', seg: 12 });
+    s.cyl(0.21, 0.08, sx * 1.58, BAR_Y, 0, color, { axis: 'x', seg: 12 });
+  }
+  // Maneta de freno y gatillo del acelerador
+  s.box(0.7, 0.07, 0.07, -1.05, BAR_Y + 0.04, 0.26, C.lgray, { ry: 0.2 });
+  s.box(0.2, 0.22, 0.3, 0.72, BAR_Y - 0.1, 0.12, color, { r: 0.05 });
+  // Pantalla
+  s.box(0.7, 0.16, 0.56, 0, BAR_Y + 0.12, 0, C.black, { r: 0.06 });
+  s.box(0.46, 0.03, 0.3, 0, BAR_Y + 0.21, 0, C.lime);
+  s.box(0.42, 0.44, 0.3, 0, BAR_Y - 0.62, 0.26, C.black, { r: 0.08 });
+  steer.add(s.mesh(plastic));
+  const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.08, 14), headlight);
+  lamp.rotation.x = Math.PI / 2;
+  lamp.position.set(0, BAR_Y - 0.62, 0.43);
+  steer.add(lamp);
+  group.add(steer);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.16, 0.08), taillight);
+  tail.position.set(0, WHEEL_R + 0.3, WZ_R - 1.3);
+  tail.rotation.x = 1.0;
+  group.add(tail);
+
+  const wheel = (motor) => {
+    const g = new THREE.Group();
+    const tire = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.26, 12, 28), rubber);
+    tire.rotation.y = Math.PI / 2;
+    tire.castShadow = true;
+    const w = new Builder();
+    w.cyl(motor ? 0.44 : 0.36, motor ? 0.6 : 0.46, 0, 0, 0, C.black, { axis: 'x', seg: 20 });
+    w.cyl(0.2, motor ? 0.66 : 0.52, 0, 0, 0, color, { axis: 'x', seg: 12 });
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      w.box(motor ? 0.62 : 0.48, 0.08, 0.2, 0, Math.sin(a) * 0.28, Math.cos(a) * 0.28, C.lgray, { rx: -a });
+    }
+    g.add(tire, w.mesh(plastic));
+    return g;
+  };
+  const rear = wheel(false);
+  rear.position.set(0, WHEEL_R, WZ_R);
+  const front = wheel(true);
+  front.position.set(0, WHEEL_R, WZ_F);
+  group.add(rear, front);
+  return { group, steer, rear, front, kind: 'scooter', electric: true, wheelR: WHEEL_R, steerZ: STEER_Z, seatY: DECK_Y, seatZ: -0.5, cargo: [0, 1.5, -2.2], tail: 2.8, lean: 0.9 };
 }
 
 // Monopatín: tabla con las puntas levantadas, lija negra, ejes y cuatro ruedecitas.

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { createMinifig, nameTag } from '../lego/minifig.js';
 import { createUnicycle, createSkates } from '../lego/vehicles.js';
+import { streetGraph, nextEdge, laneOf, randomSpot } from '../world/streets.js';
+import { lift, grade } from '../world/relief.js';
 import { Builder } from '../lego/builder.js';
 import { plastic } from '../lego/materials.js';
 import { C } from '../lego/colors.js';
@@ -27,7 +29,8 @@ const shadows = (o) =>
 
 // Vecinos con nombre propio: Yago y su monociclo en el skatepark, Adrián, el pequeño batería heavy
 // de la plaza, Jose y su hijo Jose Manuel en la canasta, Ana, Cintia y Bea haciendo footing
-// por los parques y Emma, de visita, haciéndose selfies en El Palmeral.
+// por los parques, Emma, de visita, haciéndose selfies en El Palmeral, e Iker, que no para de dar
+// vueltas por el pueblo con su patinete eléctrico.
 export class Folks {
   constructor(game) {
     this.game = game;
@@ -38,6 +41,7 @@ export class Folks {
     this.buildJose();
     this.buildJoggers();
     this.buildEmma();
+    this.buildIker();
   }
 
   // El personaje que lleva el jugador no puede estar a la vez en su sitio de siempre
@@ -62,6 +66,11 @@ export class Folks {
       E.marker.hidden = id === 'emma';
       if (id === 'emma') E.fig.group.visible = E.tag.visible = E.fx.visible = false;
     }
+    const K = this.iker;
+    if (K) {
+      K.marker.hidden = id === 'iker';
+      if (id === 'iker') K.root.visible = K.tag.visible = false;
+    }
   }
 
   update(dt, p, time, live) {
@@ -70,6 +79,109 @@ export class Folks {
     if (this.jose) this.updateJose(dt, p, time, live);
     if (this.joggers) this.updateJoggers(dt, p, time, live);
     if (this.emma && this.away !== 'emma') this.updateEmma(dt, p, time, live);
+    if (this.iker && this.away !== 'iker') this.updateIker(dt, p, time, live);
+  }
+
+  // ---------- Iker, dando vueltas por el pueblo en su patinete eléctrico ----------
+  buildIker() {
+    const ch = characterById('iker');
+    const veh = ch.build(COLORS[ch.color]);
+    const root = new THREE.Group();
+    root.rotation.order = 'YXZ';
+    const fig = createMinifig(ch.look);
+    fig.group.scale.setScalar(ch.scale);
+    // De pie en la tabla y agarrado al manillar, como cuando lo lleva el jugador
+    fig.group.position.set(0, veh.seatY, veh.seatZ);
+    fig.group.rotation.x = 0.25;
+    fig.armL.rotation.x = fig.armR.rotation.x = -1.72;
+    fig.head.rotation.x = -0.2;
+    root.add(veh.group, fig.group);
+    shadows(root);
+    const tag = nameTag(ch.name, '#f7d117');
+    this.game.scene.add(root, tag);
+    const marker = { x: 0, z: 0, icon: ch.icon };
+    this.markers.push(marker);
+    // Empieza en una calle cualquiera y va eligiendo por dónde tirar en cada cruce
+    const s = randomSpot();
+    const N = streetGraph().nodes;
+    const edge = N[s.node].all.find((e) => e.to === s.to);
+    this.iker = { root, veh, fig, tag, marker, from: s.node, edge, next: nextEdge(s.to, s.node), s: 0, x: N[s.node].x, z: N[s.node].z, heading: s.heading, speed: 0, lane: laneOf(edge), lean: 0, cd: 0, bell: 0 };
+  }
+
+  updateIker(dt, p, time, live) {
+    const K = this.iker;
+    const N = streetGraph().nodes;
+    let A = N[K.from];
+    let B = N[K.edge.to];
+    let len = Math.hypot(B.x - A.x, B.z - A.z) || 1;
+    // Levanta el puño en las curvas cerradas que le vienen y frena si tiene al jugador delante
+    const C2 = N[K.next.to];
+    const turn = Math.abs(angDiff(Math.atan2(B.x - A.x, B.z - A.z), Math.atan2(C2.x - B.x, C2.z - B.z)));
+    let target = 25 * (len - K.s < 12 ? 1 - 0.6 * Math.min(1, turn / 1.6) : 1);
+    const fx = Math.sin(K.heading);
+    const fz = Math.cos(K.heading);
+    const dx = p.pos.x - K.x;
+    const dz = p.pos.z - K.z;
+    const fwd = dx * fx + dz * fz;
+    const lat = dx * fz - dz * fx;
+    K.bell -= dt;
+    if (live && p.crashT <= 0 && fwd > 0 && fwd < 11 && Math.abs(lat) < 2.2 && p.pos.y < 4) {
+      target = Math.min(target, Math.max(0, p.v * (Math.sin(p.heading) * fx + Math.cos(p.heading) * fz) * 0.8));
+      if (K.bell <= 0) {
+        K.bell = 2.5;
+        this.game.sfx.bell();
+      }
+    }
+    K.speed += clamp(target - K.speed, -34 * dt, 13 * dt);
+    K.s += K.speed * dt;
+    while (K.s >= len) {
+      K.s -= len;
+      K.from = K.edge.to;
+      K.edge = K.next;
+      K.next = nextEdge(K.edge.to, K.from);
+      A = B;
+      B = N[K.edge.to];
+      len = Math.hypot(B.x - A.x, B.z - A.z) || 1;
+    }
+    const ux = (B.x - A.x) / len;
+    const uz = (B.z - A.z) / len;
+    // El morro gira con suavidad hacia la calle y el patinete se queda por su derecha
+    const da = angDiff(K.heading, Math.atan2(ux, uz));
+    K.heading += da * Math.min(1, 7 * dt);
+    K.lane = damp(K.lane, laneOf(K.edge), 2.5, dt);
+    K.x = A.x + ux * K.s - Math.cos(K.heading) * K.lane;
+    K.z = A.z + uz * K.s + Math.sin(K.heading) * K.lane;
+    K.marker.x = K.x;
+    K.marker.z = K.z;
+    const far = Math.hypot(p.pos.x - K.x, p.pos.z - K.z) > SEE;
+    K.root.visible = K.tag.visible = !far;
+    if (far) return;
+    const v = K.veh;
+    const roll = (K.speed * dt) / v.wheelR;
+    v.rear.rotation.x += roll;
+    v.front.rotation.x += roll;
+    const st = clamp(da * 1.4, -0.5, 0.5);
+    v.steer.rotation.y = st;
+    v.front.rotation.y = st * 0.6;
+    K.lean = damp(K.lean, clamp(-da * K.speed * 0.05, -0.35, 0.35), 8, dt);
+    K.fig.head.rotation.y = st * 0.8;
+    const y = Math.max(0, Math.min(1, this.T.height(K.x, K.z)));
+    lift(K.x, K.z);
+    K.root.position.set(K.x, y, K.z);
+    K.root.rotation.set(-Math.atan(grade.x * fx + grade.z * fz), K.heading, K.lean);
+    K.tag.position.set(K.x, y + 7.3, K.z);
+    // Si se le echan encima, se aparta al que viene sin caerse del patinete
+    K.cd -= dt;
+    const d2 = dx * dx + dz * dz;
+    if (live && p.crashT <= 0 && d2 < 6.5 && Math.abs(p.pos.y - y) < 3) {
+      const d = Math.sqrt(d2) || 1;
+      p.bump(dx / d, dz / d, 0.25, 0.8);
+      if (K.cd <= 0) {
+        K.cd = 1.2;
+        K.speed *= 0.5;
+        this.game.sfx.bump();
+      }
+    }
   }
 
   // ---------- Yago, el del monociclo ----------
