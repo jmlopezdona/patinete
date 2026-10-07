@@ -44,7 +44,7 @@ const TIPS = [
   '⛲ Sube hasta la <b>Plaza de la Villa</b>: allí están la fuente, la iglesia y el ayuntamiento.',
   '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> en la canasta, las corredoras del parque y <b>Adrián</b>, el batería de la calle Libertad.',
   '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar tu vehículo.',
-  '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monociclo, bici o Tesla.',
+  '🧑‍🤝‍🧑 En la pausa puedes cambiar de <b>personaje</b>: patinete, monopatín, monociclo, bici o Tesla.',
 ];
 const params = new URLSearchParams(location.search);
 
@@ -104,7 +104,7 @@ class Game {
   }
 
   loadSave() {
-    const def = { studs: 0, bricks: [], stars: {}, best: {}, colors: {}, character: 'adrian', muted: false, aliens: 0, invasions: 0 };
+    const def = { studs: 0, bricks: [], stars: {}, best: {}, colors: {}, character: 'josemanuel', muted: false, aliens: 0, invasions: 0 };
     try {
       return { ...def, ...JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') };
     } catch {

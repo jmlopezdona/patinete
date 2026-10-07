@@ -6,7 +6,7 @@ import { createScooter, WHEEL_R, STEER_Z, DECK_Y } from './scooter.js';
 
 // Vehículos del jugador. Todos miran hacia +Z con el origen en el suelo y comparten interfaz:
 //   group    malla completa
-//   kind     'scooter' | 'unicycle' | 'bike' | 'car'
+//   kind     'scooter' | 'skate' | 'unicycle' | 'bike' | 'car'
 //   wheelR   radio de rueda (para que giren a la velocidad justa)
 //   steerZ   eje vertical sobre el que pivota el vehículo en los trucos
 //   seatY/Z  dónde va sentado (o de pie) el piloto
@@ -38,6 +38,44 @@ export function scooterVehicle(color, scale = 1) {
   const s = createScooter(color);
   s.group.scale.setScalar(scale);
   return { ...s, kind: 'scooter', wheelR: WHEEL_R * scale, steerZ: STEER_Z * scale, seatY: DECK_Y * scale, seatZ: -0.5 * scale, cargo: [0, 1.5 * scale, -2.2 * scale], tail: 2.8 * scale, lean: 1 };
+}
+
+// Monopatín: tabla con las puntas levantadas, lija negra, ejes y cuatro ruedecitas.
+// La tabla va en un grupo aparte para poder voltearla en los kickflips.
+export function createSkateboard(color = C.red) {
+  const group = new THREE.Group();
+  const R = 0.3;
+  const DECK = 2 * R + 0.24;
+  const board = new THREE.Group();
+  board.position.y = DECK;
+  const b = new Builder();
+  b.box(1.36, 0.14, 3.1, 0, 0, 0, color, { r: 0.06 });
+  b.box(1.26, 0.03, 3.0, 0, 0.08, 0, C.black);
+  for (const sz of [-1, 1]) {
+    b.box(1.36, 0.14, 0.95, 0, 0.14, sz * 1.92, color, { r: 0.06, rx: -sz * 0.34 });
+    b.cyl(0.68, 0.14, 0, 0.29, sz * 2.34, color, { rx: -sz * 0.34, seg: 20 });
+    b.box(1.26, 0.03, 0.9, 0, 0.22, sz * 1.9, C.black, { rx: -sz * 0.34 });
+    // Ejes
+    b.box(0.5, 0.2, 0.42, 0, -0.16, sz * 1.25, C.lgray, { r: 0.06 });
+    b.cyl(0.07, 1.5, 0, -0.24, sz * 1.25, C.lgray, { axis: 'x', seg: 8 });
+  }
+  board.add(b.mesh(plastic));
+  const wb = new Builder();
+  wb.cyl(R, 0.3, 0, 0, 0, C.cream, { axis: 'x', seg: 16 });
+  wb.cyl(R * 0.45, 0.32, 0, 0, 0, color, { axis: 'x', seg: 10 });
+  const wgeo = wb.geometry();
+  const wheels = [];
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const w = new THREE.Mesh(wgeo, plastic);
+      w.castShadow = true;
+      w.position.set(sx * 0.68, -0.24, sz * 1.25);
+      board.add(w);
+      wheels.push(w);
+    }
+  }
+  group.add(board);
+  return { group, board, wheels, kind: 'skate', wheelR: R, steerZ: 0, seatY: DECK + 0.1, seatZ: 0, cargo: [0, DECK + 0.25, 1.75], tail: 2.4, lean: 1.25 };
 }
 
 // Monociclo de circo: rueda con radios y pedales, horquilla y sillín

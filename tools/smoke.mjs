@@ -222,7 +222,7 @@ await log('marcianos: victoria', () => {
 await log('personajes', () => {
   const g = window.__game; const p = g.player; const F = g.folks; const sp = g.world.places.spawn;
   const out = {};
-  for (const id of ['yago', 'teo', 'jose', 'adrian']) {
+  for (const id of ['yago', 'teo', 'jose', 'adrian', 'josemanuel']) {
     g.setCharacter(id);
     p.place(sp.x, sp.z, sp.heading);
     let vm = 0; let ym = 0;
@@ -230,7 +230,7 @@ await log('personajes', () => {
     window.sim(1 / 60, () => ({ jumpPressed: true }));
     window.sim(1.6, (t) => { ym = Math.max(ym, p.pos.y); return { throttle: 1, trickPressed: t > 0.1 && t < 0.13 }; });
     out[id] = [p.veh.kind, +vm.toFixed(0), +ym.toFixed(1), document.getElementById('trick').textContent.split('+')[0]].join(' ');
-    out[id + 'Doble'] = id === 'yago' ? F.yago.root.visible : id === 'jose' ? F.jose.fig.group.visible : id === 'teo' ? g.ball.keeperName : F.drummer.fig.group.visible;
+    out[id + 'Doble'] = id === 'yago' ? F.yago.root.visible : id === 'jose' ? F.jose.fig.group.visible : id === 'teo' ? g.ball.keeperName : id === 'adrian' ? F.drummer.fig.group.visible : 'no tiene';
   }
   out.guardado = g.save.character;
   return out;

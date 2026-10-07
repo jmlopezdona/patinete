@@ -107,6 +107,7 @@ export class Player {
     this.buildVehicle();
     this.kick = 0;
     this.doorVis = 0;
+    this.stance = 1;
   }
 
   buildVehicle() {
@@ -742,7 +743,7 @@ export class Player {
     this.squash = damp(this.squash, 0, 7, dt);
     const hop = whip && kind !== 'car' ? Math.sin((whip / TAU) * Math.PI) * 0.9 : 0;
     const driving = this.grounded && !this.grind && (inp.throttle > 0 || this.boosting);
-    this.scooterPivot.rotation.y = kind === 'car' ? 0 : whip;
+    this.scooterPivot.rotation.y = kind === 'car' || kind === 'skate' ? 0 : whip;
     r.armL.rotation.z = r.armR.rotation.z = this.steerVis * 0.25;
     r.head.rotation.y = -inp.steer * 0.35;
     r.group.rotation.z = this.visRoll * 0.5;
@@ -762,6 +763,26 @@ export class Player {
       r.legL.rotation.x = air && !this.grind ? -0.25 : whip ? 0.5 : 0;
       r.armL.rotation.x = r.armR.rotation.x = -1.72 + this.squash * 0.15;
       r.head.rotation.x = -0.2;
+    } else if (kind === 'skate') {
+      // De frente mientras se impulsa con el pie; de lado, en postura de surf, cuando ya rueda
+      for (const w of v.wheels) w.rotation.x += roll;
+      v.board.rotation.z = whip; // kickflip: la tabla da la vuelta sobre su eje largo
+      const pushing = driving && inp.throttle > 0 && this.v < 17 && this.v > -1 && !this.boosting;
+      this.kick = pushing ? this.kick + dt * (6 + this.v * 0.25) : damp(this.kick, Math.round(this.kick / TAU) * TAU, 10, dt);
+      const kp = Math.max(0, Math.sin(this.kick));
+      this.stance = damp(this.stance, pushing ? 0.2 : 1, 6, dt);
+      const st = this.stance;
+      r.group.position.set(0, v.seatY - this.squash * 0.3 + hop, v.seatZ);
+      r.group.rotation.y = -1.25 * st;
+      r.group.rotation.x = 0.16 * (1 - st) + this.squash * 0.1;
+      r.legR.rotation.x = kp * 0.95 * (1 - st) - 0.34 * st - (whip ? 0.4 : 0);
+      r.legL.rotation.x = 0.34 * st + (whip ? 0.4 : 0);
+      const up = air && !this.grind ? 0.7 : 0;
+      r.armL.rotation.x = r.armR.rotation.x = -0.25 - up;
+      r.armL.rotation.z = (0.85 + up * 0.5) * st + Math.sin(this.time * 6) * 0.06;
+      r.armR.rotation.z = -(0.85 + up * 0.5) * st + Math.sin(this.time * 6) * 0.06;
+      r.head.rotation.x = -0.1;
+      r.head.rotation.y = 1.1 * st - inp.steer * 0.3;
     } else if (kind === 'unicycle') {
       // Sentado en el sillín, pedaleando con la rueda y los brazos en cruz
       v.wheel.rotation.x += roll;

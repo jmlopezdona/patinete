@@ -56,7 +56,8 @@ lleva su vehículo y se conduce distinto:
 
 | | Personaje | Vehículo | Cómo va | Su truco (`F` en el aire) |
 | --- | --- | --- | --- | --- |
-| 🥁 | **Adrián** | Patinete | El de siempre: equilibrado | Tailwhip |
+| 🛴 | **Jose Manuel** | Patinete | El de siempre: equilibrado | Tailwhip |
+| 🥁 | **Adrián** | Monopatín | Gira fino y tiene buen ollie. Se impulsa con el pie y luego va de lado | Kickflip |
 | 🤹 | **Yago** | Monociclo | Gira sobre una moneda y salta más que nadie, pero corre menos | Pirueta |
 | 🧤 | **Teo** | Bicicleta | Más velocidad punta y buenos saltos | Tailwhip |
 | 🏀 | **Jose** | Tesla Model X | Acelera y corre como nadie, pero gira ancho y salta poco | Alas de halcón: abre las puertas en pleno vuelo |
@@ -131,8 +132,8 @@ se guarda en el navegador.
 - [Three.js](https://threejs.org) + [Vite](https://vite.dev). Sin modelos ni texturas externas:
   todo se genera por código al arrancar.
 - `src/lego/` — paleta, shader de ladrillos (studs y juntas dibujados por pieza), instanciado
-  masivo, constructor de piezas, patinete, minifiguras y modelos. `vehicles.js` añade el monociclo,
-  la bici y el Tesla.
+  masivo, constructor de piezas, patinete, minifiguras y modelos. `vehicles.js` añade el monopatín,
+  el monociclo, la bici y el Tesla.
 - `src/world/` — `cobena-data.js` (callejero ya procesado), `cobena.js` (suelo por capas, calles,
   casas, vallas y mobiliario), `landmarks.js` (skatepark y demás lugares especiales) y `terrain.js`
   (terreno analítico: rampas, quarter pipes, bowls… que usa la física).

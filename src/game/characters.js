@@ -1,5 +1,5 @@
 import { C } from '../lego/colors.js';
-import { scooterVehicle, createUnicycle, createBike, createTesla } from '../lego/vehicles.js';
+import { scooterVehicle, createSkateboard, createUnicycle, createBike, createTesla } from '../lego/vehicles.js';
 
 export const COLORS = [C.azure, C.red, C.lime, C.orange, C.magenta, C.yellow, C.purple, C.white];
 
@@ -8,11 +8,19 @@ export const COLORS = [C.azure, C.red, C.lime, C.orange, C.magenta, C.yellow, C.
 // turn = agilidad al girar, spin = velocidad de giro en el aire.
 export const CHARACTERS = [
   {
-    id: 'adrian', name: 'Adrián', icon: '🥁', vehicle: 'Patinete', blurb: 'El de siempre: equilibrado y con el mejor tailwhip.',
-    look: { torso: C.black, arms: C.black, legs: C.dgray, hair: 'long', hairColor: C.black, face: 'rock', print: 'bolt', printColor: '#f7d117' },
-    scale: 0.85, color: 0, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
-    build: (color) => scooterVehicle(color, 0.9),
+    id: 'josemanuel', name: 'Jose Manuel', icon: '🛴', vehicle: 'Patinete', blurb: 'El de siempre: equilibrado y con el mejor tailwhip.',
+    look: { legs: C.sandBlue, torso: 0xf06a0c, arms: 0xf06a0c, hair: 'helmet', hairColor: C.red, face: 'grin', print: 'bolt', printColor: '#ffffff' },
+    scale: 1, color: 0, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
+    build: (color) => scooterVehicle(color),
     stats: { acc: 22, vmax: 31, vboost: 47, jump: 15, turn: 3.1, spin: 7.6 },
+    cam: 1,
+  },
+  {
+    id: 'adrian', name: 'Adrián', icon: '🥁', vehicle: 'Monopatín', blurb: 'Surfea el asfalto: gira fino, buen ollie y kickflips de escándalo.',
+    look: { torso: C.black, arms: C.black, legs: C.dgray, hair: 'long', hairColor: C.black, face: 'rock', print: 'bolt', printColor: '#f7d117' },
+    scale: 0.85, color: 1, trick: 'Kickflip', alienTrick: '¡Kickflip marciano!',
+    build: (color) => createSkateboard(color),
+    stats: { acc: 21, vmax: 30, vboost: 46, jump: 16.5, turn: 3.4, spin: 8.6 },
     cam: 1,
   },
   {
