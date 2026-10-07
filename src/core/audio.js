@@ -263,6 +263,7 @@ export class Sfx {
   // ---------- Marcianos ----------
   ufo(vol, tense) {
     if (!this.ctx) return;
+    this.tense = tense;
     const t = this.ctx.currentTime;
     this.ufoL.g.gain.setTargetAtTime(vol * (tense ? 0.16 : 0.09), t, 0.12);
     this.ufoL.o.frequency.setTargetAtTime(tense ? 330 : 170, t, 0.15);
@@ -394,7 +395,7 @@ export class Sfx {
   }
 
   _eerieVol() {
-    return this.eerie ? 0.42 * (1 - this.drumVol * 0.9) : 0;
+    return this.eerie ? 0.3 * (1 - this.drumVol * 0.9) : 0;
   }
 
   _startDrums() {
@@ -535,20 +536,15 @@ export class Sfx {
     this.musicTimer = setInterval(tick, 80);
   }
 
-  // Música de la invasión: pedal grave, arpegio en menor y un theremín que se lamenta
+  // Música de la invasión: bajo machacón que tropieza en el semitono, arpegio en menor,
+  // theremín y una sirena que sube al final de la vuelta. Si el rayo te apunta, salta la alarma
   _startEerie() {
     const ctx = this.ctx;
-    const step = 60 / 100 / 4;
-    const chords = [
-      [50, 57, 62, 65],
-      [50, 58, 62, 65],
-      [50, 58, 62, 67],
-      [49, 57, 61, 64],
-    ];
-    const bass = [38, 34, 43, 45];
-    const arp = [0, 1, 2, 3, 2, 1, 2, 3];
+    const step = 60 / 126 / 4;
+    const roots = [50, 50, 53, 52, 50, 50, 46, 45];
+    const arp = [12, 15, 19, 20, 19, 15, 12, 15];
     // Theremín: [paso, nota, pasos que dura]
-    const lead = [[0, 69, 6], [8, 74, 6], [16, 70, 12], [32, 67, 6], [40, 70, 6], [48, 69, 8], [56, 73, 7]];
+    const lead = [[0, 69, 10], [12, 68, 4], [16, 69, 6], [24, 74, 8], [32, 77, 12], [46, 76, 2], [48, 76, 14], [64, 69, 10], [76, 68, 4], [80, 69, 6], [88, 74, 8], [96, 77, 8], [104, 78, 8], [112, 76, 8], [120, 73, 8]];
     const sparks = [86, 89, 93, 98];
     const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
     let i = 0;
@@ -571,29 +567,46 @@ export class Sfx {
       o.start(t);
       o.stop(t + dur + 0.02);
     };
-    const theremin = (m, t, dur) => {
-      const o = ctx.createOscillator();
-      const lfo = ctx.createOscillator();
-      const lg = ctx.createGain();
+    const drum = (t, freq, dur, vol, type) => {
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
       const g = ctx.createGain();
-      // Llega resbalando desde la nota anterior, con vibrato
-      o.frequency.setValueAtTime(hz(last), t);
-      o.frequency.exponentialRampToValueAtTime(hz(m), t + 0.16);
-      lfo.frequency.value = 5.5;
-      lg.gain.value = hz(m) * 0.012;
-      lfo.connect(lg);
-      lg.connect(o.frequency);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(f);
+      f.connect(g);
+      g.connect(this.eerieBus);
+      src.start(t, Math.random());
+      src.stop(t + dur + 0.02);
+    };
+    // Tono que resbala de una frecuencia a otra: theremín (con vibrato), bombo y sirena
+    const slide = (t, f0, f1, glide, dur, type, vol, vib) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(f1, t + glide);
+      if (vib) {
+        const lfo = ctx.createOscillator();
+        const lg = ctx.createGain();
+        lfo.frequency.value = 6;
+        lg.gain.value = f1 * 0.014;
+        lfo.connect(lg);
+        lg.connect(o.frequency);
+        lfo.start(t);
+        lfo.stop(t + dur + 0.02);
+      }
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.11, t + 0.12);
-      g.gain.setValueAtTime(0.11, t + dur * 0.7);
+      g.gain.exponentialRampToValueAtTime(vol, t + (vib ? 0.09 : 0.005));
+      g.gain.setValueAtTime(vol, t + dur * 0.7);
       g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       o.connect(g);
       g.connect(this.eerieBus);
       o.start(t);
-      lfo.start(t);
       o.stop(t + dur + 0.02);
-      lfo.stop(t + dur + 0.02);
-      last = m;
     };
     const tick = () => {
       if (!this.eerie || ctx.state !== 'running') {
@@ -603,28 +616,34 @@ export class Sfx {
         return;
       }
       while (next < ctx.currentTime + 0.25) {
-        const s = i % 64;
-        const bar = Math.floor(s / 16);
+        const s = i % 128;
+        const bar = s >> 4;
         const b = s % 16;
-        const phrase = Math.floor(i / 64) % 4;
-        if (b % 2 === 0) play(bass[bar], next, step * 1.7, 'triangle', b === 0 ? 0.3 : 0.16, 500);
-        play(chords[bar][arp[b % 8]], next, step * 1.4, 'sawtooth', 0.045, 1100);
-        // La primera vuelta va sin theremín, para que entre de sorpresa
-        if (phrase !== 0) for (const [at, m, len] of lead) if (at === s) theremin(m, next, step * len);
-        if (b === 0 || b === 3) {
-          // Latido
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.frequency.setValueAtTime(70, next);
-          o.frequency.exponentialRampToValueAtTime(36, next + 0.14);
-          g.gain.setValueAtTime(b === 0 ? 0.4 : 0.26, next);
-          g.gain.exponentialRampToValueAtTime(0.0001, next + 0.2);
-          o.connect(g);
-          g.connect(this.eerieBus);
-          o.start(next);
-          o.stop(next + 0.22);
+        const root = roots[bar];
+        // Bajo en semicorcheas que se va al semitono de arriba, como el tiburón
+        const up = b === 6 || b === 14 ? 1 : 0;
+        play(root + up, next, step * 0.95, 'sawtooth', b % 4 === 0 ? 0.26 : 0.15, 750);
+        if (b % 4 === 0) play(root - 12, next, step * 2.4, 'triangle', 0.3, 400);
+        if (b % 2 === 0) play(root + arp[b >> 1], next, step * 1.7, 'square', 0.06, 2000);
+        // Trítono de metales a mitad y al final de la vuelta
+        if (b === 0 && (bar === 3 || bar === 7)) {
+          play(root + 12, next, step * 7, 'sawtooth', 0.09, 1100);
+          play(root + 18, next, step * 7, 'sawtooth', 0.09, 1100);
         }
-        if (Math.random() < 0.07) play(sparks[(Math.random() * sparks.length) | 0], next, 0.5, 'sine', 0.035, 6000);
+        // Los primeros compases van sin theremín, para que entre de sorpresa
+        if (i >= 64) {
+          for (const [at, m, len] of lead) {
+            if (at !== s) continue;
+            slide(next, hz(last), hz(m), 0.14, step * len, 'triangle', 0.17, true);
+            last = m;
+          }
+        }
+        if (b % 4 === 0) slide(next, 130, 44, 0.11, 0.2, 'sine', 0.55);
+        if (b % 8 === 4) drum(next, 1700, 0.13, 0.22, 'bandpass');
+        drum(next, 7500, 0.03, this.tense ? 0.1 : b % 4 === 2 ? 0.07 : 0.03, 'highpass');
+        if (s === 112) slide(next, 220, 1760, step * 15, step * 16, 'sawtooth', 0.05);
+        if (this.tense) play(root + 36 + (b & 1), next, step * 0.8, 'square', 0.045, 5000);
+        else if (Math.random() < 0.05) play(sparks[(Math.random() * sparks.length) | 0], next, 0.5, 'sine', 0.04, 6000);
         next += step;
         i++;
       }
