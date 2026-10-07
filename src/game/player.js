@@ -293,7 +293,9 @@ export class Player {
     this.free.z = z;
 
     // Acelerador, freno y turbo
-    const boosting = inp.boost && this.boost > 0.02 && inp.throttle >= 0;
+    // Agotado, el turbo no vuelve a entrar hasta que se recarga un poco: si no, con la tecla
+    // pulsada entraría y saldría a cada instante, petardeando
+    const boosting = inp.boost && inp.throttle >= 0 && this.boost > (this.boosting ? 0.02 : 0.15);
     if (boosting && !this.boosting) this.game.sfx.boost();
     this.boosting = boosting;
     const S = this.stats;

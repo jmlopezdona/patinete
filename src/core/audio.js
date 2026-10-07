@@ -88,9 +88,10 @@ export class Sfx {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     const k = Math.min(1, speed / 45);
-    this.roll.g.gain.setTargetAtTime(grounded ? 0.05 + k * 0.3 : 0, t, 0.06);
+    // Rodadura y viento van por debajo de la música, y parado no suena nada
+    this.roll.g.gain.setTargetAtTime(grounded ? k * 0.06 : 0, t, 0.06);
     this.roll.f.frequency.setTargetAtTime(160 + k * 700, t, 0.08);
-    this.wind.g.gain.setTargetAtTime(k * k * 0.16, t, 0.15);
+    this.wind.g.gain.setTargetAtTime(k * k * 0.027, t, 0.15);
     this.wind.f.frequency.setTargetAtTime(500 + k * 1500, t, 0.15);
     this.grindL.g.gain.setTargetAtTime(grinding ? 0.22 : 0, t, 0.03);
   }
