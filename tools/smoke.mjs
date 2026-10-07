@@ -243,9 +243,10 @@ await log('marcianos: timbre sónico', () => {
   // Aparece por la calle, se recoge pasando por encima y con Q deja tontos a los de alrededor
   const sp = g.world.places.spawn;
   p.place(sp.x, sp.z, sp.heading);
-  I.held = null; I.group.visible = false; I.cd = 0;
-  window.sim(0.5);
-  const enLaCalle = I.group.visible && I.blips.length === 1;
+  I.stop(p); I.held = null; I.group.visible = false; I.cd = 0; I.last = null;
+  let n = 0; while (!I.group.visible && n++ < 600) window.sim(1 / 60);
+  window.sim(1 / 60);
+  const enLaCalle = I.group.visible && I.blips.length === 1 && I.drop.kind;
   for (const o of A.aliens) o.cd = 99;
   p.place(I.drop.x - 6, I.drop.z, Math.PI / 2); p.invuln = 5;
   window.sim(0.8, () => ({ throttle: 1 }));
@@ -263,6 +264,56 @@ await log('marcianos: timbre sónico', () => {
   p.place(a.x, a.z - 9, 0); p.v = 20; p.invuln = 0;
   window.sim(0.6, () => ({ throttle: 1 }));
   return { enLaCalle, cogido, gastado: I.held === null, tontos, platillo: u.state, culetazoDeFrente: A.wave.count - c0 };
+});
+await log('marcianos: gorro de aluminio', () => {
+  const g = window.__game; const A = g.aliens; const I = g.items; const p = g.player; const u = A.u;
+  // Después del timbre le toca al gorro: con él puesto, ni parado debajo del platillo te coge el rayo
+  const sp = g.world.places.spawn;
+  for (const o of A.aliens) o.cd = 99;
+  p.place(sp.x, sp.z, sp.heading);
+  I.stop(p); I.held = null; I.group.visible = false; I.cd = 0; I.last = 'bell';
+  let n = 0; while (!I.group.visible && n++ < 600) window.sim(1 / 60);
+  const sale = I.drop.kind;
+  p.place(I.drop.x - 6, I.drop.z, Math.PI / 2); p.invuln = 5;
+  window.sim(0.8, () => ({ throttle: 1 }));
+  const cogido = I.held;
+  const bajoElRayo = (secs) => {
+    p.place(sp.x, sp.z, sp.heading); p.invuln = 0;
+    u.x = p.pos.x; u.z = p.pos.z; u.vx = u.vz = 0; A.setUfo('hunt');
+    let m = 0; window.sim(secs, () => { m = Math.max(m, u.meter); });
+    return +m.toFixed(2);
+  };
+  window.sim(1 / 60, () => ({ keys: ['KeyQ'] }));
+  const puesto = p.foil && I.hat.visible && I.hat.parent === p.rider.head;
+  const conGorro = bajoElRayo(3);
+  I.fx.t = 0.1; window.sim(0.2);
+  const quitado = !p.foil && !I.hat.visible && !I.fx;
+  const sinGorro = bajoElRayo(2);
+  if (p.held) A.release(p);
+  A.setUfo('rest'); window.sim(1);
+  return { sale, cogido, puesto, rayoConGorro: conGorro, quitado, rayoSinGorro: sinGorro };
+});
+await log('marcianos: cohete', () => {
+  const g = window.__game; const A = g.aliens; const I = g.items; const p = g.player;
+  // Turbo que entra solo y no gasta, más rápido que el normal, hasta que se acaba
+  const sp = g.world.places.spawn;
+  for (const o of A.aliens) o.cd = 99;
+  p.place(sp.x, sp.z, sp.heading);
+  I.stop(p); I.held = null; I.group.visible = false; I.cd = 0; I.last = 'foil';
+  let n = 0; while (!I.group.visible && n++ < 600) window.sim(1 / 60);
+  const sale = I.drop.kind;
+  p.place(I.drop.x - 6, I.drop.z, Math.PI / 2); p.invuln = 99;
+  window.sim(0.8, () => ({ throttle: 1 }));
+  const cogido = I.held;
+  p.place(sp.x, sp.z, sp.heading); p.boost = 0.5;
+  window.sim(1 / 60, () => ({ keys: ['KeyQ'] }));
+  window.sim(2.5);
+  const lanzado = { v: +p.v.toFixed(0), tope: p.stats.vboost, turbo: p.boost, atado: I.rocket.visible };
+  window.sim(1, () => ({ throttle: -1 }));
+  const frenando = +p.v.toFixed(0);
+  I.fx.t = 0.1; window.sim(0.2);
+  p.invuln = 0;
+  return { sale, cogido, lanzado, frenando, apagado: !p.rocket && !p.boosting && !I.rocket.visible && !I.fx };
 });
 await log('marcianos: robo del platillo', () => {
   const g = window.__game; const A = g.aliens; const p = g.player; const u = A.u;

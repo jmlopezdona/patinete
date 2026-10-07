@@ -353,6 +353,17 @@ kbd {
   font-style: normal;
   text-shadow: none;
 }
+#itemtime,
+#itembox.running kbd {
+  display: none;
+}
+#itembox.running #itemtime {
+  display: inline;
+  min-width: 2.4em;
+  text-align: right;
+  color: var(--yellow);
+  font-variant-numeric: tabular-nums;
+}
 #abduct .a-title {
   font-size: 24px;
   font-weight: 700;
@@ -1241,6 +1252,10 @@ body.touch #speedo .num {
   bottom: calc(max(26px, env(safe-area-inset-bottom)) + 154px);
   background: #b8860b;
   font-size: 26px;
+}
+#tb-item.running {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 @media (max-width: 900px) {

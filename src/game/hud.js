@@ -9,7 +9,7 @@ export class Hud {
       trick: $('trick'), results: $('results'), zone: $('zone'), studBox: $('studbox'),
       alienBox: $('alienbox'), aliens: $('aliens'), abduct: $('abduct'), abductFill: $('abductfill'), beam: $('beamwarn'),
       wantedBox: $('wantedbox'), wanted: $('wanted'), cop: $('copwarn'),
-      ufoBox: $('ufobox'), ufoHits: $('ufohits'), ride: $('ride'), rideFill: $('ridefill'), itemBox: $('itembox'), itemIcon: $('itemicon'), itemName: $('itemname'), itemBtn: $('tb-item'),
+      ufoBox: $('ufobox'), ufoHits: $('ufohits'), ride: $('ride'), rideFill: $('ridefill'), itemBox: $('itembox'), itemIcon: $('itemicon'), itemName: $('itemname'), itemTime: $('itemtime'), itemBtn: $('tb-item'),
     };
     this.lastRide = null;
     this.lastWanted = 0;
@@ -78,16 +78,28 @@ export class Hud {
     if (k != null) this.el.rideFill.style.transform = `scaleX(${k})`;
   }
 
-  // El objeto que se lleva encima (null vacía el hueco)
-  setItem(kind) {
+  // El objeto que se lleva encima (null vacía el hueco). Con `secs`, ya está gastado y es lo que
+  // le queda de efecto: en vez de la tecla se ve la cuenta atrás
+  setItem(kind, secs) {
     this.el.itemBox.classList.toggle('hidden', !kind);
     this.el.itemBtn.classList.toggle('hidden', !kind);
+    this.el.itemBox.classList.toggle('running', !!secs);
+    this.el.itemBtn.classList.toggle('running', !!secs);
+    this.lastItemT = null;
     if (!kind) return;
+    if (secs) this.itemTime(secs);
     this.el.itemIcon.textContent = this.el.itemBtn.textContent = kind.icon;
     this.el.itemName.textContent = kind.name;
     this.el.itemBox.classList.remove('pop');
     void this.el.itemBox.offsetWidth;
     this.el.itemBox.classList.add('pop');
+  }
+
+  itemTime(secs) {
+    const n = Math.ceil(secs);
+    if (n === this.lastItemT) return;
+    this.lastItemT = n;
+    this.el.itemTime.textContent = `${n} s`;
   }
 
   // Barra para soltarse del rayo abductor (null la esconde)

@@ -338,6 +338,16 @@ export class Sfx {
     this.tone(1300, 0.9, 'sine', 0.12, 0.35, 0.3);
     this.noise(0.6, 0.12, 5200, 3, 'bandpass', 0.3, 0.3);
   }
+  // El gorro de aluminio cruje al ponérselo
+  foil() {
+    [0, 0.07, 0.13, 0.22].forEach((d, i) => this.noise(0.07, 0.16, 5200 + i * 700, 4, 'bandpass', d));
+    this.tone(1568, 0.3, 'sine', 0.08, 1.5, 0.28);
+  }
+  rocket() {
+    this.noise(1.1, 0.3, 420, 0.8, 'bandpass', 0, 6);
+    this.tone(90, 1.0, 'sawtooth', 0.1, 4);
+    this.tone(1400, 0.35, 'sine', 0.05, 0.3);
+  }
   // Coscorrón al platillo: suena a cacerola
   ufoHit() {
     this.tone(260, 0.5, 'triangle', 0.3, 0.6);
