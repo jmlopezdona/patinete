@@ -466,7 +466,7 @@ export function createMinifig(o = {}) {
       hb.sphere(r, 0.6 * Math.sin(pol) * Math.cos(a), 1 + 0.42 * Math.cos(pol), 0.04 + 0.62 * Math.sin(pol) * Math.sin(a), i % 3 ? hairColor : curl, { seg: 8, seg2: 6 });
     }
   } else if (hairType === 'bowl') {
-    // Corte a tazón: flequillo recto y desfilado, que se va aclarando hacia las puntas, y rapado por debajo
+    // Corte a tazón: flequillo recto y desfilado, que se va aclarando hacia las puntas, y rapado por debajo en un tono intermedio
     const tips = o.hairTips ?? hairColor;
     const R = 0.75;
     const bowl = new THREE.SphereGeometry(R, 24, 8, 0, Math.PI * 2, 0, Math.PI * 0.5).toNonIndexed();
@@ -482,7 +482,7 @@ export function createMinifig(o = {}) {
     const light = new THREE.Color(tips);
     fade.forEach((t, i) => bc.setXYZ(i, ...dark.clone().lerp(light, t)));
     hb.cyl(R - 0.01, 0.06, 0, 0.62, 0, tips, { rx: -0.2, rz: 0.06, seg: 24 });
-    shortSides(hairColor, 0.3, 0.7);
+    shortSides(dark.clone().lerp(light, 0.55).getHex(), 0.42, 0.7);
   } else if (hairType === 'antenna') {
     for (const sx of [-1, 1]) {
       hb.cyl(0.07, 1.0, sx * 0.42, 1.5, 0, skin, { rz: -sx * 0.3, seg: 8 });
