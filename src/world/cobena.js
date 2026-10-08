@@ -29,6 +29,8 @@ const PROPS = ['hydrant', 'bin', 'mailbox', 'cone', 'bench', 'crate', 'flowerpot
 const HOMES = new Set(Object.values(D.places.homes).map((h) => h.b)); // casas de los personajes
 // Capas del suelo, de abajo arriba
 export const LY = { field: 0, urban: 1, green: 2, water: 3, sidewalk: 4, path: 5, road: 6, mark: 7 };
+// Cómo varía el tono cada capa (ver createBrickMaterial); el agua y las marcas viales van lisas
+const LOOK = ['surcos', 'placas', 'manchas', null, 'baldosas', 'manchas', 'asfalto', null];
 
 // ---------- Suelo por capas (calles, aceras, parques...), tendido sobre el relieve ----------
 const _col = new THREE.Color();
@@ -147,7 +149,7 @@ class Ground {
   build() {
     const group = new THREE.Group();
     this.layers.forEach((sectors, k) => {
-      const mat = createBrickMaterial({ ground: true, vertexColors: true, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -(k + 1) * 0.5, polygonOffsetUnits: -(k + 1) * 2 });
+      const mat = createBrickMaterial({ ground: LOOK[k], vertexColors: true, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -(k + 1) * 0.5, polygonOffsetUnits: -(k + 1) * 2 });
       for (const L of sectors.values()) {
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(L.p), 3));

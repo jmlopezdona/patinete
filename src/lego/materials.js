@@ -10,10 +10,11 @@ export const legoUniforms = {
 // Material de los ladrillos estáticos (mallas instanciadas por sectores) y del suelo por capas.
 // El shader dibuja los studs en las caras superiores y las juntas entre ladrillos
 // en las paredes, usando coordenadas locales de cada pieza.
-// ground: el suelo, además, varía un pelín el tono de placa en placa.
-export function createBrickMaterial({ ground = false, ...opts } = {}) {
+// ground: el suelo, además, varía el tono según de qué sea (una de las claves de GROUND).
+const GROUND = { placas: 1, baldosas: 2, manchas: 3, surcos: 4, asfalto: 5 };
+export function createBrickMaterial({ ground = null, ...opts } = {}) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.46, metalness: 0, ...opts });
-  if (ground) mat.defines.LEGO_GROUND = '';
+  if (ground) mat.defines.LEGO_GROUND = GROUND[ground];
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = legoUniforms.uNight;
     shader.uniforms.uSunDir = legoUniforms.uSunDir;
@@ -64,7 +65,16 @@ varying vec3 vLNormal;
 varying vec3 vLAxX;
 varying vec3 vLAxZ;
 varying float vFlags;
-float legoHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }`
+float legoHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+#ifdef LEGO_GROUND
+// Ruido suave: manchas de bordes blandos en vez de casillas
+float legoNoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(legoHash(i), legoHash(i + vec2(1.0, 0.0)), f.x), mix(legoHash(i + vec2(0.0, 1.0)), legoHash(i + vec2(1.0)), f.x), f.y);
+}
+#endif`
       )
       .replace(
         '#include <color_fragment>',
@@ -96,14 +106,36 @@ if (fStuds && vLNormal.y > 0.5) {
   if (legoFine) legoBump.xz += dir * ring * fade * 0.85;
 }
 #ifdef LEGO_GROUND
-if (vLNormal.y > 0.5) {
-  // Placas de 8 × 8 studs, cada una de un tono algo distinto: sin esto una plaza o un campo son un plano liso.
-  // De lejos se apaga, que ahí solo sería ruido
+if (vLNormal.y > 0.5 && !fWin) {
+  // Cada suelo varía el tono a su manera: sin esto una plaza o un campo son un plano liso.
+  // tone va de -0,5 a 0,5. Cada dibujo se apaga cuando ya no cabe en unos pocos píxeles, que ahí solo sería ruido
+  vec2 gq = legoQ.xz;
   float px = max(legoDQ.x, legoDQ.z);
-  float fade = 1.0 - smoothstep(0.5, 2.5, px);
-  float plate = legoHash(floor(legoQ.xz / 8.0)) - 0.5;
-  diffuseColor.rgb *= 1.0 + plate * 0.10 * fade;
-  if (legoFine) legoRough += plate * 0.24 * fade;
+  #define LEGO_FAR(size) (1.0 - smoothstep(0.08 * size, 0.4 * size, px))
+  #if LEGO_GROUND == 1
+  // Placas de 8 × 8 studs
+  float amp = 0.10;
+  float tone = (legoHash(floor(gq / 8.0)) - 0.5) * LEGO_FAR(8.0);
+  #elif LEGO_GROUND == 2
+  // Baldosas de 4 × 4
+  float amp = 0.09;
+  float tone = (legoHash(floor(gq / 4.0)) - 0.5) * LEGO_FAR(4.0);
+  #elif LEGO_GROUND == 3
+  // Manchas: hierba más y menos tupida, tierra más y menos pisada
+  float amp = 0.70;
+  float tone = (legoNoise(gq / 15.0) - 0.5) * 0.6 * LEGO_FAR(15.0) + (legoNoise(gq / 4.3) - 0.5) * 0.4 * LEGO_FAR(4.3);
+  #elif LEGO_GROUND == 4
+  // Surcos de labranza de dos studs, sobre manchas grandes
+  float amp = 0.34;
+  float tone = (mod(floor(gq.x / 2.0), 2.0) - 0.5) * 0.45 * LEGO_FAR(2.0) + (legoNoise(gq / 34.0) - 0.5) * 0.9 * LEGO_FAR(34.0);
+  #else
+  // Asfalto gastado: manchas blandas y, de cerca, un moteado de gravilla
+  float amp = 0.80;
+  float tone = (legoNoise(gq / 11.0) - 0.5) * 0.6 * LEGO_FAR(11.0) + (legoNoise(gq / 3.1) - 0.5) * 0.4 * LEGO_FAR(3.1);
+  tone += (legoHash(floor(gq * 2.0)) - 0.5) * 0.12 * LEGO_FAR(0.5);
+  #endif
+  diffuseColor.rgb *= 1.0 + tone * amp;
+  if (legoFine) legoRough += tone * amp * 2.4;
 }
 #endif
 #ifdef USE_INSTANCING
