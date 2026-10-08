@@ -419,7 +419,10 @@ class Game {
     this.saveGame();
     this.sfx.init();
     this.sfx.ui();
-    if (this.state === 'play') this.hud.toast(`${ch.icon} Ahora llevas a <b>${ch.name}</b> con ${ch.plural ? 'sus' : 'su'} <b>${ch.vehicle.toLowerCase()}</b>. ${ch.blurb}`);
+    // La presentación se oye también en el menú, y al pasar de uno a otro solo la del último
+    const intro = `${ch.icon} Ahora llevas a <b>${ch.name}</b> con ${ch.plural ? 'sus' : 'su'} <b>${ch.vehicle.toLowerCase()}</b>. ${ch.blurb}`;
+    if (this.state === 'play') this.hud.toast(intro, '');
+    this.hud.voice.say(intro, false, true);
   }
 
   start() {
