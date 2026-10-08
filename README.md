@@ -121,6 +121,8 @@ cada vehículo se cambia con `V` y se guarda por separado.
   Llevan cartel con el número y banderín, y la del que se lleva sale marcada en el minimapa.
 - **Parque El Palmeral**, pegado a Río Júcar, 44: su puerta, con arco y palmeras, está en el lado
   que da a la Pista Polideportiva, con la avenida Río Guadalquivir por medio.
+- **El cartel de «COBEÑA»**: las letras blancas de la isleta de media luna de la calle Clavel, a la
+  entrada del pueblo por la carretera, con su césped y su macizo de flores. Se puede subir a ellas.
 - **Skatepark nuevo**, en su parcela junto a la rotonda: half-pipe, bowl circular, funbox con
   barandilla, mesa de salto, rollers y raíles.
 - **Plaza de la Villa** con el ayuntamiento, la iglesia de San Cipriano y su campanario, y la fuente
