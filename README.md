@@ -48,6 +48,9 @@ barra del navegador**, con su icono en la pantalla de inicio.
   juego instalado suele quedarse abierto días sin recargarse; por eso, al abrirlo, al volver a él y
   al pausar pregunta si hay algo más nuevo y, si lo hay, un platillo lo avisa en el menú y en la
   pausa con un botón para actualizar.
+- La tarjeta **«Novedades»** del menú cuenta lo último que ha llegado al juego y marca con «¡Nuevo!»
+  lo que aún no se había visto. Se escribe a mano: para anunciar un cambio se añade una entrada
+  arriba en `src/game/news.js`.
 
 Hace falta servirlo por HTTPS (GitHub Pages lo hace) o desde `localhost`. El service worker solo
 se registra en la versión compilada (`npm run build` y `npm run preview`), no con `npm run dev`.

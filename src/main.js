@@ -25,6 +25,7 @@ import { Player } from './game/player.js';
 import { CHARACTERS, characterById } from './game/characters.js';
 import { ChaseCamera } from './game/camera.js';
 import { Bits } from './game/bits.js';
+import { setupNews } from './game/news.js';
 import { Studs, STUD_VALUE } from './game/studs.js';
 import { Props } from './game/props.js';
 import { Traffic } from './game/traffic.js';
@@ -141,7 +142,7 @@ class Game {
   }
 
   loadSave() {
-    const def = { studs: 0, bricks: [], stars: {}, best: {}, colors: {}, character: 'jose', muted: false, aliens: 0, invasions: 0 };
+    const def = { studs: 0, bricks: [], stars: {}, best: {}, colors: {}, character: 'jose', muted: false, aliens: 0, invasions: 0, news: 0 };
     try {
       return { ...def, ...JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') };
     } catch {
@@ -415,6 +416,7 @@ class Game {
     $('s-mute').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
     setupInstall($('btn-install'), $('install-hint'));
     this.checkUpdate = setupUpdate($('version'), $('update'), $('update-text'), [$('btn-update'), $('p-update')]);
+    this.news = setupNews($('news'), this.save.news);
   }
 
   // La casa del personaje que se lleva, con su punto de salida a la calle
@@ -617,6 +619,11 @@ class Game {
     document.getElementById('menu').classList.add('out');
     this.hud.show(true);
     this.dropoff.leave();
+    // Al salir a jugar el tablón del menú ya está visto: la próxima vez no marca nada como nuevo
+    if (this.save.news !== this.news) {
+      this.save.news = this.news;
+      this.saveGame();
+    }
     this.hud.toast(`¡Bienvenido a <b>Cobeña</b>! ${this.home.drop ? 'Tu padre te deja en' : this.home.roam ? 'Hoy apareces en' : this.home.spot ? 'Sales de' : 'Sales de casa, en'} ${this.home.name}. Busca los iconos del mapa para jugar.`, '¡Bienvenido a Cobeña! Busca los iconos del mapa para jugar.');
     if (this.env.target > 0.5) this.tipI = Math.max(this.tipI, 2);
     setTimeout(() => document.getElementById('keys').classList.add('fade'), 14000);
