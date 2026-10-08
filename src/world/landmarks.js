@@ -445,25 +445,30 @@ function megaJump(W) {
   W.places.mega = { x: X(150), z, hole: h, islandX: ix };
 }
 
-// ---------- La entrada de la Plaza de la Villa: Adrián, el pequeño batería heavy ----------
+// ---------- La puerta de la Escuela de Música: Adrián, el pequeño batería heavy ----------
 
-// A la plaza se entra por la esquina donde se juntan las calles Cid, Madrid y Mayor. El escenario va
-// allí mismo, ya dentro de la plaza y de cara a la fuente.
+// La huella del escenario, en su marco: la tarima con el telón de fondo y las dos torres de altavoces
+const STAGE = [[-4.5, 4.5, -3.8, 3.5], [-7.1, 7.1, -2.3, -0.1]];
+
+// El escenario va en el patio de delante de la fachada del cartel, lo más cerca de la puerta que quepa
+// sin taparla ni pisar la calle: de espaldas a la escuela o, si no hay fondo, de lado y mirando a la puerta.
 function drummer(W) {
   const { batch, terrain } = W;
-  const P = W.places.plaza;
-  const street = DATA.names.indexOf('Calle Cid');
-  // El cabo de la calle Cid que da a la plaza, y las calzadas de alrededor para no pisarlas
-  let gate = null;
+  const A = DATA.buildings;
+  const label = DATA.labels.indexOf('ESCUELA DE MÚSICA');
+  let i = 0;
+  while (i < A.length && A[i + 8] !== label) i += 11;
+  if (label < 0 || i >= A.length) return;
+  const a = (A[i + 7] * Math.PI) / 2;
+  const out = (A[i + 7] % 2 === 0 ? A[i + 3] : A[i + 2]) / 2;
+  const door = frame(...frame(A[i], A[i + 1], A[i + 4] * RAD).p(Math.sin(a) * out, Math.cos(a) * out), A[i + 4] * RAD + a);
+  // Las calzadas de alrededor, para no pisarlas
   const roads = [];
-  for (const [, width, , name, , r] of DATA.roads) {
-    for (let i = 0; i < r.length; i += 2) {
-      const d = Math.hypot(r[i] - P.x, r[i + 1] - P.z);
-      if (name === street && (!gate || d < gate.d)) gate = { d, x: r[i], z: r[i + 1] };
-      if (i && d < 90) roads.push([r[i - 2], r[i - 1], r[i] - r[i - 2], r[i + 1] - r[i - 1], width / 2 + 1]);
+  for (const [, width, , , , r] of DATA.roads) {
+    for (let k = 2; k < r.length; k += 2) {
+      if (Math.hypot(r[k] - door.x, r[k + 1] - door.z) < 90) roads.push([r[k - 2], r[k - 1], r[k] - r[k - 2], r[k + 1] - r[k - 1], width / 2 + 0.4]);
     }
   }
-  if (!gate || gate.d > 90) return;
   const onRoad = (x, z) => {
     for (const [ax, az, dx, dz, half] of roads) {
       const t = Math.min(1, Math.max(0, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)));
@@ -471,32 +476,39 @@ function drummer(W) {
     }
     return false;
   };
-  const ux = (P.x - gate.x) / gate.d;
-  const uz = (P.z - gate.z) / gate.d;
-  const rot = Math.atan2(ux, uz);
-  // Se corre a un lado, o plaza adentro, si hay una calle, un árbol o una valla en medio
-  let f = null;
-  for (const s of [20, 24, 16, 28]) {
-    for (const side of [0, 4, -4, 8, -8]) {
-      const c = frame(gate.x + ux * s - uz * side, gate.z + uz * s + ux * side, rot);
-      let ok = !f;
-      for (let lx = -7.5; lx <= 7.5 && ok; lx += 0.75) {
-        for (let lz = -4; lz <= 4.5 && ok; lz += 0.75) {
+  const fits = (c) => {
+    for (const [x0, x1, z0, z1] of STAGE) {
+      for (let lx = x0; lx <= x1 + 0.01; lx += (x1 - x0) / 24) {
+        for (let lz = z0; lz <= z1 + 0.01; lz += (z1 - z0) / 12) {
           const q = c.p(lx, lz);
-          ok = free(W, q[0], q[1]) && !onRoad(q[0], q[1]);
+          if (Math.abs(door.inv(q[0], q[1])[0]) < 2 || !free(W, q[0], q[1]) || onRoad(q[0], q[1])) return false;
         }
       }
-      if (ok) f = c;
     }
+    return true;
+  };
+  let f = null;
+  for (const turn of [0, 1, -1]) {
+    let best = Infinity;
+    for (let t = -16; t <= 16; t += 0.25) {
+      for (let s = 3; s <= 16; s += 0.25) {
+        if (t * t + s * s >= best) continue;
+        const c = door.sub(t, s, (turn * Math.PI) / 2);
+        if (!fits(c)) continue;
+        best = t * t + s * s;
+        f = c;
+      }
+    }
+    if (f) break;
   }
   if (!f) return;
-  const { x, z } = f;
+  const { x, z, rot } = f;
   batch.level = lift(x, z); // el escenario entero, a la cota de su centro
   fbox(batch, f, 0, -1, 0, 9, 1.5, 7, C.black, F.STUDS);
   terrain.box(x, z, 9, 7, 0.5, rot);
   fbox(batch, f, 0, 0, -3.3, 9, 6.8, 0.5, C.black, F.SEAMS);
   terrain.box(...f.p(0, -3.3), 9, 0.5, 6.8, rot);
-  // El cartel, por las dos caras: por detrás lo ve quien llega de la calle
+  // El cartel, por las dos caras
   for (const s of [-1, 1]) {
     const q = f.p(0, -3.3 + s * 0.28);
     addSign(W, 'HEAVY METAL', q[0], 5.4, q[1], rot + (s > 0 ? 0 : Math.PI), 8, 1.7, '#1b1d21', '#ffd23a');
@@ -509,7 +521,7 @@ function drummer(W) {
   }
   terrain.cyl(x, z, 2.6, 3.2); // la batería no se atraviesa
   batch.level = null;
-  W.places.drummer = { x, z, rot, y: 0.5 };
+  W.places.drummer = { x, z, rot, y: 0.5, door: { x: door.x, z: door.z } };
 }
 
 // ---------- La puerta del parque El Palmeral: allí deja su padre a Emma ----------

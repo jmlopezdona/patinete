@@ -29,7 +29,7 @@ const shadows = (o) =>
   });
 
 // Vecinos con nombre propio: Yago y su monociclo en el skatepark, Adrián, el pequeño batería heavy
-// de la plaza, Jose y su padre en la canasta, Ana, Cintia y Bea haciendo footing
+// de la Escuela de Música, Jose y su padre en la canasta, Ana, Cintia y Bea haciendo footing
 // por los parques, Emma, de visita, haciéndose selfies en El Palmeral, Iker, que no para de dar
 // vueltas por el pueblo con su patinete eléctrico, y Leo, de blanco, que pelotea en la pista de tenis.
 export class Folks {
@@ -442,7 +442,7 @@ export class Folks {
     Y.tag.position.set(Y.x, P.y + Y.y + hop + (juggle ? 9.4 : 7.4), Y.z);
   }
 
-  // ---------- Adrián, el pequeño batería heavy, a la entrada de la Plaza de la Villa ----------
+  // ---------- Adrián, el pequeño batería heavy, a la puerta de la Escuela de Música ----------
   buildDrummer() {
     const P = this.game.world.places.drummer;
     if (!P) return;

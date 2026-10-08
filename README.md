@@ -214,7 +214,7 @@ peatones también cuenta) y aparece la primera estrella bajo el minimapa:
 | --- | --- | --- | --- |
 | 🤹 | **Yago** | Skatepark nuevo, en su pista de circo | Monociclo, malabares, piruetas y reverencia. Si te le echas encima, te salta con una voltereta |
 | 🧤 | **Teo** | Pista Polideportiva | El portero de «Chut a Puerta»: rizos, gafas redondas y la camiseta de Argentina con sus tres estrellas |
-| 🥁 | **Adrián** | Entrada de la Plaza de la Villa, de cara a la fuente | Doble bombo y flequillo a tazón. Cuanto más te acercas, más suena |
+| 🥁 | **Adrián** | Puerta de la Escuela de Música, en la calle Fuente el Saz | Doble bombo y flequillo a tazón. Cuanto más te acercas, más suena |
 | 🏀 | **Jose** y el **Padre de Jose** | Pista de baloncesto más cercana a Río Júcar, 44 | Padre e hijo echando unas canastas: rueda de pases (de pecho y picados), pase y corte, alley-oops, mates colgándose del aro, triples y entradas. No las meten todas, y los canastones se celebran. Si llevas tú a Jose, su padre se queda tirando solo |
 | 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de Río Júcar, 44 | Footing en grupo dando la vuelta a los dos parques |
 | 🤳 | **Emma** | Parque El Palmeral, pasada la puerta | Selfies sin parar, con sus patines: posa, dispara, mira la foto y cambia de ángulo, rodeada de corazones. Si te acercas, se gira para sacarte de fondo |

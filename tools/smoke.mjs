@@ -167,7 +167,7 @@ await log('vecinos', () => {
   g.player.place(q.x + 20, q.z + 20, 0);
   window.sim(20);
   const spread = Math.max(...R.list.map((j) => Math.hypot(j.x - R.list[0].x, j.z - R.list[0].z)));
-  return { marcadores: F.markers.map((m) => m.icon).join(''), yagoSalta: jumped, joseTiros: J.n, joseCanastas: J.made, corredorasJuntas: +spread.toFixed(1), bateriaALaFuente: +Math.hypot(P.drummer.x - P.plaza.x, P.drummer.z - P.plaza.z).toFixed(0), teo: g.ball.keeper.group.children.some((c) => c.isSprite) };
+  return { marcadores: F.markers.map((m) => m.icon).join(''), yagoSalta: jumped, joseTiros: J.n, joseCanastas: J.made, corredorasJuntas: +spread.toFixed(1), bateriaALaEscuela: +Math.hypot(P.drummer.x - P.drummer.door.x, P.drummer.z - P.drummer.door.z).toFixed(0), teo: g.ball.keeper.group.children.some((c) => c.isSprite) };
 });
 await shot('s_vecinos');
 await log('marcianos: culetazo', () => {
