@@ -66,6 +66,7 @@ const KINDS = {
       const g = items.game;
       g.sfx.sonic();
       items.ring(p.pos.x, p.pos.y, p.pos.z);
+      g.party?.tell('timbre', 0);
       if (!g.aliens.active) {
         g.hud.toast('🔔 ¡Riiing! Aquí no hay marcianos a los que aturdir: guárdalo para esta noche.');
         return false;
@@ -171,6 +172,11 @@ const KINDS = {
 };
 
 // Objetos que aparecen por la calle: se recoge uno, se lleva encima y se gasta con Q.
+//
+// En red el de la calle es uno para todos y lo pone el anfitrión (`simulate`); va en cada `foto`
+// (`write`, `read`). Cada jugador detecta en su pantalla que lo toca y lo pide (`coge`): se lo
+// queda el primero cuyo aviso llegue al anfitrión, que se lo da (`give`). Lo que se lleva encima
+// y lo que hace efecto son de cada uno.
 export class Items {
   constructor(game) {
     this.game = game;
@@ -190,7 +196,9 @@ export class Items {
     this.halo = new THREE.Mesh(halo, new THREE.MeshBasicMaterial({ color: 0xffd23a, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
     this.halo.position.y = 0.15;
     g.add(this.halo);
-    this.drop = { kind: null, mesh: null, x: 0, y: 0, z: 0, t: 0, far: 0, blip: { x: 0, z: 0, icon: '' } };
+    // serial: cuántos han salido ya, para saber en red de cuál se habla
+    this.drop = { kind: null, mesh: null, x: 0, y: 0, z: 0, t: 0, far: 0, serial: 0, blip: { x: 0, z: 0, icon: '' } };
+    this.askT = 0;
 
     // El gorro que se le planta al piloto y el cohete que se le ata al patinete
     this.hat = foilModel();
@@ -236,35 +244,57 @@ export class Items {
       if (k < 25 && dx * Math.sin(p.heading) + dz * Math.cos(p.heading) < 0) continue;
       const h = this.T.height(s.x, s.z);
       if (Math.abs(h) > 0.8 || s.y - h > 3) continue;
-      const D = this.drop;
-      if (D.mesh) {
-        this.group.remove(D.mesh);
-        D.mesh.geometry.dispose();
-      }
-      D.kind = this.last = kind;
-      D.mesh = KINDS[kind].model();
-      D.x = s.x;
-      D.y = h;
-      D.z = s.z;
-      D.t = D.far = 0;
-      D.blip.icon = KINDS[kind].icon;
-      this.group.add(D.mesh);
-      this.group.position.set(s.x, h, s.z);
-      this.group.visible = true;
+      this.last = kind;
+      this.show(kind, s.x, h, s.z, (this.drop.serial + 1) & 255);
       return true;
     }
     return false;
   }
 
-  take(p) {
+  // Pone en la calle el objeto que toca
+  show(kind, x, y, z, serial) {
+    const D = this.drop;
+    if (D.mesh) {
+      this.group.remove(D.mesh);
+      D.mesh.geometry.dispose();
+    }
+    D.kind = kind;
+    D.mesh = KINDS[kind].model();
+    D.x = x;
+    D.y = y;
+    D.z = z;
+    D.t = D.far = 0;
+    D.serial = serial;
+    D.blip.icon = KINDS[kind].icon;
+    this.group.add(D.mesh);
+    this.group.position.set(x, y, z);
+    this.group.visible = true;
+  }
+
+  // Jugando solo o en el anfitrión: el de la calle es para `p`, y deja de estar para los demás
+  give(p) {
     const g = this.game;
-    const K = KINDS[this.drop.kind];
-    this.held = this.drop.kind;
     this.group.visible = false;
+    if (g.party) this.cd = g.aliens.active ? EVERY : EVERY_DAY;
+    g.to(p).giveItem(this.drop.kind);
+  }
+
+  // En el anfitrión: un invitado dice que ha tocado el de la calle. Si sigue ahí, es suyo
+  claim(serial, r) {
+    if (r && this.group.visible && serial === this.drop.serial) this.give(r);
+  }
+
+  // Al jugador de esta pantalla le ha tocado un objeto
+  take(kind) {
+    const g = this.game;
+    const p = g.player;
+    const K = KINDS[kind];
+    if (!K) return;
+    this.held = kind;
     g.sfx.pickup();
     g.hud.setItem(K);
     g.hud.big(`¡${K.name}!`, '#ffd23a', 1.2, true);
-    g.bits.burst(this.drop.x, p.pos.y + 2, this.drop.z, [0xffd23a, 0xfff27a, 0xffffff], 14, 9, this.drop.y, 0.4);
+    g.bits.burst(p.pos.x, p.pos.y + 2, p.pos.z, [0xffd23a, 0xfff27a, 0xffffff], 14, 9, this.T.height(p.pos.x, p.pos.z), 0.4);
     g.hud.toast(`${K.icon} Llevas ${K.art || 'el'} <b>${K.name.toLowerCase()}</b>. ${K.tip}`);
   }
 
@@ -278,7 +308,8 @@ export class Items {
       g.hud.setItem(K, K.dur);
     } else g.hud.setItem(null);
     this.held = null;
-    this.cd = g.aliens.active ? EVERY : EVERY_DAY;
+    // En red el siguiente no espera a que este se gaste: la cuenta empieza al cogerlo (`give`)
+    if (!g.party) this.cd = g.aliens.active ? EVERY : EVERY_DAY;
   }
 
   // Se acaba (o se corta) el efecto del que estaba en marcha
@@ -294,19 +325,25 @@ export class Items {
     this.wave.position.set(x, y + 0.6, z);
     this.wave.visible = true;
     this.waveT = 0;
-    this.game.bits.burst(x, y + 3, z, [0xffd23a, 0xfff27a, 0xffffff], 16, 12, y, 0.35);
+    this.game.here(x, z).bits.burst(x, y + 3, z, [0xffd23a, 0xfff27a, 0xffffff], 16, 12, y, 0.35);
+  }
+
+  // En red: otro jugador (`r`) ha hecho sonar el timbre
+  rang(r) {
+    if (!r) return;
+    this.ring(r.pos.x, r.pos.y, r.pos.z);
+    this.game.here(r.pos.x, r.pos.z).sfx.sonic();
   }
 
   update(dt, p, time) {
     const g = this.game;
     const D = this.drop;
-    const on = this.group.visible;
-    const night = g.aliens.active;
+    const party = g.party;
+    const led = !!party && !party.hosting && party.fed;
+    if (!led) this.simulate(dt, p);
     this.blips.length = 0;
-    if (on && KINDS[D.kind].night && !night) this.group.visible = false;
-    else if (on) {
+    if (this.group.visible) {
       D.t += dt;
-      const d = Math.hypot(p.pos.x - D.x, p.pos.z - D.z);
       const k = Math.min(1, D.t * 3);
       D.mesh.position.y = 1.5 + Math.sin(time * 2.6) * 0.3;
       D.mesh.rotation.y = time * 2.2;
@@ -316,16 +353,16 @@ export class Items {
       D.blip.x = D.x;
       D.blip.z = D.z;
       this.blips.push(D.blip);
-      // Si se queda muy atrás, vuelve a aparecer más a mano
-      D.far = d > 150 ? D.far + dt : 0;
-      if (D.far > 4) {
-        this.group.visible = false;
-        this.cd = 1;
-      } else if (d < 3.4 && Math.abs(p.pos.y - D.y) < 4 && p.crashT <= 0 && !p.held && !this.fx) this.take(p);
-    } else if (!this.held && !this.fx && !p.held && (night || !g.missions.active)) {
-      // De noche no se hacen esperar aunque el anterior se gastara de día
-      this.cd = Math.min(this.cd, night ? EVERY : EVERY_DAY) - dt;
-      if (this.cd <= 0) this.cd = this.spawn(this.pick(night), p) ? 0 : 0.3;
+      // Lo toca el jugador de esta pantalla: es suyo, o lo pide si el que manda es el anfitrión
+      this.askT -= dt;
+      const d = Math.hypot(p.pos.x - D.x, p.pos.z - D.z);
+      if (d < 3.4 && Math.abs(p.pos.y - D.y) < 4 && p.crashT <= 0 && !p.held && !this.fx && !this.held && !g.busy(p)) {
+        if (!led) this.give(p);
+        else if (this.askT <= 0) {
+          this.askT = 0.5;
+          party.tell('coge', D.serial);
+        }
+      }
     }
     if (this.held && g.input.hit('item') && p.crashT <= 0 && !p.held) this.use(p);
     if (this.fx) {
@@ -346,5 +383,54 @@ export class Items {
       this.wave.material.opacity = (1 - this.waveT) * 0.8;
       if (this.waveT >= 1) this.wave.visible = false;
     }
+  }
+
+  // Cuándo sale uno a la calle y cuándo se quita: solo jugando solo o en el anfitrión
+  simulate(dt, p) {
+    const g = this.game;
+    const D = this.drop;
+    const night = g.aliens.active;
+    if (!this.group.visible) {
+      // Jugando solo no sale otro mientras llevas uno o te dura su efecto; en red, lo que lleva
+      // cada uno es cosa suya y sale cerca de alguien que no esté a otra cosa
+      const who = g.party ? g.crowd(p).filter((o) => !g.busy(o) && !o.held) : !this.held && !this.fx && !p.held && (night || !g.missions.active) ? [p] : [];
+      if (!who.length) return;
+      // De noche no se hacen esperar aunque el anterior se gastara de día
+      this.cd = Math.min(this.cd, night ? EVERY : EVERY_DAY) - dt;
+      if (this.cd <= 0) this.cd = this.spawn(this.pick(night), who[Math.floor(Math.random() * who.length)]) ? 0 : 0.3;
+    } else if (KINDS[D.kind].night && !night) this.group.visible = false;
+    else {
+      // Si se queda muy atrás de todos, vuelve a aparecer más a mano
+      D.far = g.nearest2(D.x, D.z) > 150 * 150 ? D.far + dt : 0;
+      if (D.far > 4) {
+        this.group.visible = false;
+        this.cd = 1;
+      }
+    }
+  }
+
+  // ---------- En red ----------
+  // Lo que viaja en cada `foto`: si hay objeto en la calle, cuál y dónde
+  get bytes() {
+    return 8;
+  }
+
+  write(dv, o) {
+    const D = this.drop;
+    dv.setUint8(o, this.group.visible ? ORDER.indexOf(D.kind) + 1 : 0);
+    dv.setUint8(o + 1, D.serial);
+    dv.setInt16(o + 2, Math.round(D.x * 10), true);
+    dv.setInt16(o + 4, Math.round(D.z * 10), true);
+    dv.setInt16(o + 6, Math.round(D.y * 100), true);
+    return o + 8;
+  }
+
+  // Invitado: el objeto no se mueve, así que basta con la foto más antigua de las dos
+  read(a, b, o) {
+    const kind = ORDER[a.getUint8(o) - 1];
+    const serial = a.getUint8(o + 1);
+    if (!kind) this.group.visible = false;
+    else if (!this.group.visible || serial !== this.drop.serial || kind !== this.drop.kind) this.show(kind, a.getInt16(o + 2, true) / 10, a.getInt16(o + 6, true) / 100, a.getInt16(o + 4, true) / 10, serial);
+    return o + 8;
   }
 }
