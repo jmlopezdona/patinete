@@ -78,7 +78,7 @@ sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 | Studs y ladrillos dorados | Personal | Cada uno recoge los suyos y los guarda en su progreso |
 | Bolos y balón | Compartido | Los que tira o chuta uno los ven caer y rodar los demás, también los bolos y el portero marcianos de noche. Los lleva la pantalla del último que los ha tocado. **Ya funciona** |
 | Minijuegos | Personal | Cada uno juega el suyo; mientras tanto ni marcianos ni municipal le hacen caso. Mientras alguien juega a los bolos o al fútbol, la bolera o la pista es suya: los demás lo ven jugar, pero ni pueden empezar ahí ni tocarle los bolos o el balón. **Ya funciona** |
-| Selfie con Emma, seguir a las mamás | Personal | Emma y las corredoras se animan por libre en cada pantalla, así que no hay nada que repartir |
+| Selfie con Emma, seguir a las mamás | Personal | Emma se anima por libre en cada pantalla, así que no hay nada que repartir. Las corredoras sí van a la par en todas: por dónde van sale del reloj del juego, como los peatones. **Ya funciona** |
 | Estrellas, récords, colores | Personal | Siguen en el `localStorage` de cada uno |
 | Calidad gráfica, sonido, cámara | Personal | |
 
