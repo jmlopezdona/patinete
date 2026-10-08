@@ -162,7 +162,8 @@ export class Hens {
     if (!first) return;
     this.owner = by;
     g.to(by).hud.big('¡Las gallinas!', ORANGE, 1.4);
-    g.to(by).hud.toast('🐔 Has atropellado a una gallina y ahora te persiguen <b>todas</b>. Cada <b>picotazo</b> te quita studs: dales esquinazo o aguanta hasta que se cansen.');
+    const news = '🐔 Has atropellado a una gallina y ahora te persiguen <b>todas</b>. Cada <b>picotazo</b> te quita studs: dales esquinazo o aguanta hasta que se cansen.';
+    g.to(by).hud.toast(news, g.told('gallinero') ? '' : news);
   }
 
   // En el anfitrión: un invitado dice que ha atropellado a una

@@ -609,6 +609,11 @@ class Game {
     if (why && this.state === 'play') this.hud.toast(`👥 ${WHY[why] || WHY.broker}`);
   }
 
+  // Lo que ya ha contado un consejo, el narrador no lo repite cuando pasa: sale el aviso, sin voz
+  told(what) {
+    return TIPS.findIndex((t) => t.includes(what)) < this.tipI;
+  }
+
   charIntro() {
     const ch = this.player.char;
     return `${ch.icon} Ahora llevas a <b>${ch.name}</b> con ${ch.plural ? 'sus' : 'su'} <b>${ch.vehicle.toLowerCase()}</b>. ${ch.blurb}`;

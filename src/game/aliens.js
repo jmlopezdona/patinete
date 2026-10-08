@@ -107,6 +107,7 @@ export class Aliens {
     this.mate = null; // tu doble a los mandos
     this.snatchCd = 0;
     this.hints = [];
+    this.briefed = false; // ya se han oído los consejos de la oleada
     this.blips = [];
 
     this.aliens = [];
@@ -215,16 +216,19 @@ export class Aliens {
     this.hints = this.tips();
   }
 
-  // Los consejos de la oleada, que cada pantalla va soltando a su ritmo
+  // Los consejos de la oleada, que cada pantalla va soltando a su ritmo. Se oyen en la primera;
+  // en las siguientes solo se leen
   tips() {
     const W = this.wave;
+    const quiet = this.briefed;
+    this.briefed = true;
     return [
       [0.3, `🛸 ¡Los marcianos invaden Cobeña! Oleada <b>${W.level + 1}</b>${W.cut ? `, con <b>${W.cut}</b> menos por los disfrazados que echaste de día` : ''}: échalos a <b>culetazos</b>, embistiéndolos por la espalda.`, '¡Los marcianos invaden Cobeña! Échalos a culetazos, embistiéndolos por la espalda.'],
       [7, '💨 Con el <b>turbo</b> se asustan y salen huyendo: ¡es el momento de darles en el culo!'],
       [14, '🔦 No te quedes bajo el <b>rayo del platillo</b>. Si te atrapa, machaca <b>Espacio</b> para soltarte.'],
       [22, '🛸 Cuando el platillo se queda <b>atontado</b> (al soltarte del rayo o al rescatar a alguien) baja mucho: <b>salta</b> y dale un coscorrón. ¡Al tercero es tuyo!'],
       [30, '🟢 Ojo con la <b>baba verde</b> que dejan los marcianos: rodando por encima <b>derrapas</b>, pero si caes encima de un salto, <b>rebotas</b>. A ellos también les hace resbalar.'],
-    ];
+    ].map((h) => (quiet ? [h[0], h[1], ''] : h));
   }
 
   resume(who) {
@@ -268,7 +272,7 @@ export class Aliens {
     g.all.hud.big('¡Cobeña salvada!', GREEN, 2.6);
     g.all.sfx.fanfare();
     g.all.confetti();
-    g.all.hud.toast(`🏆 ¡Invasión rechazada! Premio: <b>${reward.toLocaleString('es-ES')}</b> studs${W.saved ? `, con <b>${W.saved * 500}</b> por los rescates` : ''}. Volverán otra noche… con refuerzos y otra nodriza más dura.`, '¡Invasión rechazada! Volverán otra noche… con refuerzos y otra nodriza más dura.');
+    g.all.hud.toast(`🏆 ¡Invasión rechazada! Premio: <b>${reward.toLocaleString('es-ES')}</b> studs${W.saved ? `, con <b>${W.saved * 500}</b> por los rescates` : ''}. Volverán otra noche… con refuerzos y otra nodriza más dura.`);
   }
 
   setUfo(state) {

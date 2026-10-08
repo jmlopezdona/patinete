@@ -76,7 +76,7 @@ const KINDS = {
       g.hud.big('¡Riiing!', '#ffd23a', 1, true);
       if (hit.boss) g.hud.toast('🔔 ¡El timbrazo le ha roto el <b>escudo</b> a la nave nodriza! Aprovecha y dale en la panza.');
       else if (hit.ufo) g.hud.toast('🔔 ¡El platillo se ha quedado <b>atontado</b> y pierde altura! Salta y dale un coscorrón.');
-      else if (hit.n) g.hud.toast(`🔔 <b>${hit.n}</b> ${hit.n > 1 ? 'marcianos tontos' : 'marciano tonto'} perdido${hit.n > 1 ? 's' : ''}: ahora el culetazo vale por cualquier lado.`, hit.n > 1 ? 'Marcianos tontos perdidos: ahora el culetazo vale por cualquier lado.' : 'Marciano tonto perdido: ahora el culetazo vale por cualquier lado.');
+      else if (hit.n) g.hud.toast(`🔔 <b>${hit.n}</b> ${hit.n > 1 ? 'marcianos tontos' : 'marciano tonto'} perdido${hit.n > 1 ? 's' : ''}: ahora el culetazo vale por cualquier lado.`);
       else g.hud.toast('🔔 ¡Riiing! No había ningún marciano lo bastante cerca.');
       return true;
     },

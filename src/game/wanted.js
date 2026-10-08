@@ -171,7 +171,8 @@ export class Wanted {
     }
     if (first) {
       g.hud.big('¡Alto ahí!', BLUE, 1.4);
-      g.hud.toast('👮 Tanto destrozo ha hecho salir al <b>policía municipal</b>. Dale esquinazo o <b>sáltalo</b>: si te toca, multa.');
+      const news = '👮 Tanto destrozo ha hecho salir al <b>policía municipal</b>. Dale esquinazo o <b>sáltalo</b>: si te toca, multa.';
+      g.hud.toast(news, this.game.told('policía municipal') ? '' : news);
     }
   }
 
@@ -208,7 +209,7 @@ export class Wanted {
     g.addStuds(prize);
     g.hud.big('¡Esquinazo!', '#4dff88', 1.4);
     g.sfx.escape();
-    g.hud.toast(`💨 ${s >= 5 ? 'Les has dado esquinazo al municipal y a la abuela' : 'Le has dado esquinazo al municipal'}. Premio: <b>${prize.toLocaleString('es-ES')}</b> studs… y a portarse bien.`, s >= 5 ? 'Les has dado esquinazo al municipal y a la abuela. Y ahora, a portarse bien.' : 'Le has dado esquinazo al municipal. Y ahora, a portarse bien.');
+    g.hud.toast(`💨 ${s >= 5 ? 'Les has dado esquinazo al municipal y a la abuela' : 'Le has dado esquinazo al municipal'}. Premio: <b>${prize.toLocaleString('es-ES')}</b> studs… y a portarse bien.`);
     this.reset();
   }
 
