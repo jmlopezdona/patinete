@@ -1653,6 +1653,11 @@ body.touch #speedo .num {
   background: #b8860b;
   font-size: 26px;
 }
+/* Solo, encima del truco: si el personaje no hace caballitos desaparece y los demás no se mueven */
+#tb-wheelie {
+  grid-column: 2;
+  font-size: 26px;
+}
 #tb-item.running {
   opacity: 0.55;
   pointer-events: none;

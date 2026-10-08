@@ -27,7 +27,7 @@ export function readState(p, inp, s) {
   s.whip = Math.max(0, p.whipT);
   s.steer = inp.steer;
   s.throttle = inp.throttle;
-  s.flags = (p.grounded ? F.GROUND : 0) | (p.grind ? F.GRIND : 0) | (p.boosting ? F.BOOST : 0) | (p.crashT > 0 ? F.CRASH : 0) | (p.sunk ? F.SUNK : 0) | (p.hidden ? F.HIDDEN : 0) | (p.invuln > 0 ? F.INVULN : 0) | (p.held ? F.HELD : 0) | (p.foil ? F.FOIL : 0);
+  s.flags = (p.grounded ? F.GROUND : 0) | (p.grind ? F.GRIND : 0) | (p.boosting ? F.BOOST : 0) | (p.crashT > 0 ? F.CRASH : 0) | (p.sunk ? F.SUNK : 0) | (p.hidden ? F.HIDDEN : 0) | (p.invuln > 0 ? F.INVULN : 0) | (p.held ? F.HELD : 0) | (p.foil ? F.FOIL : 0) | (p.wheelie ? F.WHEELIE : 0);
   // Quién está a otra cosa y qué tiene pulsado lo sabe el juego, no el personaje: lo añade la pandilla (F.BUSY, F.KEY)
   return s;
 }
@@ -84,6 +84,7 @@ export class RemotePlayer extends Player {
     this.busy = !!(f & F.BUSY);
     this.foil = !!(f & F.FOIL);
     this.key = !!(f & F.KEY);
+    this.wheelie = !!(f & F.WHEELIE);
     this.invuln = f & F.INVULN ? 1 : 0;
     this.inp.steer = s.steer;
     this.inp.throttle = s.throttle;

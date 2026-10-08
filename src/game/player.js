@@ -65,6 +65,7 @@ export class Player {
     this.held = false; // en manos del rayo abductor: la posición la mueve el platillo
     this.hidden = false;
     this.dropped = false; // caída desde el platillo: no cuenta como truco
+    this.wheelie = false; // va sobre la rueda de atrás mientras aguanta el botón
     this.respawnAt = null; // dónde reaparecer tras el próximo castañazo (castigado a casa)
     this.safe = { x: 0, z: 0, heading: 0 };
     this.safeT = 0;
@@ -104,6 +105,7 @@ export class Player {
     this.visPitch = 0;
     this.visRoll = 0;
     this.visFlip = 0;
+    this.visWheelie = 0;
     this.steerVis = 0;
     this.kick = 0;
     this.squash = 0;
@@ -212,6 +214,8 @@ export class Player {
     if (this.frozen) inp = this.game.input.neutral;
     this.boost = Math.min(1, this.boost + dt * 0.035);
     this.jumpReq = inp.jumpPressed;
+    // El caballito es de ir rodando: en el aire, en una barandilla, marcha atrás o derrapando se baja la rueda
+    this.wheelie = !!inp.wheelie && !!this.veh.wheelie && this.grounded && !this.grind && this.slip <= 0 && this.v > -0.5;
     if (this.whipT > 0) this.whipT -= dt;
     if (this.slip > 0) this.slip -= dt;
     if (inp.trickPressed && !this.grounded && !this.grind && this.airTime > 0.08 && this.whipT <= 0) {
@@ -803,7 +807,16 @@ export class Player {
     const lean = air ? 0 : inp.steer * Math.min(1, Math.abs(this.v) / 18) * 0.3 * this.veh.lean;
     this.visRoll = damp(this.visRoll, lean, 8, dt);
     this.slope.rotation.x = -this.visPitch;
-    this.slope.rotation.z = this.visRoll;
+    // Caballito: todo el conjunto se levanta girando sobre el eje trasero, que no se despega del suelo,
+    // y cabecea y se ladea un poco, que aguantar el equilibrio cuesta
+    const wl = this.veh.wheelie;
+    const wk = (this.visWheelie = damp(this.visWheelie, this.wheelie && wl && !air ? 1 : 0, this.wheelie ? 6 : 9, dt));
+    const wa = wl ? wk * (wl[2] + Math.sin(this.time * 5.3) * 0.06 + Math.sin(this.time * 8.7) * 0.03) : 0;
+    const sway = wk * Math.sin(this.time * 7.1);
+    this.slope.rotation.z = this.visRoll + sway * 0.05;
+    this.model.rotation.x = -wa;
+    if (wl) this.model.position.set(0, -2.2 + wl[0] * (1 - Math.cos(wa)) - wl[1] * Math.sin(wa), wl[1] * (1 - Math.cos(wa)) + wl[0] * Math.sin(wa));
+    else this.model.position.set(0, -2.2, 0);
     this.visFlip = this.grounded ? damp(this.visFlip, 0, 10, dt) : 0;
     this.flipPivot.rotation.x = -(this.flip + this.visFlip);
 
@@ -929,6 +942,19 @@ export class Player {
       r.armL.rotation.z = r.armR.rotation.z = 0;
       r.head.rotation.x = 0;
     }
+    if (wk > 0.001) {
+      // Echa el cuerpo adelante para no irse de espaldas, mira al frente y se bambolea buscando el equilibrio
+      r.group.rotation.x += wa * 0.4;
+      r.group.rotation.z += sway * 0.1;
+      r.head.rotation.x += wa * 0.5;
+      r.head.rotation.z = -sway * 0.12;
+      if (kind === 'skate') {
+        r.armL.rotation.z += sway * 0.35;
+        r.armR.rotation.z += sway * 0.35;
+      } else {
+        r.legR.rotation.x += wk * (0.25 + Math.sin(this.time * 6.3) * 0.2);
+      }
+    } else r.head.rotation.z = 0;
     // Parpadeo al reaparecer
     if (this.crashT <= 0) this.model.visible = !this.hidden && (this.invuln > 0 ? Math.floor(this.time * 14) % 2 === 0 : true);
   }

@@ -7,6 +7,7 @@ const MAP = {
   jump: ['Space'],
   boost: ['ShiftLeft', 'ShiftRight'],
   trick: ['KeyF', 'KeyJ'],
+  wheelie: ['KeyG'],
   action: ['KeyE', 'Enter'],
   reset: ['KeyR'],
   pause: ['Escape', 'KeyP'],
@@ -21,13 +22,13 @@ const MAP = {
   sink: ['KeyQ'],
   hide: ['KeyH'],
 };
-const PAD = { jump: 0, boost: 1, trick: 2, action: 3, item: 5, pause: 9, camera: 8 };
+const PAD = { jump: 0, boost: 1, trick: 2, action: 3, wheelie: 4, item: 5, pause: 9, camera: 8 };
 
 export class Input {
   constructor() {
     this.keys = new Set();
     this.pressed = new Set();
-    this.touch = { steer: 0, throttle: 0, jump: false, boost: false, trick: false };
+    this.touch = { steer: 0, throttle: 0, jump: false, boost: false, trick: false, wheelie: false };
     this.touchPressed = new Set();
     this.padPrev = {};
     this.state = this._blank();
@@ -43,7 +44,7 @@ export class Input {
   }
 
   _blank() {
-    return { steer: 0, throttle: 0, boost: false, jump: false, jumpPressed: false, trickPressed: false, upPressed: false, downPressed: false };
+    return { steer: 0, throttle: 0, boost: false, jump: false, wheelie: false, jumpPressed: false, trickPressed: false, upPressed: false, downPressed: false };
   }
 
   held(a) {
@@ -120,6 +121,7 @@ export class Input {
     let throttle = (this.held('up') ? 1 : 0) - (this.held('down') ? 1 : 0);
     let boost = this.held('boost');
     let jump = this.held('jump') || this.touch.jump;
+    let wheelie = this.held('wheelie') || this.touch.wheelie;
     this._padHits = null;
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
     for (const p of pads) {
@@ -131,6 +133,7 @@ export class Input {
       if (rt > 0.1 || lt > 0.1) throttle = rt - lt;
       if (p.buttons[PAD.boost] && p.buttons[PAD.boost].pressed) boost = true;
       if (p.buttons[PAD.jump] && p.buttons[PAD.jump].pressed) jump = true;
+      if (p.buttons[PAD.wheelie] && p.buttons[PAD.wheelie].pressed) wheelie = true;
       this._padHits = new Set();
       for (const a in PAD) {
         const down = !!(p.buttons[PAD[a]] && p.buttons[PAD[a]].pressed);
@@ -149,6 +152,7 @@ export class Input {
     s.throttle = throttle;
     s.boost = boost;
     s.jump = jump; // mantenido: el rayo del platillo robado
+    s.wheelie = wheelie; // mantenido: el caballito dura lo que se aguante el botón
     s.jumpPressed = this.hit('jump');
     s.trickPressed = this.hit('trick');
     s.upPressed = this.hit('up');

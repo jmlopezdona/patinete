@@ -12,6 +12,7 @@ import { createScooter, WHEEL_R, STEER_Z, DECK_Y, BAR_Y } from './scooter.js';
 //   seatY/Z  dónde va sentado (o de pie) el piloto
 //   cargo    dónde se apilan las pizzas del reparto
 //   tail     distancia del centro a la cola (llamas del turbo)
+//   wheelie  [y, z, ángulo]: eje trasero sobre el que se levanta en el caballito y cuánto sube. Sin él, no hay caballito
 
 const headlight = new THREE.MeshStandardMaterial({ color: 0xfff6d0, emissive: 0xffe9a0, emissiveIntensity: 1.6, roughness: 0.3 });
 const taillight = new THREE.MeshStandardMaterial({ color: 0xff2a1a, emissive: 0xc01208, emissiveIntensity: 1.2, roughness: 0.3 });
@@ -39,7 +40,7 @@ function spokeWheel(r, tubeR, spokes, hub = C.lgray) {
 export function scooterVehicle(color, scale = 1) {
   const s = createScooter(color);
   s.group.scale.setScalar(scale);
-  return { ...s, kind: 'scooter', wheelR: WHEEL_R * scale, steerZ: STEER_Z * scale, seatY: DECK_Y * scale, seatZ: -0.5 * scale, cargo: [0, 1.5 * scale, -2.2 * scale], tail: 2.8 * scale, lean: 1 };
+  return { ...s, kind: 'scooter', wheelR: WHEEL_R * scale, steerZ: STEER_Z * scale, seatY: DECK_Y * scale, seatZ: -0.5 * scale, cargo: [0, 1.5 * scale, -2.2 * scale], tail: 2.8 * scale, lean: 1, wheelie: [WHEEL_R * scale, s.rear.position.z * scale, 0.6] };
 }
 
 // Patinete eléctrico: tabla ancha y negra con la batería dentro, ruedas gordas con el motor en el
@@ -120,7 +121,7 @@ export function createEScooter(color = C.yellow) {
   const front = wheel(true);
   front.position.set(0, WHEEL_R, WZ_F);
   group.add(rear, front);
-  return { group, steer, rear, front, kind: 'scooter', electric: true, wheelR: WHEEL_R, steerZ: STEER_Z, seatY: DECK_Y, seatZ: -0.5, cargo: [0, 1.5, -2.2], tail: 2.8, lean: 0.9 };
+  return { group, steer, rear, front, kind: 'scooter', electric: true, wheelR: WHEEL_R, steerZ: STEER_Z, seatY: DECK_Y, seatZ: -0.5, cargo: [0, 1.5, -2.2], tail: 2.8, lean: 0.9, wheelie: [WHEEL_R, WZ_R, 0.5] };
 }
 
 // Patinete de calle, de los de toda la vida: tabla baja y estrecha con su lija, dos ruedas pequeñas,
@@ -168,7 +169,7 @@ export function createKickScooter(color = C.lime) {
   const front = wheel();
   front.position.set(0, R, WZ_F);
   group.add(rear, front);
-  return { group, steer, rear, front, kind: 'scooter', wheelR: R, steerZ: STEER_Z, seatY: DECK, seatZ: -0.5, cargo: [0, 1.2, -2.0], tail: 2.7, lean: 1 };
+  return { group, steer, rear, front, kind: 'scooter', wheelR: R, steerZ: STEER_Z, seatY: DECK, seatZ: -0.5, cargo: [0, 1.2, -2.0], tail: 2.7, lean: 1, wheelie: [R, WZ_R, 0.6] };
 }
 
 // Monopatín: tabla con las puntas levantadas, lija negra, ejes y cuatro ruedecitas.
@@ -206,7 +207,7 @@ export function createSkateboard(color = C.red) {
     }
   }
   group.add(board);
-  return { group, board, wheels, kind: 'skate', wheelR: R, steerZ: 0, seatY: DECK + 0.1, seatZ: 0, cargo: [0, DECK + 0.25, 1.75], tail: 2.4, lean: 1.25 };
+  return { group, board, wheels, kind: 'skate', wheelR: R, steerZ: 0, seatY: DECK + 0.1, seatZ: 0, cargo: [0, DECK + 0.25, 1.75], tail: 2.4, lean: 1.25, wheelie: [DECK - 0.24, -1.25, 0.3] };
 }
 
 // Monociclo de circo: rueda con radios y pedales, horquilla y sillín
@@ -281,7 +282,7 @@ export function createBike(color = C.lime) {
   }
   cranks.add(cb.mesh(plastic));
   group.add(steer, rear, cranks);
-  return { group, steer, front, rear, cranks, kind: 'bike', wheelR: WR, steerZ: SZ, seatY: SEAT[0] + 0.62, seatZ: SEAT[1] - 0.1, barY: 3.78, cargo: [0, 2.35, -2.3], tail: 3.0, lean: 1.15 };
+  return { group, steer, front, rear, cranks, kind: 'bike', wheelR: WR, steerZ: SZ, seatY: SEAT[0] + 0.62, seatZ: SEAT[1] - 0.1, barY: 3.78, cargo: [0, 2.35, -2.3], tail: 3.0, lean: 1.15, wheelie: [WR, ZR, 0.7] };
 }
 
 // Patines en línea: no son un vehículo aparte sino dos botas que se calzan en las piernas de la
