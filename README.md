@@ -77,6 +77,8 @@ se registra en la versión compilada (`npm run build` y `npm run preview`), no c
 
 Para hacer *grind*, salta y cae sobre una barandilla del skatepark.
 
+El volumen de la música, los efectos y las voces se ajusta por separado en **Sonido**, tanto en el menú principal como en la pausa, y se guarda con la partida.
+
 ## Personajes
 
 En el menú principal (o con «Personaje» en la pausa) se elige quién sale a la calle. Cada uno

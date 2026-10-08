@@ -119,6 +119,7 @@ class Game {
     this.input = new Input();
     this.sfx = new Sfx();
     this.sfx.muted = !!this.save.muted;
+    this.save.vol = Object.assign(this.sfx.vol, this.save.vol);
     this.hud = new Hud();
     this.hud.voice = new Voice(this.sfx);
     this.combo = 0;
@@ -350,7 +351,26 @@ class Game {
       this.saveGame();
       this.applyQuality();
     });
-    $('p-sound').addEventListener('click', () => this.toggleMute());
+    $('p-sound').addEventListener('click', () => this.openSound());
+    $('btn-sound').addEventListener('click', () => this.openSound());
+    $('s-back').addEventListener('click', () => this.closeSound());
+    $('s-mute').addEventListener('click', () => this.toggleMute());
+    for (const k in this.sfx.vol) {
+      const el = $(`s-${k}`);
+      const show = () => (el.nextElementSibling.textContent = `${el.value} %`);
+      el.value = Math.round(this.sfx.vol[k] * 100);
+      show();
+      el.addEventListener('input', () => {
+        this.sfx.setVolume(k, el.value / 100);
+        show();
+      });
+      // Al soltar se guarda y suena una muestra; la música ya se oye sola
+      el.addEventListener('change', () => {
+        this.saveGame();
+        if (k === 'sfx') this.sfx.stud();
+        if (k === 'voice') this.hud.voice.say(this.charIntro(), false, true);
+      });
+    }
     $('p-respawn').addEventListener('click', () => {
       this.goHome();
       this.setPaused(false);
@@ -373,7 +393,7 @@ class Game {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.state === 'play' && !this.photo.on && !this.watch.on) this.setPaused(true);
     });
-    $('p-sound').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
+    $('s-mute').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
     setupInstall($('btn-install'), $('install-hint'));
     this.checkUpdate = setupUpdate($('version'), $('update'), $('update-text'), [$('btn-update'), $('p-update')]);
   }
@@ -420,9 +440,14 @@ class Game {
     this.sfx.init();
     this.sfx.ui();
     // La presentación se oye también en el menú, y al pasar de uno a otro solo la del último
-    const intro = `${ch.icon} Ahora llevas a <b>${ch.name}</b> con ${ch.plural ? 'sus' : 'su'} <b>${ch.vehicle.toLowerCase()}</b>. ${ch.blurb}`;
+    const intro = this.charIntro();
     if (this.state === 'play') this.hud.toast(intro, '');
     this.hud.voice.say(intro, false, true);
+  }
+
+  charIntro() {
+    const ch = this.player.char;
+    return `${ch.icon} Ahora llevas a <b>${ch.name}</b> con ${ch.plural ? 'sus' : 'su'} <b>${ch.vehicle.toLowerCase()}</b>. ${ch.blurb}`;
   }
 
   start() {
@@ -440,6 +465,7 @@ class Game {
 
   setPaused(p) {
     if (this.state !== 'play') return;
+    if (this.soundOn) this.closeSound();
     this.paused = p;
     if (p) this.checkUpdate();
     document.getElementById('pause').classList.toggle('hidden', !p);
@@ -455,7 +481,25 @@ class Game {
     this.sfx.setMuted(!this.sfx.muted);
     this.save.muted = this.sfx.muted;
     this.saveGame();
-    document.getElementById('p-sound').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
+    document.getElementById('s-mute').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
+  }
+
+  // Panel de sonido. En la pausa el audio está parado: se reanuda mientras dure para oír lo que se ajusta
+  openSound() {
+    this.soundOn = true;
+    this.sfx.init();
+    this.sfx.motion(0, false, false);
+    document.getElementById('pause').classList.add('hidden');
+    document.getElementById('sound').classList.remove('hidden');
+  }
+
+  closeSound() {
+    this.soundOn = false;
+    document.getElementById('sound').classList.add('hidden');
+    if (!this.paused) return;
+    this.hud.voice.shut();
+    this.sfx.ctx.suspend();
+    document.getElementById('pause').classList.remove('hidden');
   }
 
   refreshHud(instant = false) {
@@ -642,11 +686,13 @@ class Game {
       if (this.photo.on) this.photo.update(dt);
       else if (this.watch.on) this.watch.update(dt);
       else {
-        if (this.input.hit('pause')) this.setPaused(!this.paused);
-        if (this.input.hit('photo')) this.photo.open();
+        // Con el panel de sonido abierto, Esc vuelve a la pausa en vez de a la partida
+        if (this.input.hit('pause')) this.soundOn ? this.closeSound() : this.setPaused(!this.paused);
+        if (this.input.hit('photo') && !this.soundOn) this.photo.open();
         if (!this.paused) this.update(dt, inp);
       }
     } else {
+      if (this.soundOn && this.input.hit('pause')) this.closeSound();
       this.time += dt;
       this.menuCamera();
       this.player.updateVisual(dt, this.input.neutral);

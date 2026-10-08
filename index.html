@@ -126,6 +126,7 @@
         <div class="menu-buttons">
           <button id="btn-play" class="brick-btn primary" disabled>Cargando…</button>
           <button id="btn-install" class="brick-btn ghost hidden">📲 Instalar</button>
+          <button id="btn-sound" class="brick-btn ghost">🔊 Sonido</button>
           <button id="btn-reset" class="brick-btn ghost">Borrar progreso</button>
         </div>
 
@@ -181,9 +182,21 @@
         <button class="brick-btn" id="p-watch">🏃‍♀️ Seguir a las mamás</button>
         <button class="brick-btn" id="p-char">Personaje: Jose · Patinete</button>
         <button class="brick-btn" id="p-quality">Gráficos: Altos</button>
-        <button class="brick-btn" id="p-sound">Sonido: Sí</button>
+        <button class="brick-btn" id="p-sound">🔊 Sonido</button>
         <button class="brick-btn" id="p-respawn">Volver a casa</button>
         <button class="brick-btn ghost" id="p-menu">Menú principal</button>
+      </div>
+    </div>
+
+    <!-- Sonido: se abre desde la pausa y desde el menú -->
+    <div id="sound" class="hidden">
+      <div class="card">
+        <h2>Sonido</h2>
+        <label><span>🎵 Música</span><input type="range" id="s-music" min="0" max="100" step="5" /><b></b></label>
+        <label><span>💥 Efectos</span><input type="range" id="s-sfx" min="0" max="100" step="5" /><b></b></label>
+        <label><span>🗣️ Voces</span><input type="range" id="s-voice" min="0" max="100" step="5" /><b></b></label>
+        <button class="brick-btn" id="s-mute">Sonido: Sí</button>
+        <button class="brick-btn primary" id="s-back">Volver</button>
       </div>
     </div>
 
