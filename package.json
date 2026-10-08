@@ -2,7 +2,7 @@
   "name": "juego-patinete",
   "private": true,
   "version": "1.0.0",
-  "description": "Cobeña en patinete: el pueblo de Cobeña (Madrid) hecho de bloques para recorrerlo en patinete… y defenderlo de los marcianos",
+  "description": "Cobeña · Los Panacotas: el pueblo de Cobeña (Madrid) hecho de bloques para recorrerlo con Los Panacotas… y defenderlo de los marcianos",
   "type": "module",
   "scripts": {
     "dev": "vite",

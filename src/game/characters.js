@@ -11,7 +11,7 @@ export const COLORS = [C.azure, C.red, C.lime, C.orange, C.magenta, C.yellow, C.
 // turn = agilidad al girar, spin = velocidad de giro en el aire.
 export const CHARACTERS = [
   {
-    id: 'jose', name: 'Jose', icon: '🏀', vehicle: 'Patinete', blurb: 'El de siempre: equilibrado y con el mejor tailwhip.',
+    id: 'jose', name: 'Jose', icon: '🏀', vehicle: 'Patinete', blurb: 'De la realidad al juego: equilibrado y con el mejor tailwhip.',
     look: { legs: C.sandBlue, torso: 0x1c1b30, arms: C.yellow, hair: 'messy', hairColor: 0x2f1e17, face: 'smile', glasses: 'square', brows: 0x2a1a12, shirt: { front: 'adva-delante', back: 'adva-atras', long: true } },
     scale: 1, color: 0, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
     build: (color) => scooterVehicle(color),
