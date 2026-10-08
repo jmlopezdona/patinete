@@ -7,7 +7,10 @@ toma que acaba cortada se repite con la semilla siguiente. Reanudable: lo que
 ya está en la salida no se repite.
 
 Uso (con MESA_MODELOS, y el paquete del motor y `colas.py` en el PYTHONPATH):
-  python sintetizar.py encargo.json <carpeta de voces> <salida>
+  python sintetizar.py encargo.json <carpeta de voces> <salida> [semilla]
+
+Para rehacer una frase que no ha quedado bien: borrar su .mp3 de la salida y
+volver a llamar con otra semilla (un número que se suma a la de siempre).
 """
 import io
 import json
@@ -30,6 +33,7 @@ PICO = 0.89  # -1 dBFS
 
 encargo = json.load(open(sys.argv[1], encoding="utf-8"))
 voces, salida = Path(sys.argv[2]).resolve(), Path(sys.argv[3]).resolve()
+semilla = SEMILLA + (int(sys.argv[4]) if len(sys.argv) > 4 else 0)
 (salida / "wav").mkdir(parents=True, exist_ok=True)
 fabrica = {q.nombre: q.valor_de_fabrica for q in manifiesto().parametros}
 
@@ -67,7 +71,7 @@ try:
         gpu = 0.0
         for intento in range(INTENTOS):
             peticion = peticion_de_audiocpp(
-                receta, texto=x["texto"], idioma="es-ES", semilla=SEMILLA + intento,
+                receta, texto=x["texto"], idioma="es-ES", semilla=semilla + intento,
                 timbre=str(timbres[x["voz"]]), original=None)
             t0 = time.monotonic()
             m, hz = muestras(servidor.sintetizar(peticion))
