@@ -430,7 +430,7 @@ class Game {
     if (swap && this.state === 'menu') this.goHome();
     this.folks.setPlayer(ch.id);
     this.ball.setKeeper(ch.id !== 'teo');
-    this.missions.defs.find((d) => d.id === 'soccer').desc = `Márcale a ${this.ball.keeperName} todos los goles que puedas en 60 segundos.`;
+    this.missions.defs.find((d) => d.id === 'soccer').desc = `Márcale a ${this.ball.teo ? 'Teo' : 'el suplente'} todos los goles que puedas en 60 segundos.`;
     this.missions.near = null;
     for (const b of document.querySelectorAll('.char-btn')) b.classList.toggle('sel', b.dataset.id === ch.id);
     document.getElementById('char-blurb').textContent = ch.blurb;
@@ -781,13 +781,15 @@ class Game {
     this.wanted.update(dt, p, this.time);
     this.folks.update(dt, p, this.time, true);
     this.dropoff.update(dt, true);
-    // De noche los bolos de la bolera son marcianos, salvo que se esté jugando a los de siempre
-    const bowl = this.missions.active && this.missions.def ? this.missions.def.id : null;
-    const martian = bowl === 'alienbowl' || (bowl !== 'bowling' && this.env.target > 0.5);
+    // De noche los bolos de la bolera y el portero son marcianos, salvo que se esté jugando a los de siempre
+    const mini = this.missions.active && this.missions.def ? this.missions.def.id : null;
+    const night = this.env.target > 0.5;
+    const martian = mini === 'alienbowl' || (mini !== 'bowling' && night);
     this.pins.show(!martian);
     this.alienPins.show(martian);
-    this.pins.update(dt, p, bowl === 'bowling');
-    this.alienPins.update(dt, p, bowl === 'alienbowl', this.time);
+    this.pins.update(dt, p, mini === 'bowling');
+    this.alienPins.update(dt, p, mini === 'alienbowl', this.time);
+    this.ball.setAlien(mini === 'aliensoccer' || (mini !== 'soccer' && night));
     this.ball.update(dt, p, this.time, (side) => this.missions.goal(side));
     this.missions.update(dt, this.time);
     this.bits.update(dt);

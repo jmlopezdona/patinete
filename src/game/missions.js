@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { C } from '../lego/colors.js';
 import { BASE } from '../world/city.js';
 
+const ALIEN_GOALS = [1, 2, 4]; // goles para bronce, plata y oro contra el portero marciano
+
 const fmt = (t) => {
   t = Math.max(0, t);
   const m = Math.floor(t / 60);
@@ -33,7 +35,7 @@ function beamMaterial(color, opacity) {
   return new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
 }
 
-// Minijuegos: carrera, trucos, bolos (de noche, marcianos), reparto de pizza y fútbol.
+// Minijuegos: carrera, trucos, bolos, reparto de pizza y fútbol; de noche, bolos y portero son marcianos.
 export class Missions {
   constructor(game) {
     this.game = game;
@@ -46,7 +48,9 @@ export class Missions {
       // De noche, en el mismo sitio, los bolos son marcianos
       { id: 'alienbowl', name: 'Bolos Marcianos', icon: '👽', color: 0x7ddc1f, x: P.bowling.x - 5.5, z: P.bowling.z + 1.5, desc: 'Los bolos son marcianos y se apartan: tumba los 10 en dos tiradas.', night: true, unit: (v) => `${v} marcianos` },
       { id: 'pizza', name: 'Pizza Exprés', icon: '🍕', color: 0xe23b2a, x: P.pizza.x, z: P.pizza.z, desc: 'Reparte 5 pizzas por las calles de Cobeña antes de que se enfríen.', lower: true, unit: (v) => fmt(v) },
-      { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Márcale a Teo todos los goles que puedas en 60 segundos.', unit: (v) => `${v} goles` },
+      { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Márcale a Teo todos los goles que puedas en 60 segundos.', night: false, unit: (v) => `${v} goles` },
+      // De noche Teo se toma la noche libre: para un marciano con cuatro brazos
+      { id: 'aliensoccer', name: 'Chut Marciano', icon: '👾', color: 0x7ddc1f, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'El portero es un marciano con cuatro brazos que no le quita ojo al balón: márcale en 60 segundos.', night: true, unit: (v) => `${v} goles` },
     ];
     this.state = 'idle';
     this.cur = null;
@@ -423,6 +427,15 @@ export class Missions {
 
   // ---------- Fútbol ----------
   _soccer() {
+    return this._pitch([1, 3, 5], 'Golpea el balón de lado para que el portero no llegue.');
+  }
+
+  // El portero marciano sigue el balón: hay que chutar fuerte y cruzado, o pillarlo a contrapié
+  _aliensoccer() {
+    return this._pitch(ALIEN_GOALS, 'Chuta con turbo y cruzado: llega a todo, pero no corre tanto.');
+  }
+
+  _pitch(need, tip) {
     const g = this.game;
     const P = g.world.places.soccer;
     g.ball.reset();
@@ -430,13 +443,14 @@ export class Missions {
     g.player.boost = 1;
     this.goals = 0;
     return {
+      soccer: true,
       update: () => {
         const left = 60 - this.time;
-        g.hud.mission(`⚽ ${this.def.name}`, `${this.goals} ${this.goals === 1 ? 'gol' : 'goles'}`, `⏱ ${fmt(left)} · Portería del este (para ${g.ball.keeperName}) · Oro: 5 goles`);
+        g.hud.mission(`${this.def.icon} ${this.def.name}`, `${this.goals} ${this.goals === 1 ? 'gol' : 'goles'}`, `⏱ ${fmt(left)} · Portería del este (para ${g.ball.keeperName}) · Oro: ${need[2]} goles`);
         if (left <= 0) {
           const n = this.goals;
-          const stars = n >= 5 ? 3 : n >= 3 ? 2 : n >= 1 ? 1 : 0;
-          this.finish(stars, n, [`Goles: <b>${n}</b>`, stars === 0 ? `Empuja el balón hacia la portería de ${g.ball.keeperName}.` : 'Golpea el balón de lado para que el portero no llegue.']);
+          const stars = n >= need[2] ? 3 : n >= need[1] ? 2 : n >= need[0] ? 1 : 0;
+          this.finish(stars, n, [`Goles: <b>${n}</b>`, stars === 0 ? `Empuja el balón hacia la portería ${g.ball.keeperName.replace(/^el /, 'del ').replace(/^(?!del )/, 'de ')}.` : tip]);
         }
       },
       cleanup: () => g.ball.reset(),
@@ -445,7 +459,7 @@ export class Missions {
 
   goal(side) {
     const g = this.game;
-    if (this.state === 'run' && this.def.id === 'soccer') {
+    if (this.state === 'run' && this.cur.soccer) {
       if (side === 'east') {
         this.goals++;
         g.hud.big('¡GOOOL!', '#4dff88', 1.4);

@@ -169,6 +169,39 @@ await log('fútbol fin', () => {
 await shot('s_futbol_fin');
 await page.evaluate(() => { window.sim(1.2, (t) => (t > 1 ? { keys: ['KeyE'] } : {})); });
 
+// De noche para un marciano con cuatro brazos que sigue el balón: el tiro recto lo despeja, el cruzado entra
+await log('chut marciano', () => {
+  const g = window.__game; const m = g.missions; const B = g.ball; const S = g.world.places.soccer;
+  const vis = () => `${m.defs.filter((d) => !d.hidden && /soccer/.test(d.id)).map((d) => d.id)} para ${B.keeperName}`;
+  const dia = vis();
+  g.env.night = g.env.target = 1; g.env.apply(); window.sim(0.3);
+  const noche = vis();
+  window.startMission('aliensoccer');
+  const chut = (off, tz) => {
+    const antes = m.goals;
+    B.reset(); B.pos.set(S.goalX - 16, B.floor, S.cz + off);
+    let ux = 16, uz = tz - off; const ul = Math.hypot(ux, uz); ux /= ul; uz /= ul;
+    g.player.place(B.pos.x - ux * 20, B.pos.z - uz * 20, Math.atan2(ux, uz));
+    window.sim(0.6);
+    let celebra = false; let lejos = 0;
+    window.sim(1.5, () => { celebra = celebra || B.cheer > 0; return { throttle: 1, boost: true }; });
+    window.sim(1.5, () => { lejos = Math.max(lejos, S.goalX - B.pos.x); return { throttle: -1 }; });
+    return { gol: m.goals > antes, celebra, despeje: +lejos.toFixed(0) };
+  };
+  const recto = chut(0, 0);
+  const cruzado = chut(5, -3.6);
+  return { dia, noche, recto, cruzado };
+});
+await shot('s_chut_marciano');
+await log('chut marciano fin', () => {
+  const g = window.__game; const m = g.missions;
+  window.sim(56);
+  const r = { st: m.state, goals: m.goals, stars: g.save.stars.aliensoccer };
+  g.env.night = g.env.target = 0; g.env.apply();
+  return r;
+});
+await page.evaluate(() => { window.sim(1.2, (t) => (t > 1 ? { keys: ['KeyE'] } : {})); });
+
 await log('noche + mega salto', () => {
   const g = window.__game;
   g.env.night = g.env.target = 1; g.env.apply();
@@ -560,8 +593,10 @@ await log('marcianos: baba verde', () => {
   A.pop(a, 0, 10);
   const alReventar = vivos() - n0;
   // Al irse los marcianos se secan todos
-  S.clear(); window.sim(1.2);
-  return { puesto: !!c, derrape, rebote, marcianoResbala: tonto, alReventar, secos: vivos() === 0 };
+  // (los de antes: si justo aterriza un marciano deja uno nuevo, que no cuenta)
+  const antes = S.list.filter((s) => s.t > 0); const splat = S.splat; S.splat = () => null;
+  S.clear(); window.sim(1.2); S.splat = splat;
+  return { puesto: !!c, derrape, rebote, marcianoResbala: tonto, alReventar, secos: antes.length > 0 && vivos() === 0 };
 });
 await log('marcianos: robo de la estatua', () => {
   const g = window.__game; const A = g.aliens; const H = g.heist; const p = g.player; const k = H.k;

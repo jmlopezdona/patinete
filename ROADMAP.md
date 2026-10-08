@@ -10,13 +10,17 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 ## Minijuegos en versión marciana
 
 - [ ] **Pizza Exprés galáctica.** El pedido es para el platillo y hay que entregarlo saltando.
-- [ ] **Chut a Puerta contra los marcianos.** El portero es un marciano con cuatro brazos (Teo se
-  toma la noche libre).
 
 ## Locuras sin alienígenas
 
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `chut-marciano`)
+
+- [x] **Chut a Puerta contra los marcianos.** De noche Teo se toma la noche libre y para un marciano
+  con cuatro brazos: no le quita ojo al balón, no se deja atropellar y lo que para lo despeja a
+  puñetazos y lo celebra. Hay que chutarle cruzado. Minijuego propio, «Chut Marciano».
 
 ## Ya hecho (rama `bolos-marcianos`)
 
