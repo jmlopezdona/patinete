@@ -2,6 +2,7 @@
 // Se escribe a mano: cuando un cambio merece anunciarse se añade arriba una entrada con el `id`
 // siguiente (por él se sabe cuáles no ha visto todavía cada jugador) y la fecha en que se publica.
 export const NEWS = [
+  { id: 7, date: '2026-10-08', text: '🛹 <b>Bordillos</b>: las aceras tienen escalón. Súbelo rodando o salta a su lado y grinda por el canto.' },
   { id: 6, date: '2026-10-08', text: '🗞️ <b>Tablón de novedades</b>: aquí verás lo que trae cada actualización.' },
   { id: 5, date: '2026-10-08', text: '🤸 <b>Caballito</b>: mantén la <kbd>G</kbd> y el patinete, la bici y el monopatín van sobre la rueda de atrás.' },
   { id: 4, date: '2026-10-08', text: '👥 <b>Jugar con amigos</b>: crea una partida, pasa el código y recorred Cobeña juntos. Desde la pausa puedes ir a donde está un amigo.' },

@@ -69,6 +69,14 @@ const res = await page.evaluate(() => {
   run('L_rollers', () => sk(-76, 8, E, 22), 3, () => ({ throttle: 1 }));
   run('N_return', () => { p.place(mx + 99, mz + 13, -Math.PI / 2); p.boost = 1; }, 5, () => ({ throttle: 1, boost: true }));
   run('O_wall', () => { p.place(sp.x, sp.z, sp.heading + Math.PI / 2); setV(20); }, 2, () => ({ throttle: 1 }));
+  // Bordillo más cercano a casa: se sube de frente y, saltando a su lado, se grinda por el canto
+  {
+    const r = g.terrain.rails.filter((q) => q.curb && q.len > 30).sort((a, b) => Math.hypot(a.ax - sp.x, a.az - sp.z) - Math.hypot(b.ax - sp.x, b.az - sp.z))[0];
+    const ux = (r.bx - r.ax) / r.len, uz = (r.bz - r.az) / r.len;
+    const s = g.terrain.height(r.ax + ux * 5 - uz * 0.5, r.az + uz * 5 + ux * 0.5) > 0 ? 1 : -1; // a qué lado queda la acera
+    run('P_bordillo', () => { p.place(r.ax + ux * 5 + uz * s * 3, r.az + uz * 5 - ux * s * 3, Math.atan2(-uz * s, ux * s)); setV(12); }, 0.4, () => ({ throttle: 1 }));
+    run('P2_bordilloGrind', () => { p.place(r.ax + ux * 3 + uz * s * 0.6, r.az + uz * 3 - ux * s * 0.6, Math.atan2(ux, uz)); setV(18); }, 3, (t, pl) => ({ throttle: 1, jumpPressed: pl.grounded && t > 0.1 && t < 0.15 }));
+  }
   // Vuelta completa al circuito de la carrera siguiendo la línea: comprueba que las calles son transitables
   {
     const R = P.race;

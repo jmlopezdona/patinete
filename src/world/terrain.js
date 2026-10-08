@@ -79,6 +79,7 @@ export class Terrain {
     this.hit = null;
     this.holes = [];
     this.waterY = -4;
+    this.curb = null; // aceras levantadas: { y, at(x, z) }, ver world/curbs.js
   }
 
   // Hueco rectangular en el suelo (una charca): ahí el fondo baja hasta waterY
@@ -188,6 +189,10 @@ export class Terrain {
           hit = p;
         }
       }
+    }
+    if (this.curb && best >= 0 && best < this.curb.y && this.curb.at(x, z)) {
+      best = this.curb.y;
+      hit = null;
     }
     this.hit = hit;
     return best;

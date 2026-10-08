@@ -5,7 +5,8 @@ import { F } from '../lego/batch.js';
 import { createBrickMaterial } from '../lego/materials.js';
 import { makeRng } from '../core/rng.js';
 import { frame, fbox, tree, lamp, addSign, SIDEWALK_COLOR } from './city.js';
-import { lift, drape, normal, NEAR, FAR } from './relief.js';
+import { lift, drape, normal, crease, NEAR, FAR } from './relief.js';
+import { CURB, curbAt, curbs, curbRails, miters } from './curbs.js';
 
 // Cobeña (Madrid) reconstruido con ladrillos a partir del callejero de OpenStreetMap:
 // 2 unidades de juego por metro, con el origen en la calle Río Júcar, 44. El norte es -Z.
@@ -17,6 +18,7 @@ const G0 = 7; // altura de la planta baja
 const FH = 6; // altura del resto de plantas
 const WHEAT = 0xd8c47a;
 const TEJA = 0xb5562f;
+const KERB = 0xd3d6d8; // el canto del bordillo, algo más claro que la acera
 const FIELDS = [0xcdb565, 0xbfc270, 0xa9bf63, 0xb99a5e, 0xe0cf8c, 0xc7b25a, WHEAT, WHEAT];
 const FAMILIES = [
   [C.white, C.cream, 0xe9dcc0], [0xd9a066, C.cream, C.tan], [TEJA, 0xc46a43, C.nougat], [C.white, C.tan, C.nougat],
@@ -49,14 +51,15 @@ class Ground {
     return L;
   }
 
-  // far: triángulo de los campos de fuera de NEAR, donde el relieve va a celdas grandes
-  tri(k, ax, az, bx, bz, cx, cz, color, flag = 0, far = false) {
+  // far: triángulo de los campos de fuera de NEAR, donde el relieve va a celdas grandes.
+  // rise: a cuánto queda por encima del terreno (las aceras, que van sobre su bordillo)
+  tri(k, ax, az, bx, bz, cx, cz, color, flag = 0, far = false, rise = 0) {
     const L = this._sector(k, (ax + bx + cx) / 3, (az + bz + cz) / 3);
     _col.setHex(color);
     // Siempre mirando hacia arriba
     const up = (bz - az) * (cx - ax) - (bx - ax) * (cz - az) >= 0;
     drape(up ? [ax, az, bx, bz, cx, cz] : [ax, az, cx, cz, bx, bz], (x, z) => {
-      L.p.push(x, lift(x, z), z);
+      L.p.push(x, lift(x, z) + rise, z);
       normal(x, z, _n);
       L.n.push(_n[0], _n[1], _n[2]);
       L.c.push(_col.r, _col.g, _col.b);
@@ -81,48 +84,13 @@ class Ground {
   ribbon(k, pts, half, color, flag = 0, caps = false) {
     const n = pts.length / 2;
     if (n < 2) return;
+    const o = miters(pts);
     let plx = 0, plz = 0, prx = 0, prz = 0;
     for (let i = 0; i < n; i++) {
-      const x = pts[i * 2];
-      const z = pts[i * 2 + 1];
-      let dx0 = 0, dz0 = 0, dx1 = 0, dz1 = 0;
-      if (i > 0) {
-        dx0 = x - pts[i * 2 - 2];
-        dz0 = z - pts[i * 2 - 1];
-        const l = Math.hypot(dx0, dz0) || 1;
-        dx0 /= l;
-        dz0 /= l;
-      }
-      if (i < n - 1) {
-        dx1 = pts[i * 2 + 2] - x;
-        dz1 = pts[i * 2 + 3] - z;
-        const l = Math.hypot(dx1, dz1) || 1;
-        dx1 /= l;
-        dz1 /= l;
-      }
-      if (i === 0) {
-        dx0 = dx1;
-        dz0 = dz1;
-      }
-      if (i === n - 1) {
-        dx1 = dx0;
-        dz1 = dz0;
-      }
-      let tx = dx0 + dx1;
-      let tz = dz0 + dz1;
-      const tl = Math.hypot(tx, tz);
-      if (tl < 1e-4) {
-        tx = dx1;
-        tz = dz1;
-      } else {
-        tx /= tl;
-        tz /= tl;
-      }
-      const m = half / Math.max(0.5, -tz * -dz0 + tx * dx0);
-      const lx = x - tz * m;
-      const lz = z + tx * m;
-      const rx = x + tz * m;
-      const rz = z - tx * m;
+      const lx = pts[i * 2] + o[i * 2] * half;
+      const lz = pts[i * 2 + 1] + o[i * 2 + 1] * half;
+      const rx = pts[i * 2] - o[i * 2] * half;
+      const rz = pts[i * 2 + 1] - o[i * 2 + 1] * half;
       if (i > 0) this.quad(k, plx, plz, prx, prz, rx, rz, lx, lz, color, flag);
       plx = lx;
       plz = lz;
@@ -133,6 +101,32 @@ class Ground {
       this.disc(k, pts[0], pts[1], half, color, flag);
       this.disc(k, pts[n * 2 - 2], pts[n * 2 - 1], half, color, flag);
     }
+  }
+
+  // Pared vertical de alto h apoyada en el terreno, que mira hacia (nx, nz)
+  wall(k, ax, az, bx, bz, h, nx, nz, color) {
+    const L = this._sector(k, (ax + bx) / 2, (az + bz) / 2);
+    _col.setHex(color);
+    // De frente, el suelo queda a la derecha de a -> b
+    if (-(bz - az) * nx + (bx - ax) * nz < 0) [ax, az, bx, bz] = [bx, bz, ax, az];
+    let px = 0;
+    let pz = 0;
+    let first = true;
+    crease(ax, az, bx, bz, (x, z) => {
+      if (!first) {
+        const y0 = lift(px, pz);
+        const y1 = lift(x, z);
+        L.p.push(px, y0, pz, x, y1, z, x, y1 + h, z, px, y0, pz, x, y1 + h, z, px, y0 + h, pz);
+        for (let i = 0; i < 6; i++) {
+          L.n.push(nx, 0, nz);
+          L.c.push(_col.r, _col.g, _col.b);
+          L.f.push(0);
+        }
+      }
+      first = false;
+      px = x;
+      pz = z;
+    });
   }
 
   poly(k, pts, color, flag = 0) {
@@ -558,6 +552,15 @@ function roads(W, G) {
       }
     }
   }
+  // Las aceras van un escalón por encima: su cara de arriba, el canto del bordillo y, por donde
+  // da a la calzada, un raíl para grindarlo
+  curbs(
+    (p) => {
+      for (let i = 2; i + 3 < p.length; i += 2) G.tri(LY.sidewalk, p[0], p[1], p[i], p[i + 1], p[i + 2], p[i + 3], SIDEWALK_COLOR, F.STUDS, false, CURB);
+    },
+    (ax, az, bx, bz, nx, nz) => G.wall(LY.sidewalk, ax, az, bx, bz, CURB, nx, nz, KERB),
+  );
+  curbRails((ax, az, bx, bz) => Object.assign(W.terrain.rail(ax, az, bx, bz, CURB), { curb: true }));
 }
 
 function walls(W) {
@@ -639,11 +642,11 @@ function furniture(W) {
   for (const p of D.pitches) if (p[5] !== 4) court(W, p[0], p[1], p[2], p[3], p[4] * RAD, p[5]);
   const T = D.trees;
   const KINDS = ['round', 'round', 'pink', 'pine'];
-  for (let i = 0; i < T.length; i += 3) tree(W, T[i], T[i + 1], 0, T[i + 2] === 1 && i % 7 === 0 ? 'olive' : KINDS[T[i + 2]]);
+  for (let i = 0; i < T.length; i += 3) tree(W, T[i], T[i + 1], curbAt(T[i], T[i + 1]), T[i + 2] === 1 && i % 7 === 0 ? 'olive' : KINDS[T[i + 2]]);
   const L = D.lamps;
-  for (let i = 0; i < L.length; i += 4) lamp(W, L[i], L[i + 1], L[i + 2], L[i + 3]);
+  for (let i = 0; i < L.length; i += 4) lamp(W, L[i], L[i + 1], L[i + 2], L[i + 3], curbAt(L[i], L[i + 1]));
   const R = D.props;
-  for (let i = 0; i < R.length; i += 4) W.props.push({ type: PROPS[R[i]], x: R[i + 1], z: R[i + 2], rot: R[i + 3], y: 0 });
+  for (let i = 0; i < R.length; i += 4) W.props.push({ type: PROPS[R[i]], x: R[i + 1], z: R[i + 2], rot: R[i + 3], y: curbAt(R[i + 1], R[i + 2]) });
   const S = D.studs;
   for (let i = 0; i < S.length; i += 3) W.studs.push({ x: S[i], y: 1.4, z: S[i + 1], type: S[i + 2] });
   const V = D.deliveries;

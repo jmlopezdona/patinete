@@ -196,6 +196,37 @@ gráfica pasan de unos 2 MB a unos 8 MB sin comprimir (algo más con sus mipmaps
 **Coste.** Hay un cartel por vecino con nombre, así que la memoria se multiplica por cuatro en
 esas texturas. Sigue siendo poco, pero conviene contar cuántas son antes de subirlas.
 
+### T6 · Bordillos
+
+**Estado.** Hecho (lo pedía el issue #61 junto con las texturas). Las aceras de las calles van
+0,25 por encima de la calzada (`CURB` en `src/world/curbs.js`), con su canto pintado.
+
+**Cómo.** La forma sale del callejero: es acera lo que queda a menos de `sw` del borde de una
+calle y fuera de toda calzada de asfalto (los caminos de tierra pasan por debajo). De ese mismo
+módulo beben las tres cosas, para que casen:
+
+- **La física.** `Terrain.height` devuelve 0,25 sobre la acera (`terrain.curb`, que `main.js`
+  pone con el pueblo ya construido). El escalón se sube y se baja rodando con cualquier
+  vehículo: es el caso «bordillo» que `Player.stepGround` ya tenía para las plataformas.
+- **El dibujo.** `curbs()` recorta cada acera por las calzadas que la cruzan y entrega la cara
+  de arriba y los cantos, que van en la misma capa que la acera. La acera llana de antes sigue
+  debajo.
+- **El grind.** `curbRails()` da un raíl por tramo de calle y lado, enlazados entre sí
+  (`next`/`prev`) para seguir por las curvas sin soltarse. Un bordillo solo engancha yendo casi
+  en paralelo (`tryGrind`): cruzarlo en diagonal es subirse a la acera.
+
+Árboles, farolas y mobiliario de la acera se apoyan arriba. Lo que colocan los lugares
+especiales (`landmarks.js`) no se ha movido.
+
+**Coste.** 228 000 triángulos más en el suelo (de 2,82 a 3,05 millones en todo el pueblo) y
+1 425 raíles. Pintar un fotograma pasa de unos 3,45 a unos 3,8 ms en tres puntos del pueblo
+(1440 × 810, «Altos», 240 fotogramas seguidos); en un cuarto punto, con pocas calles a la vista,
+no cambia. Sin medir en móvil. No tiene interruptor de calidad: la física depende de él.
+
+**Pendiente.** En las curvas hacia fuera muy cerradas y en los cruces el raíl se corta y el
+grind da un saltito hasta el siguiente. Las plazas de aparcamiento y los vados no existen:
+el bordillo es continuo salvo donde cruza otra calle.
+
 ## 3. Calidad y rendimiento
 
 El informe de rendimiento concluye que el juego va «sobrado de lógica y justo de píxeles».
