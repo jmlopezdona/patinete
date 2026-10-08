@@ -24,8 +24,9 @@ estado de un jugador ya son reales** (salen de `src/net/protocol.js`); las del m
 - **Dónde estamos.** **La fase 1 está hecha y probada entre redes**: anfitrión en un ordenador
   con Chrome por cable y invitado en un móvil con Edge por 4G, fluido. Hay transporte, protocolo,
   jugadores remotos, sala («Jugar con amigos», con código, enlace y personajes sin repetir),
-  partida sin pausa y prueba automática. Lo siguiente es la fase 2, que empieza por decidir
-  qué se hace con la refactorización: está en el [plan](#4-plan-de-implementación).
+  partida sin pausa y prueba automática. **La fase 2 está empezada**: el reloj y el día y la
+  noche ya son los del anfitrión (C8). Se hace junto con la parte de la refactorización que se
+  solapa con ella y sistema a sistema; el orden está en el [plan](#4-plan-de-implementación).
 
 ## 1. La función
 
@@ -52,7 +53,7 @@ sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 | Cosa | En red | Detalle |
 | --- | --- | --- |
 | Los demás jugadores | Compartido | Se les ve patinar, saltar, hacer trucos y darse castañazos, con su nombre encima y su icono en el minimapa. **Ya funciona** |
-| Día y noche | Compartido | Cualquiera puede hacer de noche con `N`; sale un aviso de quién ha sido |
+| Día y noche | Compartido | Cualquiera puede hacer de noche con `N`; sale un aviso de quién ha sido. **Ya funciona** |
 | Invasión marciana | Compartido | Una sola oleada, cooperativa: los culetazos de todos cuentan para el mismo marcador |
 | Platillo, rayo y robo del platillo | Compartido | Abduce a un jugador cada vez; lo roba y lo pilota uno |
 | Nave nodriza (jefe final) | Compartido | Una sola sobre el half-pipe; los coscorrones de todos suman y sus bombas de baba caen para todos |
@@ -180,16 +181,17 @@ Dos canales por conexión: uno **sin garantías** para el estado, que caduca ens
 | --- | --- | --- | --- | --- | :---: |
 | `hola` | invitado → anfitrión | fiable | al entrar y al cambiar de personaje o color | versión del juego, personaje, color | Hecho |
 | `sala` | anfitrión → todos | fiable | al cambiar | qué sitio te toca, si la partida ha empezado, y quién está con qué personaje y color | Hecho |
-| `mundo` | anfitrión → invitado | fiable | al entrar | estado completo: hora, oleada, estatua, charcos, cráteres, mobiliario roto, abducidos, objeto en la calle | Fase 2 |
+| `mundo` | anfitrión → invitado | fiable | al entrar | estado completo: oleada, estatua, charcos, cráteres, mobiliario roto, abducidos, objeto en la calle. La hora no hace falta: va en cada `foto` | Fase 2, con el primer sistema que lo necesite (`props.js`) |
 | `yo` | invitado → anfitrión | sin garantías | 20/s | estado de su personaje (38 bytes) | Hecho, sin los contadores de controles |
-| `foto` | anfitrión → invitado | sin garantías | 15/s | reloj y los demás jugadores; más adelante, todo lo que se mueve | Hecho para los jugadores |
+| `foto` | anfitrión → invitado | sin garantías | 15/s | reloj del mundo, si es de noche y los demás jugadores; más adelante, todo lo que se mueve | Hecho para el reloj, la noche y los jugadores |
 | `orden` | anfitrión → un invitado | fiable | cuando pasa | algo que el mundo le hace a su personaje: empujón, castañazo, rayo, lanzamiento, congelar | Fase 2 |
-| `aviso` | jugador → anfitrión → todos | fiable | cuando pasa | «he roto el banco 12», «he cogido el timbre», «hago de noche» | Fase 2 |
+| `aviso` | jugador → anfitrión → los demás | fiable | cuando pasa | «he roto el banco 12», «he cogido el timbre», «hago de noche». Va como `{ k, v }`: qué y un número; el anfitrión le pone de quién es (`from`) al repartirlo | Hecho para la noche (`noche` y `alba`) |
 | `efecto` | anfitrión → uno o todos | fiable | cuando pasa | cartel, sonido, partículas, sacudida de cámara, studs de premio | Fase 2 |
 | `adios` | cualquiera | fiable | al salir o al no dejar entrar | motivo: `host`, `bye`, `version`, `full` | Hecho |
 
 `yo` y `foto` llevan una cabecera de 7 bytes: tipo, número de orden (para tirar el paquete que
-llega más viejo que el último visto) y el reloj de quien lo manda en milisegundos.
+llega más viejo que el último visto) y el reloj de quien lo manda en milisegundos. La `foto` lleva
+detrás 5 bytes del mundo: su hora en milisegundos (`game.time`) y si es de noche.
 
 Las pulsaciones (saltar, truco, acción) viajarán en `yo` como **contadores**, no como «pulsado
 ahora»: si se pierde un paquete, el siguiente trae la cuenta al día y no se pierde ninguna. El
@@ -221,7 +223,7 @@ el anfitrión necesite el rumbo real de un invitado (fase 2) habrá que ver si l
 
 | Qué | Unidades | Bytes aprox. | |
 | --- | ---: | ---: | --- |
-| Cabecera | | 8 | real |
+| Cabecera, reloj del mundo y noche | | 13 | real |
 | Jugadores (los otros 6) | 6 | 192 | real: 32 cada uno |
 | Marcianos | 9 (`POOL`) | 150 | estimado |
 | Platillo, ladrón y estatua | 3 | 60 | estimado |
@@ -233,7 +235,7 @@ el anfitrión necesite el rumbo real de un invitado (fase 2) habrá que ver si l
 | Peatones | hasta 64 | 130 | estimado: solo su avance por el recorrido |
 | **Una `foto`, con todo a la vez** | | **≈ 880** | |
 
-Hoy, que solo viajan jugadores, una `foto` con la sala llena son 200 bytes: unos 24 kbps por
+Hoy, que solo viajan jugadores, una `foto` con la sala llena son 205 bytes: unos 24 kbps por
 invitado. Con el mundo entero, a 15 por segundo, serían unos 105 kbps por invitado y **unos
 630 kbps de subida en el anfitrión** con la sala llena, aunque jefe final, meteoritos y gallinas
 no coinciden casi nunca. Una fibra doméstica lo lleva de sobra; unos datos móviles flojos, no. Lo
@@ -252,8 +254,11 @@ sensato es que haga de anfitrión quien juegue con ordenador.
 - **De invitado a invitado** el estado lleva la hora de la `foto` en la que lo reenvía el
   anfitrión, no la de cuando se midió: hasta 50 ms más de temblor. Si se nota, el anfitrión
   reenviará la hora original pasada a su reloj.
-- **Reloj común (fase 2).** `game.time` mueve muchas animaciones; el anfitrión mandará el suyo y
-  cada invitado guardará la diferencia.
+- **Reloj común.** `game.time` mueve muchas animaciones. El anfitrión manda el suyo en cada
+  `foto` y el invitado calcula qué hora es allí ahora mismo (`Session.worldTime`). Su `game.time`
+  sigue sumando `dt` y se acerca a esa hora poco a poco; si se separa más de un cuarto de segundo
+  (al entrar, o tras un parón), salta. Si el anfitrión deja de mandar, el reloj del invitado se
+  para con él.
 
 ## 3. Cambios de implementación
 
@@ -269,11 +274,11 @@ para comparar entre sí, no plazos.
 | C5 | Minimapa y HUD con los demás | `party.js`, `main.js` | P | 1 | **Hecho** |
 | C6 | Partida sin pausa | `main.js`, `party.js`, `photo.js`, `watch.js` | P | 1 | **Hecho** |
 | C7 | Pruebas con varios navegadores | `tools/red.mjs`, `package.json` | M | 1 | **Hecho** |
-| C8 | Reloj, día y noche compartidos | `env.js`, `main.js`, `src/net/*` | P | 2 | |
-| C9 | Órdenes al jugador en vez de tocarle los campos | `player.js` y todos los sistemas | M | 2 | |
-| C10 | HUD, sonido y partículas con destinatario | todos los sistemas, `src/net/*` | G | 2 | |
+| C8 | Reloj, día y noche compartidos | `env.js`, `party.js`, `main.js`, `aliens.js`, `src/net/*` | P | 2 | **Hecho** |
+| C9 | Órdenes al jugador en vez de tocarle los campos | `player.js` y los sistemas de cada fase | M | 2 y 3 | |
+| C10 | HUD, sonido y partículas con destinatario | los sistemas de cada fase, `src/net/*` | G | 2 y 3 | |
 | C11 | Sistemas para varios jugadores | `traffic.js`, `wanted.js`, `props.js`, `items.js`, `hens.js`, `meteors.js`, `cows.js` | G | 2 | |
-| C12 | Simular en el anfitrión, pintar en todos | los mismos, más `src/net/*` | G | 2 | |
+| C12 | Simular en el anfitrión, pintar en todos | los mismos, más `src/net/*`; en la fase 3, los de C13 | G | 2 y 3 | |
 | C13 | Invasión cooperativa | `aliens.js`, `boss.js`, `heist.js`, `disguise.js`, `slime.js` | G | 3 | |
 | C14 | Minijuegos con más gente en el pueblo | `missions.js`, `minigames.js` | M | 3 | |
 | C15 | Premios y progreso | `main.js`, `aliens.js`, `boss.js`, `heist.js`, `wanted.js`, `hens.js` | P | 3 | |
@@ -396,6 +401,8 @@ tercero con `?red=local` y comprueba:
 - que con la ventana del anfitrión minimizada su partida sigue y los demás lo ven moverse;
 - que la pausa no para el mundo y a quien la abre se le ve ocupado, y que si el anfitrión deja
   de calcular el invitado lo sabe;
+- que el invitado lleva el reloj del anfitrión, que si uno hace de noche lo es para todos y a los
+  demás les dicen quién ha sido, y que quien llega tarde se encuentra la noche y el reloj;
 - que el castañazo de otro se ve, pero no te saca el cartel;
 - que el que se va desaparece, que un código que no existe se explica y que, si se va el
   anfitrión, se acaba la partida;
@@ -411,11 +418,22 @@ Cada jugador va en **su ventana**, no en una pestaña: una pestaña tapada por o
 pintar. Con la página oculta, las esperas de puppeteer tienen que ir con `polling` por
 temporizador, que por defecto van con fotogramas y no acaban nunca.
 
-### C8 · Reloj, día y noche
+### C8 · Reloj, día y noche — hecho
 
-- `env.js`: `toggle()` cambia `target` directamente. En red, un invitado manda el `aviso` y es el
-  anfitrión quien cambia; `target` viaja en cada `foto`.
-- `main.js`: en los invitados `this.time` sale del reloj del anfitrión, no de sumar `dt`.
+- **La noche.** `env.toggle()` cambia `target` directamente cuando se juega solo. En red pasa por
+  `Party.night()`: el anfitrión lo cambia y lo cuenta; el invitado solo manda el `aviso` y el
+  cambio le vuelve en la `foto` siguiente, que lleva siempre si es de noche. Por eso quien entra
+  tarde se la encuentra sin mensaje aparte. El `aviso` lleva la hora que se pide (noche o día), no
+  «cámbiala»: si dos lo pulsan a la vez no se anulan.
+- **Quién ha sido.** A los demás les sale «Adrián ha hecho de noche»; al que lo ha hecho, no.
+- **El amanecer tras rechazar la invasión** (`aliens.js`, `env.toggle(true)`) va como `alba`: hace
+  de día para todos sin decir de quién ha sido. Hasta la fase 3 cada pantalla lleva su invasión,
+  así que **el primero que la rechaza hace amanecer a los demás** y sus marcianos se esconden.
+- **El reloj.** En los invitados `game.time` sigue al del anfitrión (ver
+  [Suavizado](#suavizado)). Al saltar se mueven con él las dos horas que el juego guarda para
+  los combos (`lastTrick` y `aliens.lastKick`): `Game.shiftTime(d)`.
+- `Session` sigue sin saber del juego: recibe `{ time, night }` del anfitrión en `update()` y lo
+  devuelve en `world` y `worldTime(now)`; los avisos son `aviso(k, v)` y `onAviso(pl, k, v)`.
 
 ### C9 · Órdenes al jugador
 
@@ -607,8 +625,8 @@ pueblo sale igual en todas las pantallas porque se construye con la misma semill
 | Fase | Qué se puede hacer al acabarla | Cambios |
 | --- | --- | --- |
 | 1 · Verse | Crear sala, unirse, elegir personaje sin repetir y patinar juntos de día. El mundo todavía va por libre en cada pantalla | C1–C7 |
-| 2 · Mismo pueblo | Tráfico, municipal, mobiliario, objetos, gallinas, meteoritos y día y noche son los mismos para todos | C8–C12 |
-| 3 · Invasión | La noche de los marcianos en cooperativo, con minijuegos conviviendo | C13–C15 |
+| 2 · Mismo pueblo | Tráfico, municipal, mobiliario, objetos, gallinas, meteoritos y día y noche son los mismos para todos | C8–C12, en `props.js`, `traffic.js`, `wanted.js`, `items.js`, `hens.js` y `meteors.js` |
+| 3 · Invasión | La noche de los marcianos en cooperativo, con minijuegos conviviendo | C13–C15, y C9, C10 y C12 en `aliens.js`, `boss.js`, `heist.js`, `disguise.js` y `slime.js` |
 | 4 · Aguante | Reconexión, mensajes de error, TURN propio si hace falta | C16 |
 
 La fase 1 es pequeña y casi no toca código existente, pero tiene una limitación a la vista:
@@ -632,24 +650,41 @@ resuelve programando, y la sala bonita al final.
 Con esto la fase 1 está cerrada. Lo que queda suelto es de la fase 4 (reconexión, cortes sin
 despedida).
 
-### Antes de empezar la fase 2
+### La fase 2 y la refactorización
 
-- **Decidir qué se hace con la refactorización.** C10 y C12 son las propuestas R2 y R3 de
-  `docs/refactorizacion-y-optimizacion.md` con un requisito más. Si el bus de eventos se va a
-  hacer, que nazca ya con destinatario; si no, se refactorizan dos veces los mismos archivos.
-- **Hacerla sin red de por medio**, sistema a sistema, con el juego de un jugador funcionando
-  igual en cada paso. Orden propuesto: C9 (órdenes al jugador) → C10 (destinatario) → C12
-  (simular y pintar) → C11 (varios jugadores) → C8 y la red.
-- **Cada función nueva del juego agranda la fase 2.** Entre la primera versión de este documento
-  y esta, el juego ganó nave nodriza, meteoritos, gallinas y disfrazados: las escrituras al
-  jugador pasaron de 93 a 124 y las llamadas a la presentación de 221 a 331. Merece la pena que
-  lo nuevo que se añada mientras tanto nazca ya con la forma de C9 y C10.
-- **Medir el peso de verdad** en cuanto viaje el primer sistema del mundo (R8).
+Decidido el 8 de octubre de 2026:
+
+- **Se hace junto solo lo que se solapa.** De `docs/refactorizacion-y-optimizacion.md` entran R2
+  (el bus de eventos, que es C10 y nace ya con destinatario) y R3 (partir los métodos largos, que
+  es el `simulate`/`present` de C12). Quedan fuera R1 (a la fase 2 le basta con cambiar la firma
+  de los `update` en `main.js`), R4 (los vecinos se animan por libre en cada pantalla), R5 a R7 y
+  todas las optimizaciones.
+- **Solo en los sistemas de la fase 2.** `aliens.js`, `boss.js`, `heist.js`, `disguise.js` y
+  `slime.js` suman más de la mitad de las 331 llamadas a la presentación, y refactorizarlos ahora
+  sería hacerlo sin red que lo pruebe: se quedan como están hasta la fase 3. El precio es que
+  mientras tanto conviven dos estilos, y que lo que se añada a los marcianos agranda la fase 3 (R9).
+- **Sistema a sistema, cada uno hasta la red** antes de empezar el siguiente, y no C9 → C10 → C12
+  → C11 en todos y la red al final. Así, si el formato de `efecto` o el corte entre simular y
+  pintar no convence, se descubre con un sistema tocado y no con seis.
+
+| Paso | Qué | Cambios | Estado |
+| :---: | --- | --- | --- |
+| 1 | **Reloj, día y noche**. No necesita refactorización y estrena el `aviso` | C8 | **Hecho** |
+| 2 | **El mecanismo y `props.js` entero**: `g.to(p)`, `g.all`, `g.at(x, z)`, las órdenes al jugador y el `mundo` para el que entra tarde. Son 91 líneas y una sola llamada a la presentación: el sitio más barato para comprobar el diseño | C9 y C10 (la base), C11 | |
+| 3 | **`traffic.js`**: el primero con `simulate`/`present` y con el mundo en la `foto`. Aquí se mide el peso de verdad (R8) | C11, C12 | |
+| 4 | **`wanted.js`, `items.js`, `hens.js` y `meteors.js`**, ya con el patrón probado | C9–C12 | |
+
+Cada paso va en su PR, con el juego de un jugador funcionando igual que antes.
+
+**Cada función nueva del juego agranda lo que queda.** Entre la primera versión de este documento
+y la segunda, el juego ganó nave nodriza, meteoritos, gallinas y disfrazados: las escrituras al
+jugador pasaron de 93 a 124 y las llamadas a la presentación de 221 a 331. Merece la pena que
+lo nuevo que se añada mientras tanto nazca ya con la forma de C9 y C10, en cuanto exista (paso 2).
 
 ### Pruebas
 
 C9, C10 y C12 son refactorizaciones del juego de un jugador que hay que dejar funcionando igual
-que antes; `npm run test:fisica`, `npm run test:misiones` y `npm run test:red` son la red de
+que antes en cada paso; `npm run test:fisica`, `npm run test:misiones` y `npm run test:red` son la red de
 seguridad.
 
 Por ahora las pruebas **se pasan en local antes de abrir cada PR**; llevarlas a CI (paso 4 del
@@ -678,9 +713,9 @@ informe de deuda técnica) queda para más adelante y no bloquea ninguna fase.
 | R4 | Redes que no dejan conexión directa | Alguien no consigue entrar. **Ha pasado a la primera con datos móviles** | Mensaje claro y el TURN de ExpressTURN. Con `?ice=relay` se comprueba que sigue vivo. Si se acaba el cupo o alguien abusa de las credenciales, que están a la vista, se cambian o se pasa a Cloudflare con un Worker |
 | R5 | Depender del broker público de PeerJS | Si está caído no se pueden crear salas (las ya empezadas siguen) | El transporte es intercambiable (C1); se puede pasar a otro servicio sin tocar el juego |
 | R6 | Textos con HTML por la red | Los carteles del HUD son HTML y los invitados pintarían lo que mande el anfitrión | Limitar a las etiquetas que ya se usan (`b`, `kbd`, `small`, `span`) al recibir. Hoy no viaja ningún texto: los avisos se montan en cada pantalla con el nombre del personaje |
-| R7 | Las refactorizaciones rompen el juego de un jugador | Fallos en algo que hoy funciona | Hacerlas sin red de por medio, sistema a sistema, con las pruebas pasando en cada paso |
+| R7 | Las refactorizaciones rompen el juego de un jugador | Fallos en algo que hoy funciona | Sistema a sistema, un PR cada uno, con las pruebas pasando en cada paso |
 | R8 | Las estimaciones de peso del mundo están sin medir | El anfitrión sube más de lo previsto | Medir en la fase 2; bajar la cadencia de `foto` o mandar solo lo cercano a cada invitado |
-| R9 | El juego crece más deprisa que el multijugador | La fase 2 es cada vez más grande | Lo dicho en «Antes de empezar la fase 2»: que lo nuevo nazca ya con la forma de C9 y C10 |
+| R9 | El juego crece más deprisa que el multijugador | Las fases 2 y 3 son cada vez más grandes | Lo dicho en «La fase 2 y la refactorización»: que lo nuevo nazca ya con la forma de C9 y C10 |
 
 ## 6. Decisiones abiertas
 
@@ -690,7 +725,7 @@ informe de deuda técnica) queda para más adelante y no bloquea ninguna fase.
 | D2 | ¿La invasión crece con los jugadores? | **Sí:** más marcianos a la vez, más culetazos para ganar y más coscorrones a la nodriza, a ajustar jugando |
 | D3 | ¿Modo foto (y seguir a las mamás) en red? | **Decidido: desactivados en red.** Paran el tiempo y dejarían al jugador clavado a la vista de los demás |
 | D4 | ¿Cambiar de personaje a mitad de partida? | **Sí**, entre los libres, como ahora en la pausa. Ya funciona así |
-| D5 | ¿Quién puede hacer de noche? | **Cualquiera**, con aviso de quién ha sido |
+| D5 | ¿Quién puede hacer de noche? | **Cualquiera**, con aviso de quién ha sido. Ya funciona así |
 | D6 | ¿Entrar con la partida empezada? | **Sí**; es lo que hace falta cuando a alguien se le cae la conexión. Ya funciona así |
 | D7 | ¿Minijuegos unos contra otros (carrera, trucos)? | **Más adelante**, como función aparte encima de esta |
 | D9 | ¿Qué TURN se pone? | **Decidido: ExpressTURN**, cuenta gratuita con credenciales fijas, que no pide backend. Van en el código, a la vista de cualquiera: lo peor que puede pasar es que alguien gaste el cupo. La alternativa si eso ocurre es Cloudflare, con credenciales de vida corta y un Worker que las pida |

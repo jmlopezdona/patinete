@@ -467,6 +467,13 @@ class Game {
     this.missions.defs.find((d) => d.id === 'soccer').desc = `Márcale a ${this.ball.teo ? 'Teo' : 'el suplente'} todos los goles que puedas en 60 segundos.`;
   }
 
+  // En red el reloj es el del anfitrión: lo que se guarda como «la hora a la que pasó» se mueve con él
+  shiftTime(d) {
+    this.time += d;
+    this.lastTrick += d;
+    this.aliens.lastKick += d;
+  }
+
   openParty(code, hosting) {
     this.closeParty();
     this.party = new Party(this, code, hosting, params.get('red'), params.get('ice') === 'relay');

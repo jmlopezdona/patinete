@@ -261,7 +261,7 @@ export class Aliens {
     g.sfx.invaded(on);
     if (this.dawnT > 0) {
       this.dawnT -= dt;
-      if (this.dawnT <= 0 && g.env.target > 0.5) g.env.toggle();
+      if (this.dawnT <= 0 && g.env.target > 0.5) g.env.toggle(true);
     }
     if (this.active && this.hints.length) {
       for (const h of this.hints) h[0] -= dt;

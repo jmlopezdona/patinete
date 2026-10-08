@@ -20,8 +20,8 @@ export const WHY = {
 };
 
 // La pandilla: la partida en red vista desde el juego. Cuenta a los demás dónde está el jugador
-// local y pinta a los que llegan. El mundo (tráfico, marcianos, municipal) va todavía por libre
-// en cada pantalla
+// local y pinta a los que llegan. El reloj y el día y la noche son los del anfitrión; el resto
+// del mundo (tráfico, marcianos, municipal) va todavía por libre en cada pantalla
 export class Party {
   constructor(game, code, hosting, kind, relay) {
     this.game = game;
@@ -31,6 +31,7 @@ export class Party {
     this.blips = [];
     this.state = blankState();
     this.tmp = blankState();
+    this.world = { time: 0, night: 0 };
     this.el = document.getElementById('net');
     const p = game.player;
     this.char = p.char.id;
@@ -57,6 +58,11 @@ export class Party {
       game.lobby.refresh();
       // El anfitrión da la salida: quien esperaba en la sala sale a la calle con él
       if (go && game.state === 'menu') game.start();
+    };
+    S.onAviso = (pl, k, v) => {
+      if (k !== 'noche' && k !== 'alba') return;
+      if (this.hosting) game.env.target = k === 'noche' && v ? 1 : 0;
+      if (k === 'noche') this.say(pl, v ? 'ha hecho de noche 🌙' : 'ha hecho de día ☀️');
     };
     S.onEnd = (why) => game.closeParty(why);
     this.onHide = () => {
@@ -106,6 +112,14 @@ export class Party {
     return false;
   }
 
+  // Día o noche para todos. Manda el anfitrión: el invitado se lo pide y el cambio le vuelve con
+  // la `foto`. quiet: amanece solo, sin que nadie lo haya pedido, y no se dice de quién ha sido
+  night(on, quiet) {
+    const S = this.session;
+    if (this.hosting || S.slot < 0) this.game.env.target = on;
+    S.aviso(quiet ? 'alba' : 'noche', on);
+  }
+
   // Anfitrión: todos a la calle
   start() {
     if (this.hosting && !this.session.started) this.session.start();
@@ -143,7 +157,19 @@ export class Party {
     readState(p, live ? g.input.state : g.input.neutral, this.state);
     if (!playing) this.state.flags |= F.HIDDEN;
     else if (g.paused || g.missions.active || document.hidden) this.state.flags |= F.BUSY;
-    S.update(now, this.state);
+    if (this.hosting) {
+      this.world.time = g.time;
+      this.world.night = g.env.target > 0.5 ? 1 : 0;
+    } else {
+      // El reloj se acerca al del anfitrión poco a poco, para que las animaciones no den saltos
+      const T = S.worldTime(now);
+      if (T !== null) {
+        const d = T - g.time;
+        g.shiftTime(Math.abs(d) > 0.25 ? d : d * Math.min(1, dt * 4));
+        g.env.target = S.world.night;
+      }
+    }
+    S.update(now, this.state, this.world);
     this.blips.length = 0;
     for (const [slot, r] of this.remotes) {
       const s = S.sample(S.players.get(slot), now, this.tmp);

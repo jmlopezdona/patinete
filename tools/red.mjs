@@ -135,6 +135,25 @@ const sinFoto = await B.evaluate(() => {
 });
 check('en red no hay modo foto ni seguir a las mamás', sinFoto);
 
+// El reloj y el día y la noche son los del anfitrión
+const hora = (page) => page.evaluate(() => window.__game.time);
+const [ha, hb] = await Promise.all([hora(A), hora(B)]);
+check('el invitado lleva el reloj del anfitrión', Math.abs(ha - hb) < 0.2, `${ha.toFixed(2)} y ${hb.toFixed(2)} s`);
+const noche = (page) => page.evaluate(() => ({ noche: window.__game.env.target, dicho: document.getElementById('toasts').textContent }));
+const esNoche = (page, on) => page.waitForFunction((on) => window.__game.env.target === on, { timeout: 3000, polling: 50 }, on).then(() => true, () => false);
+const fb = await B.evaluate(() => window.__game.frame);
+await B.evaluate(() => window.__game.env.toggle());
+let igual = (await esNoche(A, 1)) && (await esNoche(B, 1));
+await wait(300);
+let [na, nb] = [await noche(A), await noche(B)];
+check('un invitado hace de noche y lo es para todos', igual && na.noche === 1 && nb.noche === 1, `${na.noche} y ${nb.noche} · ${(await B.evaluate(() => window.__game.frame)) - fb} fotogramas`);
+check('y al otro le dicen quién ha sido', na.dicho.includes('Adrián ha hecho de noche') && !nb.dicho.includes('ha hecho de noche'), na.dicho);
+await A.evaluate(() => window.__game.env.toggle());
+igual = (await esNoche(A, 0)) && (await esNoche(B, 0));
+await wait(300);
+[na, nb] = [await noche(A), await noche(B)];
+check('el anfitrión hace de día', igual && na.noche === 0 && nb.noche === 0 && nb.dicho.includes('Teo ha hecho de día'), nb.dicho);
+
 // Al anfitrión se le duerme el equipo: deja de calcular y los invitados se enteran
 await A.evaluate(() => window.__game.renderer.setAnimationLoop(null));
 await wait(2600);
@@ -144,9 +163,14 @@ await wait(600);
 check('si el anfitrión se para, el invitado lo sabe', parado.espera && parado.texto.includes('en pausa') && !(await pastilla(B)).espera, parado.texto);
 
 // Un tercero: los invitados no se conectan entre sí, se ven a través del anfitrión
+await A.evaluate(() => window.__game.env.toggle());
 const C = await abrir('tercero', `sala=${SALA}`);
 check('entra un tercero', (await sala(A, 2)) && (await sala(B, 2)) && (await sala(C, 2)), `${await quien(A)} | ${await quien(B)} | ${await quien(C)}`);
 await wait(700);
+const [hc, hd] = await Promise.all([hora(A), hora(C)]);
+check('quien llega tarde se encuentra la noche y el reloj de los demás', (await noche(C)).noche === 1 && Math.abs(hc - hd) < 0.2, `${hc.toFixed(2)} y ${hd.toFixed(2)} s`);
+await A.evaluate(() => window.__game.env.toggle());
+await wait(300);
 check('los invitados se ven entre sí', lejos(b1, await otro(C, 1)) < 0.05 && lejos(await yo(C), await otro(B, 2)) < 0.05);
 check('con su nombre encima', (await otro(C, 1))?.tag === true);
 
