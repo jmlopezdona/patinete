@@ -59,7 +59,7 @@ export const CHARACTERS = [
     cam: 1,
   },
   {
-    id: 'leo', name: 'Leo', icon: '🎾', vehicle: 'Patinete', blurb: 'De blanco de arriba abajo: sale de la puerta del centro de salud. Su patinete es el de toda la vida: ligero, arranca rápido y salta mucho.',
+    id: 'leo', name: 'Leo', icon: '🎾', vehicle: 'Patinete', blurb: 'Su patinete es el de toda la vida: ligero, arranca rápido y salta mucho.',
     look: { torso: 0xf4f3ee, arms: 0xf4f3ee, legs: 0xf4f3ee, hair: 'swept', hairColor: 0x1b130e, hairTips: 0x33231a, face: 'grin', glasses: 'square', brows: 0x1b130e },
     scale: 0.9, color: 2, trick: 'Tailwhip', alienTrick: '¡Tailwhip marciano!',
     build: (color) => createKickScooter(color),
