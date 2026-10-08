@@ -29,17 +29,20 @@ export class Voice {
   say(text, urgent = false, now = false) {
     const key = voiceKey(text);
     if (!this.lines.has(key) || !this.sfx.ctx) return;
-    if (now) {
-      this.queue.length = 0;
-      this.stale = this.current;
-      this.src?.stop();
-    }
+    if (now) this.shut();
     if (this.queue.includes(key)) return;
     if (urgent) this.queue.unshift(key);
     else this.queue.push(key);
     // Si se amontonan, se queda sin decir lo más viejo
     while (this.queue.length > 2) this.queue.splice(urgent ? 1 : 0, 1);
     this.next();
+  }
+
+  // Calla lo que esté sonando y lo que espere
+  shut() {
+    this.queue.length = 0;
+    this.stale = this.current;
+    this.src?.stop();
   }
 
   async next() {

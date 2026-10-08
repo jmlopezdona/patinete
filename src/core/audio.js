@@ -3,6 +3,8 @@ export class Sfx {
   constructor() {
     this.ctx = null;
     this.muted = false;
+    // Lo que el jugador ajusta en el panel de sonido: de 0 a 1, y 1 es la mezcla tal cual
+    this.vol = { music: 1, sfx: 1, voice: 1 };
     this.studN = 0;
     this.studT = 0;
   }
@@ -20,16 +22,23 @@ export class Sfx {
     const comp = ctx.createDynamicsCompressor();
     this.master.connect(comp);
     comp.connect(ctx.destination);
+    // Una salida por familia: los buses siguen con su mezcla y aquí solo manda el jugador
+    this.outs = {};
+    for (const k in this.vol) {
+      const o = (this.outs[k] = ctx.createGain());
+      o.gain.value = this.vol[k] ** 2;
+      o.connect(this.master);
+    }
     this.sfxBus = ctx.createGain();
     this.sfxBus.gain.value = 0.9;
-    this.sfxBus.connect(this.master);
+    this.sfxBus.connect(this.outs.sfx);
     this.musicBus = ctx.createGain();
     this.musicBus.gain.value = 0.34;
-    this.musicBus.connect(this.master);
+    this.musicBus.connect(this.outs.music);
     // Las locuciones (core/voice.js) van por su cuenta: ni el modo foto ni la música las tapan
     this.voiceBus = ctx.createGain();
-    this.voiceBus.gain.value = 0.48;
-    this.voiceBus.connect(this.master);
+    this.voiceBus.gain.value = 0.4;
+    this.voiceBus.connect(this.outs.voice);
     // Ruido blanco reutilizable
     const len = ctx.sampleRate * 2;
     this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -58,19 +67,19 @@ export class Sfx {
     this.ufoL = { o: uo, lfo, g: ug };
     this.drumBus = ctx.createGain();
     this.drumBus.gain.value = 0;
-    this.drumBus.connect(this.master);
+    this.drumBus.connect(this.outs.music);
     this.drumVol = 0;
     this.eerie = false;
     this.eerieBus = ctx.createGain();
     this.eerieBus.gain.value = 0;
-    this.eerieBus.connect(this.master);
+    this.eerieBus.connect(this.outs.music);
     this._startMusic();
     this._startEerie();
     this._startDrums();
     this.jog = false;
     this.jogBus = ctx.createGain();
     this.jogBus.gain.value = 0;
-    this.jogBus.connect(this.master);
+    this.jogBus.connect(this.outs.music);
     this._startJog();
   }
 
@@ -95,6 +104,12 @@ export class Sfx {
   setMuted(m) {
     this.muted = m;
     if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.ctx.currentTime, 0.05);
+  }
+
+  // Al cuadrado: el oído no es lineal y así el deslizador baja parejo
+  setVolume(kind, v) {
+    this.vol[kind] = v;
+    if (this.outs) this.outs[kind].gain.setTargetAtTime(v * v, this.ctx.currentTime, 0.03);
   }
 
   // Estado continuo del patinete
