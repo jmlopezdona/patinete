@@ -25,11 +25,27 @@ const NAVY = 0x1a2a52;
 const BLUE = '#5aa2ff';
 const PINK = '#ff8ad1';
 
+// Cómo viaja por la red: el estado de cada perseguidor y el de la zapatilla van como su número aquí
+const STATES = ['off', 'enter', 'chase', 'windup', 'tired', 'gloat', 'leave'];
+const SLIP = ['hand', 'fly', 'back'];
+const CHASER = 13;
+const POS = 10;
+const HIGH = 100;
+const ANG = 32767 / Math.PI;
+const SPD = 4;
+
 const _v = new THREE.Vector3();
 
 // Nivel de búsqueda: romper mobiliario (o atropellar vecinos) calienta el ambiente. Con la primera
 // estrella sale el policía municipal a ponerte una multa; con la tercera saca su patinete oficial
 // y con la quinta llega la abuela con la zapatilla. Se quita dándoles esquinazo... o pagando.
+//
+// En red hay un solo nivel de búsqueda para toda la pandilla, y lo lleva el anfitrión:
+// - Los destrozos de todos suman (`add` avisa con `lio`).
+// - Él decide a por quién van (`prey`: el más cercano que no esté a otra cosa) y mueve al
+//   municipal, a la abuela y a la zapatilla (`simulate`), que viajan en cada `foto` (`write`, `read`).
+// - Cada pantalla los pinta y los hace sonar (`present`), y cada jugador detecta en la suya si lo
+//   pillan, le dan o los salta (`touch`), y lo avisa: `multa`, `zapatillazo`, `salto`.
 export class Wanted {
   constructor(game) {
     this.game = game;
@@ -38,6 +54,9 @@ export class Wanted {
     this.stars = 0;
     this.lost = 0; // segundos que llevan sin verte
     this.spawnT = 0;
+    this.prey = null; // a por quién van
+    this.culprit = null; // el último que ha roto algo
+    this.preyT = 0;
     this.blips = [];
     // El rastro del patinete: si te pierden de vista, van por donde has pasado tú
     this.trail = [];
@@ -78,7 +97,7 @@ export class Wanted {
     this.game.scene.add(root, tag);
     return {
       root, fig, tag, state: 'off', t: 0, wait: 0, rest: 0, pop: 0, x: 0, y: 0, z: 0, d: 0, heading: 0, walk: 0, kick: 0, stuck: 0, detour: 0, detourDir: 0,
-      far: 0, cuts: 0, sfxT: 0, riding: false, throwCd: 0, swing: 0, see: false, seeT: 0, crumb: 0, hopCd: 0, blip: { x: 0, z: 0, icon },
+      far: 0, cuts: 0, sfxT: 0, riding: false, throwCd: 0, swing: 0, see: false, seeT: 0, crumb: 0, hopCd: 0, speed: 0, blip: { x: 0, z: 0, icon },
     };
   }
 
@@ -115,6 +134,13 @@ export class Wanted {
   add(n = 1) {
     const g = this.game;
     if (g.missions.active) return;
+    if (g.party && !g.party.hosting) g.party.tell('lio', n);
+    else this.stir(n);
+  }
+
+  // Jugando solo o en el anfitrión, que lleva la cuenta de los destrozos de todos. by: quién ha sido
+  stir(n, by = this.game.player) {
+    this.culprit = by;
     this.heat += n;
     if (this.stars) this.lost = 0;
     let s = 0;
@@ -123,7 +149,7 @@ export class Wanted {
   }
 
   raise(s) {
-    const g = this.game;
+    const g = this.game.all; // el lío es de toda la pandilla
     const first = !this.stars;
     this.stars = s;
     this.lost = 0;
@@ -176,7 +202,7 @@ export class Wanted {
   }
 
   escaped() {
-    const g = this.game;
+    const g = this.game.all;
     const s = this.stars;
     const prize = 100 * s * s;
     g.addStuds(prize);
@@ -216,18 +242,29 @@ export class Wanted {
       p.place(this.station.x, this.station.z, this.station.heading);
       g.camera3.snap = true;
       g.hud.toast(`🚓 ${paid}… y derechito a la <b>Policía Local</b>.`, lost ? 'Multa por destrozar el mobiliario… y derechito a la Policía Local.' : 'No llevas ni un stud, así que te libras con una bronca… y derechito a la Policía Local.');
-      this.reset(true);
-    } else {
-      g.hud.toast(`👮 ${paid}. ¡Y que no se repita!`, lost ? 'Multa por destrozar el mobiliario. ¡Y que no se repita!' : 'No llevas ni un stud, así que te libras con una bronca. ¡Y que no se repita!');
-      this.setState(c, 'gloat');
+    } else g.hud.toast(`👮 ${paid}. ¡Y que no se repita!`, lost ? 'Multa por destrozar el mobiliario. ¡Y que no se repita!' : 'No llevas ni un stud, así que te libras con una bronca. ¡Y que no se repita!');
+    if (this.led) g.party.tell('multa', jail ? 1 : 0);
+    else this.caught(jail);
+  }
+
+  // Lo que hace el mundo cuando el municipal pilla a alguien: con la multa puesta, se acabó el lío
+  caught(jail) {
+    if (jail) this.reset(true);
+    else {
+      this.setState(this.cop, 'gloat');
       this.reset();
     }
+  }
+
+  // Y cuando la abuela le da a alguien
+  slapped() {
+    if (this.granny.state !== 'off') this.setState(this.granny, 'gloat');
+    this.reset();
   }
 
   // Zapatillazo: castañazo, paga requisada y castigado a casa
   slap(p) {
     const g = this.game;
-    const G = this.granny;
     const lost = this.take(500);
     const sp = g.home.spawn;
     g.bits.burst(p.pos.x, p.pos.y + 2.5, p.pos.z, [0xff8ad1, 0xffffff, C.darkRed], 10, 9, this.T.height(p.pos.x, p.pos.z), 0.5);
@@ -236,8 +273,8 @@ export class Wanted {
     g.sfx.slap();
     g.hud.big('¡Zapatillazo!', PINK, 1.6);
     g.hud.toast(`👵 La abuela te manda <b>${g.home.drop || g.home.roam || g.home.spot ? `de vuelta a ${g.home.name}` : 'castigado a casa'}</b>${lost ? ` y te requisa <b>${lost.toLocaleString('es-ES')}</b> studs de la paga` : ''}.`, '¡Se acabó la fiesta! Tú te vienes conmigo.');
-    if (G.state !== 'off') this.setState(G, 'gloat');
-    this.reset();
+    if (this.led) g.party.tell('zapatillazo', 0);
+    else this.slapped();
   }
 
   // ---------- Perseguidores ----------
@@ -258,7 +295,6 @@ export class Wanted {
     c.stuck = c.detour = c.far = c.seeT = 0;
     c.see = false;
     c.crumb = this.trailN;
-    c.root.visible = c.tag.visible = true;
   }
 
   // ¿Hay camino recto y despejado hasta ese punto?
@@ -303,11 +339,7 @@ export class Wanted {
 
   off(c) {
     c.state = 'off';
-    c.root.visible = c.tag.visible = false;
-    if (c.riding) {
-      c.riding = false;
-      c.scooter.group.visible = false;
-    }
+    c.riding = false;
   }
 
   // Busca suelo libre cerca del patinete: por detrás para darle ventaja o por delante para cortarle el paso
@@ -347,20 +379,68 @@ export class Wanted {
   // El municipal se sube al patinete oficial
   mount(c) {
     c.riding = true;
-    c.scooter.group.visible = true;
     c.sfxT = 0;
-    this.game.bits.burst(c.x, c.y + 1.5, c.z, [0x2f7dff, 0xffffff, NAVY], 10, 8, c.y, 0.5);
+    this.game.at(c.x, c.z).bits.burst(c.x, c.y + 1.5, c.z, [0x2f7dff, 0xffffff, NAVY], 10, 8, c.y, 0.5);
   }
 
   update(dt, p, time) {
     const g = this.game;
-    // Durante los minijuegos hay tregua
-    if (g.missions.active) {
+    const party = g.party;
+    // Jugando solo, durante los minijuegos hay tregua. En red el lío sigue para los demás, y a
+    // quien está a otra cosa ni lo persiguen ni lo pillan
+    if (!party && g.missions.active) {
       if (this.stars || this.heat || this.chasers.some((c) => c.state !== 'off')) this.reset(true);
       return;
     }
+    const led = !!party && !party.hosting && party.fed;
+    if (this.led && !led) this.reset(true); // se acabó la partida en red, y el lío con ella
+    this.led = led;
+    if (!led) this.simulate(dt, time, g.crowd(p));
+    const near = this.present(dt, p, time);
+    if (!this.busy(p)) this.touch(p);
+    this.hud(near);
+  }
+
+  // ¿Está a otra cosa (en la pausa, en un minijuego, con la pestaña tapada)? Solo pasa en red
+  busy(p) {
+    const g = this.game;
+    return p === g.player ? !!g.party && (g.paused || !!g.missions.active) : !!p.busy;
+  }
+
+  // A por quién van: el que tengan más cerca de los que no están a otra cosa; antes de salir a la
+  // calle, el último que ha roto algo. Se revisa cada segundo
+  pick(who, dt) {
+    this.preyT -= dt;
+    if (this.preyT > 0 && who.includes(this.prey) && !this.busy(this.prey)) return this.prey;
+    this.preyT = 1;
+    const c = this.cop.state !== 'off' ? this.cop : this.granny.state !== 'off' ? this.granny : null;
+    let best = null;
+    let bd = Infinity;
+    for (const p of who) {
+      if (this.busy(p)) continue;
+      const d = c ? Math.hypot(p.pos.x - c.x, p.pos.z - c.z) : p === this.culprit ? 0 : 1;
+      if (d < bd) {
+        bd = d;
+        best = p;
+      }
+    }
+    if (best && best !== this.prey) {
+      // El rastro que seguían era el de otro
+      this.trailN = 0;
+      for (const o of this.chasers) o.crumb = 0;
+    }
+    return best;
+  }
+
+  // Lo que decide el mundo: solo jugando solo o en el anfitrión. who: los jugadores que hay por la calle
+  simulate(dt, time, who) {
+    const g = this.game;
     if (!this.stars) this.heat = Math.max(0, this.heat - COOL * dt);
-    const pAlive = p.crashT <= 0 && !p.held;
+    const prey = this.pick(who, dt);
+    // Si no queda nadie a quien perseguir, se quedan donde están mirando al último
+    const p = prey || (who.includes(this.prey) ? this.prey : who[0]);
+    this.prey = p;
+    const pAlive = !!prey && p.crashT <= 0 && !p.held;
     const cop = this.cop;
     if (this.stars) {
       const last = this.trailN ? this.trail[(this.trailN - 1) % CRUMBS] : null;
@@ -386,7 +466,7 @@ export class Wanted {
         c.cuts = c === cop ? COP_CUTS[this.stars] : 2;
         c.throwCd = 1.5;
         this.enter(c, c === cop ? 0.9 : 0.5);
-        if (c === cop) g.sfx.whistle();
+        if (c === cop) g.to(p).sfx.whistle();
       }
     }
     if (cop.state !== 'off' && this.stars >= 3 && !cop.riding) this.mount(cop);
@@ -397,7 +477,7 @@ export class Wanted {
       this.updateChaser(c, dt, p, time, pAlive);
       if (c.state === 'chase' || c.state === 'tired' || c.state === 'enter' || c.state === 'windup') near = Math.min(near, c.d);
     }
-    this.updateSlipper(dt, p, pAlive);
+    this.flySlipper(dt, p);
 
     // Que no corran uno encima del otro
     const G = this.granny;
@@ -423,15 +503,94 @@ export class Wanted {
       this.lost = near > LOSE && pAlive && !missing ? this.lost + dt : 0;
       if (this.lost >= 5 + this.stars) this.escaped();
     }
-    this.hud(near);
+  }
 
+  // Lo que se ve y se oye en esta pantalla, estén donde estén decididos. Devuelve a cuánto queda
+  // del jugador el perseguidor más cercano
+  present(dt, p, time) {
+    const g = this.game;
+    let near = Infinity;
     this.blips.length = 0;
     for (const c of this.chasers) {
-      if (c.state === 'off') continue;
+      const on = c.state !== 'off';
+      c.root.visible = c.tag.visible = on;
+      if (c.scooter) c.scooter.group.visible = c.riding;
+      if (!on) continue;
+      const isCop = c === this.cop;
+      const d = Math.hypot(p.pos.x - c.x, p.pos.z - c.z);
+      if (c.state === 'chase' || c.state === 'tired' || c.state === 'enter' || c.state === 'windup') near = Math.min(near, d);
+      // El silbato o la sirena, más fuerte cuanto más cerca
+      c.sfxT -= dt;
+      c.hopCd -= dt;
+      if (isCop && c.state === 'chase' && c.sfxT <= 0 && d < 95) {
+        const vol = clamp(1.15 - d / 95, 0, 1);
+        if (c.riding) {
+          c.sfxT = 0.6;
+          g.sfx.siren(vol);
+        } else {
+          c.sfxT = 2.4 + Math.random() * 1.4;
+          g.sfx.whistle(vol);
+        }
+      }
+      this.pose(c, time, c.speed, dt);
       c.blip.x = c.x;
       c.blip.z = c.z;
       this.blips.push(c.blip);
     }
+    // La zapatilla, en la mano o por los aires
+    const s = this.slip;
+    this.hand.visible = s.state === 'hand';
+    s.mesh.visible = s.state !== 'hand';
+    if (s.mesh.visible) {
+      s.mesh.position.set(s.x, s.y, s.z);
+      s.mesh.rotation.y += dt * 22;
+      s.fx -= dt;
+      if (s.fx <= 0) {
+        s.fx = 0.04;
+        g.here(s.x, s.z).bits.spawn(s.x, s.y, s.z, (Math.random() - 0.5) * 3, 1.5, (Math.random() - 0.5) * 3, Math.random() < 0.5 ? 0xff8ad1 : 0xffffff, 0.26, 0.4, s.base);
+      }
+    }
+    return near;
+  }
+
+  // Lo que le pasa al jugador de esta pantalla al tocarlos, tal como los ve
+  touch(p) {
+    const g = this.game;
+    if (p.crashT > 0 || p.held) return;
+    for (let i = 0; i < this.chasers.length; i++) {
+      const c = this.chasers[i];
+      if (c.state === 'off') continue;
+      const isCop = c === this.cop;
+      const dx = p.pos.x - c.x;
+      const dz = p.pos.z - c.z;
+      const d = Math.hypot(dx, dz) || 1;
+      const dy = p.pos.y - c.y;
+      const hunting = c.state === 'chase' || c.state === 'windup';
+      if (d > 2.7 || dy < -2) continue;
+      if (dy > OVER) {
+        // Por encima no llegan: saltarlos tiene premio y los deja un momento descolocados
+        if (hunting && !p.grounded && c.hopCd <= 0) {
+          c.hopCd = 2.5;
+          if (this.led) g.party.tell('salto', i);
+          else this.hopped(i);
+          g.hud.trick(isCop ? '¡Salto del municipal!' : '¡Salto de la abuela!', 500, 1);
+          g.addStuds(50);
+          g.sfx.ole();
+        }
+      } else if (hunting && p.invuln <= 0) {
+        if (isCop) this.fine(c, p);
+        else this.slap(p);
+        return;
+      } else p.bump(dx / d, dz / d, 0.2, 0.7);
+    }
+    const s = this.slip;
+    if (s.state === 'fly' && p.invuln <= 0 && Math.hypot(p.pos.x - s.x, p.pos.z - s.z) < 2.1 && p.pos.y < s.y - 0.7 && p.pos.y > s.y - 5) this.slap(p);
+  }
+
+  // Lo que hace el mundo cuando alguien salta por encima de un perseguidor
+  hopped(i) {
+    const c = this.chasers[i];
+    if (c && (c.state === 'chase' || c.state === 'windup')) this.tire(c, 1.3);
   }
 
   updateChaser(c, dt, p, time, pAlive) {
@@ -443,10 +602,8 @@ export class Wanted {
     const toP = Math.atan2(dx, dz);
     c.d = d;
     c.t += dt;
-    c.sfxT -= dt;
     c.throwCd -= dt;
     c.swing -= dt;
-    c.hopCd -= dt;
     let dir = toP;
     let speed = 0;
     const turn = c.riding ? 3.2 : 7; // en patinete no se gira en una baldosa
@@ -466,21 +623,11 @@ export class Wanted {
         if (isCop) {
           // A pie se queda sin fuelle; en patinete, no
           if (!c.riding && c.t > (this.stars > 1 ? 11 : 8)) this.tire(c, this.stars > 1 ? 1.6 : 2.2);
-          if (c.sfxT <= 0 && d < 95) {
-            const vol = clamp(1.15 - d / 95, 0, 1);
-            if (c.riding) {
-              c.sfxT = 0.6;
-              g.sfx.siren(vol);
-            } else {
-              c.sfxT = 2.4 + Math.random() * 1.4;
-              g.sfx.whistle(vol);
-            }
-          }
         } else if (c.t > 7) this.tire(c, 2.6);
         else if (this.slip.state === 'hand' && c.throwCd <= 0 && pAlive && p.invuln <= 0 && d > 9 && d < 44 && Math.abs(angDiff(c.heading, toP)) < 0.5) {
           this.setState(c, 'windup');
-          g.hud.big('¡Zapatilla va!', PINK, 0.7, true);
-          g.sfx.slipper();
+          g.to(p).hud.big('¡Zapatilla va!', PINK, 0.7, true);
+          g.to(p).sfx.slipper();
         }
         break;
       }
@@ -508,6 +655,7 @@ export class Wanted {
           c.pop -= dt / 0.35;
           if (c.pop <= 0) {
             this.off(c);
+            c.speed = 0;
             return;
           }
         }
@@ -524,9 +672,10 @@ export class Wanted {
         c.pop = 0;
         this.lost = 0;
         this.enter(c, 1.2);
-        if (isCop) g.sfx.whistle();
-        else g.sfx.granny();
-        g.hud.toast(isCop ? '👮 ¡El municipal ha atajado por otra calle y te corta el paso!' : '👵 A la abuela no se le escapa nadie: ¡sale por la otra esquina!');
+        if (isCop) g.to(p).sfx.whistle();
+        else g.to(p).sfx.granny();
+        g.to(p).hud.toast(isCop ? '👮 ¡El municipal ha atajado por otra calle y te corta el paso!' : '👵 A la abuela no se le escapa nadie: ¡sale por la otra esquina!');
+        c.speed = 0;
         return;
       }
     }
@@ -536,31 +685,15 @@ export class Wanted {
       c.detour = 0.8;
       c.detourDir = c.heading + (Math.random() < 0.5 ? 1.7 : -1.7);
     }
-    this.pose(c, time, speed, dt);
-
-    // Contacto con el patinete
-    const dy = p.pos.y - c.y;
-    const hunting = c.state === 'chase' || c.state === 'windup';
-    if (!pAlive || d > 2.7 || dy < -2) return;
-    if (dy > OVER) {
-      // Por encima no llegan: saltarlos tiene premio y los deja un momento descolocados
-      if (hunting && !p.grounded && c.hopCd <= 0) {
-        c.hopCd = 2.5;
-        this.tire(c, 1.3);
-        g.hud.trick(isCop ? '¡Salto del municipal!' : '¡Salto de la abuela!', 500, 1);
-        g.addStuds(50);
-        g.sfx.ole();
-      }
-    } else if (hunting && p.invuln <= 0) {
-      if (isCop) this.fine(c, p);
-      else this.slap(p);
-    } else p.bump(dx / d, dz / d, 0.2, 0.7);
+    c.speed = speed;
   }
 
   pose(c, time, speed, dt) {
     const f = c.fig;
     const st = c.state;
     const isCop = c === this.cop;
+    // En un invitado no anda con `walk()`: el paso se lleva aquí
+    if (this.led) c.walk += speed * dt * 0.8;
     const sw = speed > 0 ? Math.sin(c.walk) : 0;
     let tilt = 0;
     let hop = 0;
@@ -640,16 +773,14 @@ export class Wanted {
     s.t = 0;
     s.passed = false;
     s.state = 'fly';
-    s.mesh.visible = true;
-    this.game.sfx.whoosh();
+    this.game.at(c.x, c.z).sfx.whoosh();
   }
 
-  updateSlipper(dt, p, pAlive) {
+  // Por dónde va la zapatilla: solo jugando solo o en el anfitrión
+  flySlipper(dt, p) {
     const s = this.slip;
     const G = this.granny;
-    this.hand.visible = s.state === 'hand';
     if (s.state === 'hand') return;
-    const g = this.game;
     const T = this.T;
     s.t += dt;
     if (s.state === 'fly') {
@@ -664,18 +795,13 @@ export class Wanted {
       const fl = T.height(s.x, s.z);
       if (fl - s.base > 1.6) {
         // Contra una pared
-        g.bits.burst(s.x, s.y, s.z, [0xff8ad1, 0xffffff], 5, 6, s.base, 0.4);
+        this.game.at(s.x, s.z).bits.burst(s.x, s.y, s.z, [0xff8ad1, 0xffffff], 5, 6, s.base, 0.4);
         s.state = 'back';
       } else if (s.t > 1.5) s.state = 'back';
       else {
         s.base = fl;
         s.h = damp(s.h, SLIP_H, 8, dt);
         s.y = s.base + s.h;
-        const hit = Math.hypot(p.pos.x - s.x, p.pos.z - s.z) < 2.1 && p.pos.y < s.y - 0.7 && p.pos.y > s.y - 5;
-        if (hit && pAlive && p.invuln <= 0) {
-          this.slap(p);
-          return;
-        }
       }
     } else {
       // Vuelve a la mano, como un bumerán
@@ -686,7 +812,6 @@ export class Wanted {
       const step = 62 * dt;
       if (G.state === 'off' || bd < step + 1.5) {
         s.state = 'hand';
-        s.mesh.visible = false;
         G.throwCd = 2;
         return;
       }
@@ -694,13 +819,74 @@ export class Wanted {
       s.y += (by / bd) * step;
       s.z += (bz / bd) * step;
     }
-    s.mesh.position.set(s.x, s.y, s.z);
-    s.mesh.rotation.y += dt * 22;
-    s.fx -= dt;
-    if (s.fx <= 0) {
-      s.fx = 0.04;
-      g.bits.spawn(s.x, s.y, s.z, (Math.random() - 0.5) * 3, 1.5, (Math.random() - 0.5) * 3, Math.random() < 0.5 ? 0xff8ad1 : 0xffffff, 0.26, 0.4, s.base);
+  }
+
+  // ---------- En red ----------
+  // Lo que viaja en cada `foto`: las estrellas, los dos perseguidores y la zapatilla
+  get bytes() {
+    return 2 + this.chasers.length * CHASER + 7;
+  }
+
+  write(dv, o) {
+    dv.setUint8(o, this.stars);
+    dv.setUint8(o + 1, this.lost > 0.6 ? 1 : 0);
+    o += 2;
+    for (const c of this.chasers) {
+      dv.setUint8(o, STATES.indexOf(c.state));
+      dv.setInt16(o + 1, Math.round(c.x * POS), true);
+      dv.setInt16(o + 3, Math.round(c.z * POS), true);
+      dv.setInt16(o + 5, Math.round(c.y * HIGH), true);
+      dv.setInt16(o + 7, Math.round(angDiff(0, c.heading) * ANG), true);
+      dv.setUint8(o + 9, clamp(Math.round(c.speed * SPD), 0, 255));
+      dv.setUint8(o + 10, clamp(Math.round(c.pop * 255), 0, 255));
+      dv.setUint8(o + 11, clamp(Math.round(c.t * 20), 0, 255));
+      dv.setUint8(o + 12, (c.riding ? 1 : 0) | (c.swing > 0 ? 2 : 0));
+      o += CHASER;
     }
+    const s = this.slip;
+    dv.setUint8(o, SLIP.indexOf(s.state));
+    dv.setInt16(o + 1, Math.round(s.x * POS), true);
+    dv.setInt16(o + 3, Math.round(s.z * POS), true);
+    dv.setInt16(o + 5, Math.round(s.y * HIGH), true);
+    return o + 7;
+  }
+
+  // Invitado: cómo está la persecución, entre dos fotos del anfitrión (k de 0 a 1)
+  read(a, b, o, k) {
+    const mix = (at, scale) => {
+      const va = a.getInt16(at, true) / scale;
+      return va + (b.getInt16(at, true) / scale - va) * k;
+    };
+    this.stars = a.getUint8(o);
+    this.lost = a.getUint8(o + 1);
+    o += 2;
+    for (const c of this.chasers) {
+      c.state = STATES[a.getUint8(o)] || 'off';
+      // Si en la foto siguiente está en otra cosa o en otro sitio (ha atajado por otra calle), no se mezclan
+      const same = b.getUint8(o) === a.getUint8(o) && Math.abs(b.getInt16(o + 1, true) - a.getInt16(o + 1, true)) + Math.abs(b.getInt16(o + 3, true) - a.getInt16(o + 3, true)) < 20 * POS;
+      const q = same ? b : a;
+      const j = same ? k : 0;
+      const at = (i, scale) => a.getInt16(o + i, true) / scale + ((q.getInt16(o + i, true) - a.getInt16(o + i, true)) / scale) * j;
+      c.x = at(1, POS);
+      c.z = at(3, POS);
+      c.y = at(5, HIGH);
+      const ha = a.getInt16(o + 7, true) / ANG;
+      c.heading = ha + angDiff(ha, q.getInt16(o + 7, true) / ANG) * j;
+      c.speed = a.getUint8(o + 9) / SPD;
+      c.pop = (a.getUint8(o + 10) + (q.getUint8(o + 10) - a.getUint8(o + 10)) * j) / 255;
+      c.t = (a.getUint8(o + 11) + (q.getUint8(o + 11) - a.getUint8(o + 11)) * j) / 20;
+      c.riding = !!(a.getUint8(o + 12) & 1);
+      c.swing = a.getUint8(o + 12) & 2 ? 0.1 : 0;
+      o += CHASER;
+    }
+    const s = this.slip;
+    s.state = SLIP[a.getUint8(o)] || 'hand';
+    const fly = b.getUint8(o) === a.getUint8(o);
+    s.x = fly ? mix(o + 1, POS) : a.getInt16(o + 1, true) / POS;
+    s.z = fly ? mix(o + 3, POS) : a.getInt16(o + 3, true) / POS;
+    s.y = fly ? mix(o + 5, HIGH) : a.getInt16(o + 5, true) / HIGH;
+    s.base = s.y - SLIP_H;
+    return o + 7;
   }
 }
 

@@ -1,6 +1,6 @@
 import { CHARACTERS, characterById } from './characters.js';
 import { RemotePlayer, readState, ORDERS } from './remote-player.js';
-import { echo, play, NEAR } from './fx.js';
+import { echo, play, run, NEAR } from './fx.js';
 import { createTransport } from '../net/transport.js';
 import { Session } from '../net/session.js';
 import { blankState, F } from '../net/protocol.js';
@@ -21,8 +21,9 @@ export const WHY = {
 };
 
 // La pandilla: la partida en red vista desde el juego. Cuenta a los demás dónde está el jugador
-// local y pinta a los que llegan. El reloj, el día y la noche, el mobiliario roto y el tráfico son
-// los mismos para todos; el resto del mundo (marcianos, municipal) va todavía por libre en cada pantalla
+// local y pinta a los que llegan. El reloj, el día y la noche, el mobiliario roto, el tráfico y el
+// lío con el municipal son los mismos para todos; el resto del mundo (marcianos, objetos, gallinas)
+// va todavía por libre en cada pantalla
 export class Party {
   constructor(game, code, hosting, kind, relay) {
     this.game = game;
@@ -34,7 +35,7 @@ export class Party {
     this.tmp = blankState();
     // Lo que se mueve solo y viaja en cada `foto`: el anfitrión lo escribe (`write(dv, o)`) y los
     // invitados lo leen entre dos fotos (`read(a, b, o, k)`), cada sistema su trozo y en este orden
-    this.shared = [game.traffic];
+    this.shared = [game.traffic, game.wanted];
     const bytes = this.shared.reduce((n, s) => n + s.bytes, 0);
     this.world = { time: 0, night: 0, bytes, write: (dv, o) => this.shared.reduce((at, s) => s.write(dv, at), o) };
     this.snap = { a: null, b: null, k: 0 };
@@ -72,6 +73,12 @@ export class Party {
     S.onAviso = (pl, k, v) => {
       if (k === 'rompe') game.props.hit(v, this.remotes.get(pl.slot));
       else if (k === 'atropella') game.traffic.knock(v, false);
+      // El lío con el municipal es de toda la pandilla y lo lleva el anfitrión
+      else if (k === 'multa' || k === 'zapatillazo') {
+        if (this.hosting) k === 'multa' ? game.wanted.caught(!!v) : game.wanted.slapped();
+        this.say(pl, k === 'multa' ? 'se ha llevado una multa 👮' : 'se ha llevado un zapatillazo 👵');
+      } else if (this.hosting && k === 'lio') game.wanted.stir(Math.max(0, Math.min(5, v)), this.remotes.get(pl.slot));
+      else if (this.hosting && k === 'salto') game.wanted.hopped(v);
       else if (k === 'arregla' && pl.slot === 0) game.props.fix(v);
       if (k !== 'noche' && k !== 'alba') return;
       if (this.hosting) game.env.target = k === 'noche' && v ? 1 : 0;
@@ -85,7 +92,7 @@ export class Party {
     };
     // Lo que es para todos: aquí y, si se es el anfitrión, en las demás pantallas
     this.all = echo((s, m, a) => {
-      game[s][m](...a);
+      run(game, s, m, a);
       S.tell(null, 'efecto', { s, m, a });
     });
     S.onEnd = (why) => game.closeParty(why);
@@ -167,7 +174,7 @@ export class Party {
   at(x, z, near) {
     if (!this.hosting) return null;
     return echo((s, m, a) => {
-      if (near) this.game[s][m](...a);
+      if (near) run(this.game, s, m, a);
       for (const r of this.remotes.values()) if (r.seen && !r.hidden && (r.pos.x - x) ** 2 + (r.pos.z - z) ** 2 < NEAR * NEAR) this.session.tell(r.slot, 'efecto', { s, m, a });
     });
   }
