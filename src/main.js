@@ -482,6 +482,8 @@ class Game {
     for (const b of document.querySelectorAll('.char-btn')) b.classList.toggle('sel', b.dataset.id === ch.id);
     document.getElementById('char-blurb').textContent = ch.blurb;
     document.getElementById('p-char').textContent = `Personaje: ${ch.name} · ${ch.vehicle}`;
+    // El caballito es cosa de los que llevan una rueda delante que levantar: sin ella, ni botón ni tecla
+    for (const id of ['tb-wheelie', 'k-wheelie']) document.getElementById(id).classList.toggle('hidden', !this.player.veh.wheelie);
     this.lobby.refresh();
     if (silent) return;
     this.save.character = ch.id;
