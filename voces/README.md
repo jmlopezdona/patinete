@@ -37,6 +37,11 @@ node tools/voz.mjs indice                     # apunta en public/voz/index.json 
 node tools/voz.mjs pagina                     # rehace escucha.html
 ```
 
+Para comprobar que cada locución dice lo que toca sin oírlas todas, `tools/voz/transcribir.py` las
+transcribe con Whisper en el PC y `node tools/voz.mjs comprobar oido.jsonl` lista las que no coinciden
+con el guion. Avisa de más: no entiende a los marcianos ni las palabras en inglés («studs»,
+«half-pipe»), así que lo que señala hay que oírlo.
+
 `sintetizar.py` no repite lo que ya está en la salida: para rehacer una frase hay que borrar su
 `.mp3` allí. Una voz nueva se diseña con `tools/voz/disenar.py`, que lee un `voces.json` como el de
 esta carpeta.
