@@ -904,8 +904,18 @@ await shot('s_selfie');
 await log('selfie fin', () => {
   const g = window.__game; const m = g.missions; const E = g.folks.emma;
   window.sim(30);
-  const img = document.querySelector('#results a.pola img');
-  return { st: m.state, fotos: window.fotos.length, puntos: m.score, stars: g.save.stars.selfie || 0, mejorFoto: !!img && img.src.length > 5000, tira: document.querySelectorAll('#selfies .pola').length, sesion: E.session, abanico: m.guide.visible };
+  return { st: m.state, fotos: window.fotos.length, puntos: m.score, stars: g.save.stars.selfie || 0, tira: document.querySelectorAll('#selfies .pola').length, sesion: E.session, abanico: m.guide.visible };
+});
+// El álbum del resultado: de entrada la mejor foto, y pulsando otra de la fila se cambia la que se guarda
+await new Promise((r) => setTimeout(r, 400));
+await log('selfie álbum', async () => {
+  const q = (s) => document.querySelector('#results .album ' + s);
+  const ver = () => `${q('.big span').textContent} → ${q('.row a').download} ${q('.row a').href.startsWith('blob:') && q('.big img').src === q('.row a').href}`;
+  const out = { fila: document.querySelectorAll('#results .album .strip .pola').length, mejor: ver() };
+  document.querySelectorAll('#results .album .strip .pola')[2].click();
+  await new Promise((r) => setTimeout(r, 400));
+  out.otra = ver();
+  return out;
 });
 await shot('s_selfie_fin');
 await page.evaluate(() => { delete window.__game.hud.big; window.sim(2, (t) => (t > 1.8 ? { keys: ['KeyE'] } : {})); });

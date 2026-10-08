@@ -338,7 +338,8 @@ del suelo marca dónde hay que estar para la siguiente (se enciende según se ac
 Cada foto se lleva de uno a tres corazones: posando, saltando o con un truco (giro, el truco del
 personaje o voltereta). Repetir el truco de la foto anterior vale la mitad; cambiarlo en cada foto
 sube el multiplicador hasta ×3. Las fotos son de verdad, sacadas desde su móvil: se van colgando
-como polaroids bajo el marcador y, al acabar, la mejor se puede guardar. La misión no está si
+como polaroids bajo el marcador y, al acabar, el resultado las enseña todas: se pulsa la que
+se quiera (de entrada, la mejor) para guardarla o compartirla. La misión no está si
 juegas con Emma.
 
 Cada uno da hasta 3 estrellas. El progreso (studs, estrellas, ladrillos dorados, récords)
