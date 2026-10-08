@@ -73,7 +73,7 @@ export class Session {
     this.tr.send(this.hostId, JSON.stringify({ t: 'hola', ...this.me }));
   }
 
-  // Algo que ha hecho el jugador local y tienen que saber los demás (k: qué, v: un número). Pasa
+  // Algo que ha hecho el jugador local y tienen que saber los demás (k: qué, v: un número o una ristra de ellos). Pasa
   // siempre por el anfitrión, que es quien lo reparte
   aviso(k, v) {
     if (this.slot < 0 || this.closed) return;
@@ -142,7 +142,7 @@ export class Session {
   told(pl, m, pass) {
     if (!pl) return;
     const k = String(m.k);
-    const v = +m.v || 0;
+    const v = Array.isArray(m.v) ? m.v.slice(0, 64).map((n) => +n || 0) : +m.v || 0;
     this.onAviso(pl, k, v);
     if (pass) this.relay(pl.slot, k, v);
   }

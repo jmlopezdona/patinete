@@ -250,6 +250,25 @@ await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
 await wait(500);
 check('y al calmarse se le quita el contador', !(await corral(B)).contador && !(await corral(B)).mio);
 
+// La lluvia de meteoritos la decide el anfitrión y cae igual en todas las pantallas
+const lluvia = (page) => page.evaluate(() => { const g = window.__game; const M = g.meteors; return { estado: M.state, dianas: M.falls.filter((f) => f.on || f.t > 0).map((f) => [f.x, f.z]), crateres: M.craters.map((c, i) => (c.on && !c.sink ? [c.x, c.z, i, c.has ? 1 : 0] : null)).filter(Boolean), cuenta: `${M.found}/${M.total}`, contador: document.getElementById('meteorbox').classList.contains('hidden') ? 'oculto' : document.getElementById('meteors').textContent, studs: g.save.studs }; });
+const empieza = await A.evaluate(() => { const g = window.__game; const m = g.world.places.mega; g.player.place(m.x - 60, m.z - 30, Math.PI / 2); return g.meteors.start(g.player); });
+await B.waitForFunction(() => window.__game.meteors.state !== 'idle', { timeout: 3000, polling: 50 }).catch(() => {});
+let [ma, mb] = [await lluvia(A), await lluvia(B)];
+check('la lluvia que empieza el anfitrión le cae igual al invitado', empieza && ma.dianas.length >= 3 && mb.dianas.length === ma.dianas.length && peor(ma.dianas, mb.dianas) < 0.01 && mb.contador === ma.contador && mb.contador.startsWith('0/'), `${ma.dianas.length} dianas · ${mb.contador}`);
+await B.waitForFunction(() => window.__game.meteors.craters.some((c) => c.on && c.age > 1), { timeout: 12000, polling: 100 }).catch(() => {});
+await wait(300);
+[ma, mb] = [await lluvia(A), await lluvia(B)];
+check('y deja los mismos cráteres', ma.crateres.length > 0 && mb.crateres.length === ma.crateres.length && peor(ma.crateres, mb.crateres) < 0.01 && ma.crateres[0][2] === mb.crateres[0][2], `${ma.crateres.length} / ${mb.crateres.length}`);
+// El meteorito del fondo es para el invitado que baja a por él, y la cuenta es de todos
+const [studsMa, studsMb] = [ma.studs, mb.studs];
+await B.evaluate((c) => { const g = window.__game; g.player.invuln = 5; g.player.place(c[0], c[1], 0); }, mb.crateres[0]);
+await A.waitForFunction((i) => !window.__game.meteors.craters[i].has, { timeout: 4000, polling: 50 }, mb.crateres[0][2]).catch(() => {});
+await wait(300);
+[ma, mb] = [await lluvia(A), await lluvia(B)];
+check('el meteorito del fondo se lo lleva el invitado que baja', mb.studs - studsMb === 150 && ma.studs === studsMa && ma.cuenta === mb.cuenta && mb.cuenta.startsWith('1/') && ma.crateres[0][3] === 0 && mb.crateres[0][3] === 0, `+${mb.studs - studsMb} studs · ${ma.cuenta} / ${mb.cuenta}`);
+await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
+
 // El mobiliario es el mismo para todos: lo rompe uno y lo ven roto los demás
 const mueble = await A.evaluate(() => {
   const g = window.__game;
@@ -282,6 +301,8 @@ check('quien llega tarde se encuentra la noche y el reloj de los demás', (await
 await A.evaluate(() => window.__game.env.toggle());
 await wait(300);
 check('y el mobiliario que ya estaba roto', !(await sano(C)));
+const [mA, mC] = [await lluvia(A), await lluvia(C)];
+check('y los cráteres y los meteoritos que quedan por caer', mC.crateres.length === mA.crateres.length && mC.crateres.length > 0 && peor(mA.crateres, mC.crateres) < 0.01 && mC.crateres.map((c) => c[3]).join('') === mA.crateres.map((c) => c[3]).join('') && mC.cuenta === mA.cuenta && mC.contador === mA.contador, `${mA.crateres.length} cráteres · ${mC.cuenta}`);
 // Lo reconstruye el anfitrión, cuando le toca y no hay nadie cerca
 await A.evaluate((i) => { window.__game.props.items[i].t = 0; }, mueble);
 await C.waitForFunction((i) => window.__game.props.items[i].alive, { timeout: 3000, polling: 50 }, mueble).catch(() => {});

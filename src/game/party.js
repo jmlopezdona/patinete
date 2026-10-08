@@ -51,7 +51,7 @@ export class Party {
       this.remotes.set(pl.slot, new RemotePlayer(game, pl));
       if (fresh) this.say(pl, 'ha entrado en la partida');
       // Al que entra, cómo está lo que no viaja en la `foto`
-      S.tell(pl.slot, 'mundo', { props: game.props.broken() });
+      S.tell(pl.slot, 'mundo', { props: game.props.broken(), meteors: game.meteors.dump() });
     };
     S.onLeave = (pl) => {
       this.remotes.get(pl.slot)?.dispose();
@@ -72,6 +72,8 @@ export class Party {
       if (go && game.state === 'menu') game.start();
     };
     S.onAviso = (pl, k, v) => {
+      // Solo la lluvia de meteoritos lleva más de un número
+      if (Array.isArray(v) !== (k === 'lluvia')) return;
       if (k === 'rompe') game.props.hit(v, this.remotes.get(pl.slot));
       else if (k === 'atropella') game.traffic.knock(v, false);
       // El lío con el municipal es de toda la pandilla y lo lleva el anfitrión
@@ -83,6 +85,10 @@ export class Party {
       else if (this.hosting && k === 'coge') game.items.claim(v, this.remotes.get(pl.slot));
       else if (k === 'timbre') game.items.rang(this.remotes.get(pl.slot));
       else if (this.hosting && k === 'gallina') game.hens.rammed(v, this.remotes.get(pl.slot));
+      // La lluvia de meteoritos la decide el anfitrión, y él da el meteorito del fondo a quien lo pide
+      else if (k === 'lluvia' && pl.slot === 0 && Array.isArray(v)) game.meteors.rain(v);
+      else if (k === 'cogido' && pl.slot === 0) game.meteors.collect(v);
+      else if (this.hosting && k === 'meteorito') game.meteors.grant(v, this.remotes.get(pl.slot));
       else if (k === 'arregla' && pl.slot === 0) game.props.fix(v);
       if (k !== 'noche' && k !== 'alba') return;
       if (this.hosting) game.env.target = k === 'noche' && v ? 1 : 0;
@@ -92,7 +98,10 @@ export class Party {
       if (m.t === 'efecto') play(game, m.s, m.m, m.a);
       else if (m.t === 'orden') {
         if (ORDERS.includes(m.m) && Array.isArray(m.a)) game.player[m.m](...m.a.map((v) => (typeof v === 'number' || typeof v === 'boolean' ? v : null)));
-      } else if (Array.isArray(m.props)) game.props.restore(m.props);
+      } else {
+        if (Array.isArray(m.props)) game.props.restore(m.props);
+        if (m.meteors && typeof m.meteors === 'object') game.meteors.load(m.meteors);
+      }
     };
     // Lo que es para todos: aquí y, si se es el anfitrión, en las demás pantallas
     this.all = echo((s, m, a) => {
