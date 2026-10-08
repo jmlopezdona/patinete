@@ -131,10 +131,22 @@ Cuatro arreglos pequeños e independientes:
 
 ### T4 · Suelo con variedad
 
-**Estado.** Hecho, con placas de 8 × 8 studs y una variación de ±5 %: con el ±3-4 % previsto
-apenas se veía. Solo lo lleva el suelo (`ground: true` en `createBrickMaterial`), no los
-ladrillos. Se nota en arena, hierba y aceras; en el asfalto, casi nada. El coste está sin
-aclarar: las medidas bailaron entre 6 y 16 ms de una repetición a otra, con y sin el cambio.
+**Estado.** Hecho en dos pasos. Primero, placas de 8 × 8 studs con ±5 % de tono para todo el
+suelo. Después, una variación distinta por capa (`LOOK` en `src/world/cobena.js`, estilos en
+`createBrickMaterial`):
+
+| Capa | Estilo | Qué dibuja |
+| --- | --- | --- |
+| Campos | `surcos` | Surcos de dos studs sobre manchas grandes |
+| Suelo urbano | `placas` | Placas de 8 × 8 |
+| Verde y caminos | `manchas` | Manchas blandas a dos tamaños |
+| Aceras | `baldosas` | Baldosas de 4 × 4 |
+| Calzada | `asfalto` | Manchas blandas y, de cerca, moteado de gravilla |
+| Agua y marcas viales | — | Lisas |
+
+Cada dibujo se apaga por separado cuando ya no cabe en unos pocos píxeles. Sigue siendo sutil.
+El coste del segundo paso está sin medir: hasta dos ruidos suaves (ocho `hash`) por píxel de
+suelo, y no tiene interruptor de calidad.
 
 **Qué.** Asfalto, hierba y tierra son un color por vértice idéntico en superficies muy grandes.
 Añadir en el shader una variación suave por baldosa en las caras superiores, igual que el
