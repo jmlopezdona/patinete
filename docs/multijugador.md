@@ -21,10 +21,11 @@ estado de un jugador ya son reales** (salen de `src/net/protocol.js`); las del m
   objetos) y lo reparte.
 - **El trabajo no está en la red, está en el juego.** Los sistemas dan por hecho que hay un solo
   jugador y mezclan simulación con HUD, sonido y partículas. Separar eso es el grueso.
-- **Dónde estamos.** Hecho el prototipo de la fase 1: transporte, protocolo, jugadores remotos y
-  la prueba automática. Dos o más navegadores ya se ven patinar entre sí, por ahora entrando con
-  la dirección (`?sala=KTRM`). **Falta probarlo entre dos casas de verdad**, que es lo que decide
-  si se sigue por aquí; el orden de lo que viene está en el [plan](#4-plan-de-implementación).
+- **Dónde estamos.** La fase 1 está casi entera: transporte, protocolo, jugadores remotos, la
+  sala («Jugar con amigos», con código, enlace y personajes sin repetir) y la prueba automática.
+  Probado a mano con dos ordenadores con Chrome **en la misma red local**, fluido en los dos.
+  **Falta probarlo entre dos redes distintas**, que es lo único que dice si la conexión entre
+  casas funciona; el orden de lo que viene está en el [plan](#4-plan-de-implementación).
 
 ## 1. La función
 
@@ -43,9 +44,8 @@ estado de un jugador ya son reales** (salen de `src/net/protocol.js`); las del m
 No hacen falta apodos: como no se repiten personajes, **el personaje es el nombre del jugador**
 («Adrián ha entrado en la partida»). Así tampoco hay texto escrito por usuarios viajando por la red.
 
-> **Hoy, en el prototipo:** no hay panel de sala. La partida se crea abriendo
-> `…/?sala=KTRM&anfitrion` y se entra con `…/?sala=KTRM`; cada uno sale con el personaje que tenga
-> guardado, se puede repetir, y se entra directamente con la partida en marcha.
+Todo esto ya funciona así. Lo único que no es como se describe: el botón de compartir del
+sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 
 ### Qué se comparte y qué no
 
@@ -112,8 +112,8 @@ anfitrión dentro de su foto.
 | Pieza | Para qué | Con qué |
 | --- | --- | --- |
 | Señalización | Que dos navegadores intercambien el saludo inicial | El broker público de PeerJS; el código de sala es el identificador del anfitrión (`cobena-KTRM`) |
-| STUN | Atravesar el router de casa | El de Google, que es el que PeerJS trae puesto |
-| TURN | Retransmitir cuando la conexión directa no sale (datos móviles, redes de empresa) | Los comunitarios que PeerJS trae puestos (`eu-0` y `us-0.turn.peerjs.com`), sin garantía ninguna. Si a alguien no le conecta, se añade un servicio propio con nivel gratuito |
+| STUN | Atravesar el router de casa | Los públicos de Google y Cloudflare (`ICE` en `src/net/transport.js`) |
+| TURN | Retransmitir cuando la conexión directa no sale (datos móviles, redes de empresa) | La cuenta gratuita de ExpressTURN (`free.expressturn.com`, por UDP y TCP), con las credenciales en el código. Los que PeerJS trae puestos (`eu-0` y `us-0.turn.peerjs.com`) ya no existen: sus nombres no resuelven |
 
 El juego se publica en GitHub Pages, que ya sirve por HTTPS, que es lo que WebRTC necesita. El
 service worker no estorba: `public/sw.js` solo intercepta peticiones `GET` del mismo origen.
@@ -133,6 +133,13 @@ otra cosa, o por un transporte local para las pruebas, no toca el resto.
   conexión** (`conn.peerConnection.createDataChannel(…, { negotiated: true, id: 50, ordered: false,
   maxRetransmits: 0 })`). Al ir negociado de antemano con el mismo número en los dos lados no
   hace falta más señalización ni pisa el manejador `ondatachannel` de PeerJS.
+- **Sin TURN, por datos móviles no se entra.** Primera prueba fuera de casa: un móvil con datos
+  contra un anfitrión con fibra, y no conectó. Los TURN que PeerJS trae de serie están muertos
+  (comprobado: no resuelven por DNS y no dan ningún candidato de retransmisión), así que solo
+  había STUN, y eso no basta en redes que cambian de puerto con cada destino. La lista de
+  servidores es ahora nuestra (`ICE`), con dos STUN y el TURN de ExpressTURN. Con `?ice=relay`
+  se obliga a ir solo por él: así pasa entera la prueba automática
+  (`RED=peer ICE=relay npm run test:red`). **Falta repetir la prueba con el móvil.**
 - **El modo `raw` de PeerJS sí manda el texto sin envolver**, así que el JSON lo hace la sesión y
   los dos transportes llevan exactamente lo mismo.
 - **Probado por WebRTC de verdad**, con el broker público, entre ventanas del mismo equipo
@@ -171,7 +178,7 @@ Dos canales por conexión: uno **sin garantías** para el estado, que caduca ens
 | Mensaje | Sentido | Canal | Cadencia | Lleva | Estado |
 | --- | --- | --- | --- | --- | :---: |
 | `hola` | invitado → anfitrión | fiable | al entrar y al cambiar de personaje o color | versión del juego, personaje, color | Hecho |
-| `sala` | anfitrión → todos | fiable | al cambiar | qué sitio te toca, y quién está con qué personaje y color | Hecho |
+| `sala` | anfitrión → todos | fiable | al cambiar | qué sitio te toca, si la partida ha empezado, y quién está con qué personaje y color | Hecho |
 | `mundo` | anfitrión → invitado | fiable | al entrar | estado completo: hora, oleada, estatua, charcos, cráteres, mobiliario roto, abducidos, objeto en la calle | Fase 2 |
 | `yo` | invitado → anfitrión | sin garantías | 20/s | estado de su personaje (37 bytes) | Hecho, sin los contadores de controles |
 | `foto` | anfitrión → invitado | sin garantías | 15/s | reloj y los demás jugadores; más adelante, todo lo que se mueve | Hecho para los jugadores |
@@ -255,9 +262,9 @@ para comparar entre sí, no plazos.
 | # | Cambio | Archivos | Tamaño | Fase | Estado |
 | --- | --- | --- | :---: | :---: | --- |
 | C1 | Transporte y protocolo | `src/net/*`, `package.json` | M | 1 | **Hecho** |
-| C2 | Sala: crear, unirse, elegir personaje | `index.html`, `style.css`, `main.js` | M | 1 | Solo por la dirección |
+| C2 | Sala: crear, unirse, elegir personaje | `index.html`, `style.css`, `lobby.js`, `party.js`, `main.js` | M | 1 | **Hecho** |
 | C3 | Jugadores remotos | `remote-player.js`, `party.js`, `player.js`, `main.js` | M | 1 | **Hecho**, sin sonido de los demás |
-| C4 | Varios vecinos fuera a la vez | `folks.js`, `minigames.js`, `main.js` | P | 1 | Pendiente |
+| C4 | Varios vecinos fuera a la vez | `folks.js`, `missions.js`, `main.js` | P | 1 | **Hecho** |
 | C5 | Minimapa y HUD con los demás | `minimap.js`, `hud.js` | P | 1 | Minimapa y avisos hechos; falta la tira de iconos |
 | C6 | Partida sin pausa | `main.js`, `party.js`, `photo.js`, `watch.js` | P | 1 | Hecho lo de la pestaña tapada y que los demás se muevan en tu pausa; falta el resto |
 | C7 | Pruebas con varios navegadores | `tools/red.mjs`, `package.json` | M | 1 | **Hecho** |
@@ -281,7 +288,8 @@ Módulo `src/net/`, sin dependencias del resto del juego:
   canal negociado aparte) y `LocalTransport`, con `BroadcastChannel` entre pestañas del mismo
   navegador, que se elige con `?red=local`: sirve para desarrollar con dos ventanas y para las
   pruebas, sin depender del broker. Los fallos al abrir o entrar son un `Error` con el motivo:
-  `no-room`, `taken`, `timeout` o `network`.
+  `no-room`, `taken`, `broker` (no se llega al servicio de salas) o `blocked` (se han encontrado,
+  pero entre esas dos redes no hay camino).
 - `protocol.js`: los mensajes de la tabla de arriba, el empaquetado de `yo` y `foto` en binario
   (`DataView`) y la mezcla entre dos estados (`mixState`). Lo fiable va en JSON: son pocos
   mensajes y así se depuran a simple vista.
@@ -296,25 +304,26 @@ ese bucle lo mueve el metrónomo de C6.
 
 Dependencia nueva: `peerjs` 1.5.5, cargada con `import()` solo al abrir una partida en red.
 
-### C2 · Sala
+### C2 · Sala — hecho
 
-Hoy: `?sala=KTRM&anfitrion` crea la partida y `?sala=KTRM` entra, sin panel. Una pastilla arriba
-(`#net`) dice la sala, cuántos hay y, en rojo, por qué no se ha podido entrar.
-
-Lo que falta:
-
-- `index.html` y `style.css`: botón «Jugar con amigos» y panel de sala con el código, el botón de
-  compartir, la lista de jugadores y «Empezar» (solo el anfitrión).
-- `main.js`, `bindUi()`: las tarjetas de personaje (`.char-btn`) se desactivan para los cogidos.
-  `setCharacter()` pasa a pedir el personaje al anfitrión cuando hay partida en red y solo cambia
-  al recibir el visto bueno. El botón de la pausa (`p-char`), que hoy rota por todos, salta los
-  ocupados. En `session.js`, `greet()` tiene que rechazar el personaje cogido.
-- `?sala=KTRM` en la URL abre directamente el panel de unirse.
-- Estados nuevos de `Game.state`: `'lobby'` entre `'menu'` y `'play'`. Hoy, quien está en el menú
-  ya sale en la partida de los demás, quieto en su puerta.
-- Generar el código al crear (hoy lo pone quien escribe la dirección) y reintentar si está cogido
-  (`taken`).
-- El tope de jugadores es `CHARACTERS.length`: si se añade un personaje, cabe uno más. Ya es así.
+- `index.html` y `style.css`: botón «Jugar con amigos» y, en su sitio, un panel (`#friends`) con
+  dos caras. Sin sala: «Crear partida» y el código para unirse. Con sala: el código en grande,
+  «Compartir enlace», quién está y el botón de salir a la calle.
+- `lobby.js`: el panel. Al crear genera un código de cuatro consonantes (sin vocales, para que no
+  salgan palabras) y prueba con otro si ya está cogido. El enlace es `…/?sala=KTRM`, que al
+  abrirlo entra directamente.
+- **Quién da la salida.** El anfitrión pulsa «Empezar» y los que esperaban en la sala salen con
+  él, cada uno de su casa. Quien llega con la partida empezada ve «Entrar». `sala` lleva si ha
+  empezado (`on`).
+- **Personajes sin repetir.** Manda el anfitrión (`Session.greet`): si al entrar pides uno que
+  ya lleva otro, te da el primero libre; si lo pides después, te quedas con el que tenías. Cada
+  uno se entera por la `sala` que recibe (`onMe`), sin mensaje de visto bueno aparte. En el
+  menú las tarjetas de los cogidos salen apagadas, y el botón de la pausa (`p-char`) se los salta.
+- **Sin estado `'lobby'`.** La sala es el menú con el panel delante: `Game.state` sigue siendo
+  `'menu'` o `'play'`. Quien no ha salido a la calle viaja como oculto y los demás no lo ven.
+- La pastilla de arriba (`#net`) sigue diciendo la sala y cuántos hay. Si no se puede entrar, o
+  el anfitrión se va, el panel dice por qué.
+- `?sala=KTRM&anfitrion` sigue creando una partida con ese código exacto: lo usan las pruebas.
 
 ### C3 · Jugadores remotos — hecho
 
@@ -338,17 +347,13 @@ Lo que falta:
 Falta: **no se oye a los demás** (ni saltos, ni turbo, ni castañazos). Hasta que el sonido tenga
 posición (C10) es preferible el silencio a oírlos como si fueran tuyos.
 
-### C4 · Varios vecinos fuera a la vez
+### C4 · Varios vecinos fuera a la vez — hecho
 
-- `folks.js`: `setPlayer(id)` guarda un solo ausente en `this.away`. Pasa a `setAway(ids)` con un
-  conjunto, y las comprobaciones `this.away !== 'leo'` a `!this.away.has('leo')`. La misión del
-  selfie (`missions.js`) también mira `folks.away !== 'emma'`.
-- `minigames.js`: `ball.setKeeper(ch.id !== 'teo')` pasa a «hay portero si nadie lleva a Teo».
-- `main.js`: la descripción de la misión de fútbol, que depende del portero, se recalcula al
-  cambiar la sala.
-
-Hasta entonces, **el vecino que lleva un amigo sigue en su sitio en tu pantalla**: si él es Yago,
-tú ves dos Yagos.
+- `folks.js`: `setPlayer(id)` es ahora `setAway(ids)`, con un conjunto, y las comprobaciones
+  `this.away !== 'leo'` son `!this.away.has('leo')`. La misión del selfie (`missions.js`) también.
+- `main.js`: `refreshAway()` junta al jugador local con los amigos de la sala y decide con eso
+  los vecinos que faltan, si hay portero (nadie lleva a Teo) y la descripción del Chut a Puerta.
+  Se llama al cambiar de personaje y cada vez que cambia la sala.
 
 ### C5 · Minimapa y HUD
 
@@ -387,7 +392,10 @@ tercero con `?red=local` y comprueba:
 - que con la ventana del anfitrión minimizada su partida sigue y los demás lo ven moverse;
 - que el castañazo de otro se ve, pero no te saca el cartel;
 - que el que se va desaparece, que un código que no existe se explica y que, si se va el
-  anfitrión, se acaba la partida.
+  anfitrión, se acaba la partida;
+- la sala desde el menú: crear da un código y un enlace, no se repite personaje, el cogido no se
+  puede elegir, el vecino que lleva un amigo falta del pueblo, el invitado espera a la salida,
+  quien llega tarde entra directamente y salir de la sala devuelve al menú.
 
 Con `RED=peer npm run test:red` hace lo mismo por WebRTC y el broker público de PeerJS: sirve
 para comprobar el transporte de verdad, pero necesita internet y no debería ir en la tanda
@@ -577,11 +585,11 @@ pueblo sale igual en todas las pantallas porque se construye con la misma semill
   del anfitrión, no se entra y se dice por qué. Falta ofrecer el botón de actualizar que ya existe.
 - **Invitado que se cae:** hoy su personaje desaparece con un aviso. Falta que, si vuelve con el
   mismo código en un par de minutos, recupere personaje y sitio.
-- **Anfitrión que se cae:** hoy los demás se quedan sin amigos y con el aviso en la pastilla.
-  Falta la vuelta al menú, cada uno con su progreso guardado.
-- **Sala llena o código que no existe:** el mensaje ya sale; falta llevarlo al panel de unirse.
-- **Sin conexión directa:** a los 12 segundos sin conectar se explica que esa red no deja y que
-  pruebe con otra. Si pasa a menudo, es el momento de añadir un TURN propio.
+- **Anfitrión que se cae:** los demás se quedan sin amigos, con un aviso si estaban jugando y el
+  motivo en el panel. Falta la vuelta al menú, cada uno con su progreso guardado.
+- **Sala llena o código que no existe:** hecho; el mensaje sale en el panel de unirse.
+- **Sin conexión directa:** a los 25 segundos sin conectar se explica que esas dos redes no
+  dejan y que pruebe con wifi. Pasó a la primera con datos móviles, cuando aún no había TURN.
 - **Cortes sin despedida.** Hoy uno se entera de que el otro se ha ido porque lo dice
   (`adios`) o porque se cierra el canal, y eso último puede tardar. Falta dar por perdido a quien
   lleve unos segundos sin mandar nada.
@@ -611,17 +619,18 @@ resuelve programando, y la sala bonita al final.
 | 1 | **Prototipo de conexión**: transporte con sus dos implementaciones, `yo` y `foto`, y un jugador remoto que solo se pinta. Sin panel: se entra por la dirección | C1, C3 mínimo | **Hecho** |
 | 2 | **Prueba automática** con varias ventanas, `npm run test:red` | C7 | **Hecho** |
 | 3 | **Separar en `player.js` lo que se ve de lo que le pasa al jugador local**, para que el castañazo de un amigo no te sacuda la cámara | parte de C3 | **Hecho** (salió con el paso 1) |
-| 3b | **Probar entre dos casas**: uno con fibra y otro en otra red, y otra vez con uno en datos móviles. No es código: es jugar un rato. Ver [cómo](#cómo-probarlo) | — | **Pendiente: es lo siguiente** |
-| 4 | **Sala de verdad y varios vecinos fuera**: panel, código generado, compartir, personajes cogidos, estado `'lobby'`; `folks.setAway(ids)` y el portero | C2, C4 | Pendiente |
+| 3b | **Probar entre dos redes**: uno con fibra y otro en otra red, y otra vez con uno en datos móviles. No es código: es jugar un rato. Ver [cómo](#cómo-probarlo) | — | Misma red local, dos ordenadores con Chrome: fluido. Móvil con datos contra fibra: no conectó, no había TURN; **ya lo hay, falta repetirla**. Sin probar: dos fibras distintas |
+| 4 | **Sala de verdad y varios vecinos fuera**: panel, código generado, compartir, personajes cogidos; `folks.setAway(ids)` y el portero | C2, C4 | **Hecho** |
 | 5 | **Lo que queda de HUD y la partida sin pausa**: tira de iconos, ocupado, `wakeLock`, «el anfitrión está en pausa» | C5, C6 | Pendiente; adelantado que la partida siga con la pestaña tapada |
 
-Según salga el paso 3b:
+El paso 4 se ha adelantado a la prueba entre redes porque no depende de ella: la sala va por
+encima del transporte y vale igual si este cambia. Según salga el paso 3b:
 
-- **Conecta y se ve fluido:** se sigue con los pasos 4 y 5.
+- **Conecta y se ve fluido:** se sigue con el paso 5.
 - **Conecta pero va a tirones:** antes de seguir, mirar la hora de los estados reenviados (ver
   Suavizado) y subir el retraso de 100 ms.
-- **No conecta en alguna red:** decidir TURN propio u otro transporte **antes** del paso 4. El
-  resto del código no cambia: es lo que compra la interfaz de C1.
+- **No conecta en alguna red:** decidir TURN propio u otro transporte antes de seguir. El resto
+  del código no cambia: es lo que compra la interfaz de C1.
 
 ### Antes de empezar la fase 2
 
@@ -648,11 +657,12 @@ informe de deuda técnica) queda para más adelante y no bloquea ninguna fase.
 
 ### Cómo probarlo
 
-- **Con dos ventanas del mismo navegador**, sin internet:
-  `http://localhost:5173/?red=local&sala=KTRM&anfitrion` en una y
-  `http://localhost:5173/?red=local&sala=KTRM` en otra.
-- **Entre dos casas**, con el juego publicado: el que crea abre `…/?sala=KTRM&anfitrion` (el
-  código, el que se quiera, de hasta 8 letras o números) y manda al otro `…/?sala=KTRM`. La
+- **Con dos ventanas del mismo navegador**, sin internet: abrir
+  `http://localhost:5173/?red=local` en las dos, crear la partida en una desde «Jugar con amigos»
+  y unirse con el código en la otra.
+- **Entre dos redes**, con el juego publicado: «Jugar con amigos» → «Crear partida» →
+  «Compartir enlace», y el otro abre el enlace. Para probar otra red sin salir de casa, basta
+  con que uno de los dos ordenadores se conecte a la wifi compartida de un móvil con datos. La
   pastilla de arriba dice si ha conectado; el icono del amigo sale en el minimapa aunque esté en
   la otra punta del pueblo.
 - **Qué mirar:** cuánto tarda en conectar, si el otro se mueve fluido o a saltos, si sigue así a
@@ -665,7 +675,7 @@ informe de deuda técnica) queda para más adelante y no bloquea ninguna fase.
 | R1 | Desfase en los choques con cosas que se mueven | A 30 unidades/s, 150 ms de retardo son 4–5 unidades: un culetazo que tú ves claro puede no contar, o te atropella un coche que ya habías pasado | El anfitrión adelanta la posición del jugador con su velocidad (que ya viaja en `yo`) antes de comprobar. Si no basta, los culetazos pasan a detectarse en el juego de quien los da (más código en C13) |
 | R2 | El anfitrión va lento | `loop()` limita `dt` a 0,05 s: por debajo de 20 fotogramas por segundo el mundo va a cámara lenta para todos | Avisar al crear partida en un equipo justo; la calidad automática ya baja sola |
 | R3 | Anfitrión con el juego tapado | En ordenador, cambiar de pestaña o minimizar ya no para la partida (metrónomo con worker, C6). En un móvil, bloquear la pantalla o cambiar de aplicación la congela para todos. Sin probar: Safari y el ahorro de energía de Chrome | `wakeLock`, aviso a los invitados y recomendar que haga de anfitrión quien juegue con ordenador |
-| R4 | Redes que no dejan conexión directa | Alguien no consigue entrar | Mensaje claro; los TURN comunitarios de PeerJS de entrada y uno propio cuando haga falta. **Sin probar todavía** (paso 3b) |
+| R4 | Redes que no dejan conexión directa | Alguien no consigue entrar. **Ha pasado a la primera con datos móviles** | Mensaje claro y el TURN de ExpressTURN. Con `?ice=relay` se comprueba que sigue vivo. Si se acaba el cupo o alguien abusa de las credenciales, que están a la vista, se cambian o se pasa a Cloudflare con un Worker |
 | R5 | Depender del broker público de PeerJS | Si está caído no se pueden crear salas (las ya empezadas siguen) | El transporte es intercambiable (C1); se puede pasar a otro servicio sin tocar el juego |
 | R6 | Textos con HTML por la red | Los carteles del HUD son HTML y los invitados pintarían lo que mande el anfitrión | Limitar a las etiquetas que ya se usan (`b`, `kbd`, `small`, `span`) al recibir. Hoy no viaja ningún texto: los avisos se montan en cada pantalla con el nombre del personaje |
 | R7 | Las refactorizaciones rompen el juego de un jugador | Fallos en algo que hoy funciona | Hacerlas sin red de por medio, sistema a sistema, con las pruebas pasando en cada paso |
@@ -679,8 +689,9 @@ informe de deuda técnica) queda para más adelante y no bloquea ninguna fase.
 | D1 | ¿Nivel de búsqueda de la pandilla o de cada uno? | **De la pandilla.** Solo hay un municipal y una abuela, y es más divertido que te persigan por lo que ha roto tu amigo |
 | D2 | ¿La invasión crece con los jugadores? | **Sí:** más marcianos a la vez, más culetazos para ganar y más coscorrones a la nodriza, a ajustar jugando |
 | D3 | ¿Modo foto (y seguir a las mamás) en red? | **Sin parar el tiempo:** la cámara se suelta y tú quedas ocupado, pero el mundo sigue. Si queda raro, desactivarlos en red |
-| D4 | ¿Cambiar de personaje a mitad de partida? | **Sí**, entre los libres, como ahora en la pausa. El prototipo ya lo hace, aún sin mirar si está libre |
+| D4 | ¿Cambiar de personaje a mitad de partida? | **Sí**, entre los libres, como ahora en la pausa. Ya funciona así |
 | D5 | ¿Quién puede hacer de noche? | **Cualquiera**, con aviso de quién ha sido |
-| D6 | ¿Entrar con la partida empezada? | **Sí**; es lo que hace falta cuando a alguien se le cae la conexión. El prototipo solo sabe entrar así |
+| D6 | ¿Entrar con la partida empezada? | **Sí**; es lo que hace falta cuando a alguien se le cae la conexión. Ya funciona así |
 | D7 | ¿Minijuegos unos contra otros (carrera, trucos)? | **Más adelante**, como función aparte encima de esta |
+| D9 | ¿Qué TURN se pone? | **Decidido: ExpressTURN**, cuenta gratuita con credenciales fijas, que no pide backend. Van en el código, a la vista de cualquiera: lo peor que puede pasar es que alguien gaste el cupo. La alternativa si eso ocurre es Cloudflare, con credenciales de vida corta y un Worker que las pida |
 | D8 | ¿A quién persiguen las gallinas? | **Al que atropelló a una**, no a la pandilla: es un castigo personal y son pocas para repartirlas |

@@ -5,7 +5,9 @@
 //   send(to, data)  un texto va por el canal fiable y ordenado; un ArrayBuffer, por el que no da garantías
 //   onOpen(id), onClose(id), onData(id, data)   lo que avisa
 //   close()
-// Las promesas fallan con un Error cuyo mensaje es el motivo: 'no-room', 'taken', 'timeout' o 'network'.
+// Las promesas fallan con un Error cuyo mensaje es el motivo: 'no-room' (no hay sala con ese
+// código), 'taken' (ya la hay), 'broker' (no se llega al servicio que presenta a los navegadores)
+// o 'blocked' (se han encontrado, pero entre esas dos redes no hay camino).
 
 const fail = (why) => new Error(why);
 
@@ -66,10 +68,23 @@ class LocalTransport {
 // quita el orden, sigue reenviando lo que se pierde, y aquí lo que llega tarde ya no sirve
 const PREFIX = 'cobena-';
 const FAST_ID = 50; // el mismo número en los dos extremos: así el canal no hay que negociarlo
-const WAIT = 12000;
+const WAIT_BROKER = 12000;
+const WAIT_PEER = 25000; // por datos móviles, encontrar camino tarda bastante más que en casa
+// Quién ayuda a atravesar el router de cada casa (STUN) y, cuando ni así hay camino directo, quién
+// retransmite (TURN): sin él, las redes que cambian de puerto con cada destino (muchos datos
+// móviles, redes de empresa) no conectan. PeerJS trae puestos dos TURN suyos que ya no existen,
+// así que aquí va la lista entera. El TURN es la cuenta gratuita de ExpressTURN; sus credenciales
+// van a la vista porque no hay servidor propio donde guardarlas: lo peor que puede pasar es que
+// alguien gaste el cupo, y entonces se cambian
+const ICE = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
+  { urls: ['turn:free.expressturn.com:3478', 'turn:free.expressturn.com:3478?transport=tcp'], username: '000000002106820095', credential: 'EdKImg0GzmC3Ujoadm93cUrUOrg=' },
+];
 
 class PeerTransport {
-  constructor() {
+  // relay: solo por TURN, para comprobar que el que haya puesto funciona (?ice=relay)
+  constructor(relay) {
+    this.config = { iceServers: ICE, iceTransportPolicy: relay ? 'relay' : 'all' };
     this.links = new Map();
     this.onOpen = this.onClose = this.onData = () => {};
   }
@@ -77,15 +92,15 @@ class PeerTransport {
   async start(id) {
     const { Peer } = await import('peerjs');
     return new Promise((ok, no) => {
-      const peer = (this.peer = id ? new Peer(id) : new Peer());
-      const timer = setTimeout(() => no(fail('timeout')), WAIT);
+      const peer = (this.peer = new Peer(id, { config: this.config }));
+      const timer = setTimeout(() => no(fail('broker')), WAIT_BROKER);
       peer.on('open', () => {
         clearTimeout(timer);
         ok();
       });
       peer.on('error', (e) => {
         clearTimeout(timer);
-        const why = e.type === 'unavailable-id' ? 'taken' : e.type === 'peer-unavailable' ? 'no-room' : 'network';
+        const why = e.type === 'unavailable-id' ? 'taken' : e.type === 'peer-unavailable' ? 'no-room' : e.type === 'webrtc' ? 'blocked' : 'broker';
         no(fail(why));
         this.failed?.(fail(why));
       });
@@ -101,8 +116,11 @@ class PeerTransport {
     await this.start();
     return new Promise((ok, no) => {
       this.failed = no;
-      setTimeout(() => no(fail('timeout')), WAIT);
-      this.adopt(this.peer.connect(PREFIX + code, { reliable: true, serialization: 'raw' }), ok);
+      setTimeout(() => no(fail('blocked')), WAIT_PEER);
+      const conn = this.peer.connect(PREFIX + code, { reliable: true, serialization: 'raw' });
+      // El anfitrión existe y ha contestado, pero no se encuentra camino entre las dos redes
+      conn.on('error', () => no(fail('blocked')));
+      this.adopt(conn, ok);
     });
   }
 
@@ -136,4 +154,4 @@ class PeerTransport {
   }
 }
 
-export const createTransport = (kind) => (kind === 'local' ? new LocalTransport() : new PeerTransport());
+export const createTransport = (kind, relay) => (kind === 'local' ? new LocalTransport() : new PeerTransport(relay));

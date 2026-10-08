@@ -59,7 +59,7 @@ export class Missions {
       { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Márcale a Teo todos los goles que puedas en 60 segundos.', night: false, unit: (v) => `${v} goles` },
       // De noche Teo se toma la noche libre: para un marciano con cuatro brazos
       // Solo cuando Emma está de vecina en el parque; dónde, lo dice ella (ver place)
-      { id: 'selfie', name: 'Selfie con Emma', icon: '🤳', color: 0xff5fa2, x: 0, z: 0, desc: `Cuélate en las ${SHOTS} fotos de Emma: sal bien de fondo y que el flash te pille haciendo un truco distinto cada vez.`, when: () => !!game.folks?.emma && game.folks.away !== 'emma', linger: 180, unit: (v) => `${Math.round(v)} pts` },
+      { id: 'selfie', name: 'Selfie con Emma', icon: '🤳', color: 0xff5fa2, x: 0, z: 0, desc: `Cuélate en las ${SHOTS} fotos de Emma: sal bien de fondo y que el flash te pille haciendo un truco distinto cada vez.`, when: () => !!game.folks?.emma && !game.folks.away.has('emma'), linger: 180, unit: (v) => `${Math.round(v)} pts` },
       { id: 'aliensoccer', name: 'Chut Marciano', icon: '👾', color: 0x7ddc1f, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'El portero es un marciano con cuatro brazos que no le quita ojo al balón: márcale en 60 segundos.', night: true, unit: (v) => `${v} goles` },
     ];
     this.state = 'idle';

@@ -8,18 +8,20 @@ const DELAY = 100;
 const KEEP = 12;
 
 export class Session {
-  // me: { v, char, color }. max: cuántos caben, contando al anfitrión
-  constructor(transport, me, max) {
+  // me: { v, char, color }. chars: los personajes que hay; no se repiten, así que caben tantos como haya
+  constructor(transport, me, chars) {
     this.tr = transport;
     this.me = me;
-    this.max = max;
+    this.chars = chars;
+    this.started = false; // el anfitrión ya ha dado la salida
     this.hosting = false;
     this.slot = -1; // mi sitio en la sala: 0 es el anfitrión; -1, todavía fuera
     this.players = new Map(); // los demás, por sitio: { slot, char, color, peer, buf, off, seq, last }
     this.seq = 0;
     this.fotoSeq = -1;
     this.next = 0;
-    this.onJoin = this.onLeave = this.onChange = this.onEnd = () => {};
+    // onMe: el anfitrión me ha puesto otro personaje. onSync: ha cambiado algo de la sala
+    this.onJoin = this.onLeave = this.onChange = this.onEnd = this.onMe = this.onSync = () => {};
     transport.onData = (id, data) => (typeof data === 'string' ? this.text(id, data) : this.binary(id, data));
     transport.onClose = (id) => this.gone(id);
   }
@@ -42,6 +44,19 @@ export class Session {
     if (this.slot < 0) return;
     if (this.hosting) this.roster();
     else this.hello();
+  }
+
+  // Anfitrión: da la salida. Quien entre después ya se encuentra la partida en marcha
+  start() {
+    this.started = true;
+    this.roster();
+  }
+
+  // ¿Lleva ya alguien ese personaje? (sin contar a `except`)
+  taken(char, except) {
+    if (this.slot >= 0 && except !== this && this.me.char === char) return true;
+    for (const pl of this.players.values()) if (pl !== except && pl.char === char) return true;
+    return false;
   }
 
   hello() {
@@ -94,8 +109,10 @@ export class Session {
   // Anfitrión: alguien entra, o uno que ya estaba cambia de personaje
   greet(id, m) {
     const known = this.byPeer(id);
+    const char = String(m.char);
     if (known) {
-      known.char = String(m.char);
+      // Si el personaje que pide ya lo lleva otro, se queda con el que tenía: la sala que recibe se lo dice
+      if (this.chars.includes(char) && !this.taken(char, known)) known.char = char;
       known.color = m.color | 0;
       this.onChange(known);
       this.roster();
@@ -103,12 +120,13 @@ export class Session {
     }
     let slot = 1;
     while (this.players.has(slot)) slot++;
-    const why = m.v !== this.me.v ? 'version' : slot >= this.max ? 'full' : null;
+    const free = this.chars.filter((c) => !this.taken(c));
+    const why = m.v !== this.me.v ? 'version' : !free.length ? 'full' : null;
     if (why) {
       this.tr.send(id, JSON.stringify({ t: 'adios', why }));
       return;
     }
-    this.add(slot, String(m.char), m.color | 0, id, true);
+    this.add(slot, free.includes(char) ? char : free[0], m.color | 0, id, true);
     this.roster();
   }
 
@@ -116,7 +134,8 @@ export class Session {
   roster() {
     const players = [{ slot: 0, char: this.me.char, color: this.me.color }];
     for (const pl of this.players.values()) players.push({ slot: pl.slot, char: pl.char, color: pl.color });
-    for (const pl of this.players.values()) this.tr.send(pl.peer, JSON.stringify({ t: 'sala', you: pl.slot, players }));
+    for (const pl of this.players.values()) this.tr.send(pl.peer, JSON.stringify({ t: 'sala', you: pl.slot, on: this.started, players }));
+    this.onSync();
   }
 
   // Invitado: la sala según el anfitrión
@@ -124,8 +143,12 @@ export class Session {
     const fresh = this.slot >= 0;
     this.slot = m.you;
     const seen = new Set();
+    this.started = !!m.on;
     for (const e of m.players) {
-      if (e.slot === m.you) continue;
+      if (e.slot === m.you) {
+        if (e.char !== this.me.char) this.onMe((this.me.char = e.char));
+        continue;
+      }
       seen.add(e.slot);
       const pl = this.players.get(e.slot);
       if (!pl) this.add(e.slot, e.char, e.color, this.hostId, fresh);
@@ -136,6 +159,7 @@ export class Session {
       }
     }
     for (const pl of [...this.players.values()]) if (!seen.has(pl.slot)) this.drop(pl);
+    this.onSync();
   }
 
   gone(id) {
@@ -152,9 +176,9 @@ export class Session {
   // Invitado: se acabó la partida (el anfitrión se ha ido o no nos deja entrar)
   end(why) {
     if (this.closed) return;
+    this.closed = true;
     for (const pl of [...this.players.values()]) this.drop(pl);
     this.slot = -1;
-    this.closed = true;
     this.tr.close();
     this.onEnd(why);
   }

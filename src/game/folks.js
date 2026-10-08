@@ -37,6 +37,7 @@ export class Folks {
     this.game = game;
     this.T = game.terrain;
     this.markers = [];
+    this.away = new Set();
     this.buildYago();
     this.buildDrummer();
     this.buildJose();
@@ -46,45 +47,45 @@ export class Folks {
     this.buildLeo();
   }
 
-  // El personaje que lleva el jugador no puede estar a la vez en su sitio de siempre
-  setPlayer(id) {
-    this.away = id;
+  // Los personajes que llevan el jugador y sus amigos no pueden estar a la vez en su sitio de siempre
+  setAway(ids) {
+    this.away = ids;
     const Y = this.yago;
     if (Y) {
-      Y.marker.hidden = id === 'yago';
-      if (id === 'yago') Y.root.visible = Y.tag.visible = false;
+      Y.marker.hidden = ids.has('yago');
+      if (ids.has('yago')) Y.root.visible = Y.tag.visible = false;
     }
     const D = this.drummer;
-    if (D) D.fig.group.visible = D.tag.visible = id !== 'adrian';
+    if (D) D.fig.group.visible = D.tag.visible = !ids.has('adrian');
     // Sin Jose, su padre se queda tirando solo
     const J = this.jose;
-    if (J && J.kid.away !== (id === 'jose')) {
-      J.kid.away = id === 'jose';
+    if (J && J.kid.away !== ids.has('jose')) {
+      J.kid.away = ids.has('jose');
       J.kid.fig.group.visible = J.kid.tag.visible = false;
       this.resetJose();
     }
     const E = this.emma;
-    if (E && id === 'emma') E.fig.group.visible = E.tag.visible = E.fx.visible = false;
+    if (E && ids.has('emma')) E.fig.group.visible = E.tag.visible = E.fx.visible = false;
     const K = this.iker;
     if (K) {
-      K.marker.hidden = id === 'iker';
-      if (id === 'iker') K.root.visible = K.tag.visible = false;
+      K.marker.hidden = ids.has('iker');
+      if (ids.has('iker')) K.root.visible = K.tag.visible = false;
     }
     const L = this.leo;
     if (L) {
-      L.marker.hidden = id === 'leo';
-      if (id === 'leo') L.fig.group.visible = L.machine.visible = L.ball.visible = L.tag.visible = false;
+      L.marker.hidden = ids.has('leo');
+      if (ids.has('leo')) L.fig.group.visible = L.machine.visible = L.ball.visible = L.tag.visible = false;
     }
   }
 
   update(dt, p, time, live) {
-    if (this.yago && this.away !== 'yago') this.updateYago(dt, p, time, live);
+    if (this.yago && !this.away.has('yago')) this.updateYago(dt, p, time, live);
     if (this.drummer) this.updateDrummer(dt, p, time, live);
     if (this.jose) this.updateJose(dt, p, time, live);
     if (this.joggers) this.updateJoggers(dt, p, time, live);
-    if (this.emma && this.away !== 'emma') this.updateEmma(dt, p, time, live);
-    if (this.iker && this.away !== 'iker') this.updateIker(dt, p, time, live);
-    if (this.leo && this.away !== 'leo') this.updateLeo(dt, p, time, live);
+    if (this.emma && !this.away.has('emma')) this.updateEmma(dt, p, time, live);
+    if (this.iker && !this.away.has('iker')) this.updateIker(dt, p, time, live);
+    if (this.leo && !this.away.has('leo')) this.updateLeo(dt, p, time, live);
   }
 
   // ---------- Leo, de blanco, peloteando en la pista de tenis contra la máquina lanzapelotas ----------
@@ -509,7 +510,7 @@ export class Folks {
     const P = D.P;
     const g = this.game;
     const d = Math.hypot(p.pos.x - P.x, p.pos.z - P.z);
-    const here = this.away !== 'adrian'; // si Adrián va de paseo, la batería se queda sola y callada
+    const here = !this.away.has('adrian'); // si Adrián va de paseo, la batería se queda sola y callada
     D.root.visible = d < SEE;
     D.tag.visible = here && d < SEE;
     if (live) g.sfx.drums(here ? clamp(1 - (d - 14) / 80, 0, 1) ** 2 : 0);

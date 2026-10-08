@@ -48,7 +48,8 @@ import { Items } from './game/items.js';
 import { Slime } from './game/slime.js';
 import { Heist } from './game/heist.js';
 import { Boss } from './game/boss.js';
-import { Party } from './game/party.js';
+import { Party, WHY } from './game/party.js';
+import { Lobby } from './game/lobby.js';
 
 const SAVE_KEY = 'cobena-patinete-v1';
 const QUALITY_NAMES = ['Bajos', 'Medios', 'Altos'];
@@ -209,15 +210,16 @@ class Game {
     this.resize();
     window.addEventListener('resize', () => this.resize());
     this.bindUi();
+    this.lobby = new Lobby(this);
     this.setCharacter(this.save.character, true);
     this.refreshHud(true);
     if (params.has('night')) {
       this.env.night = this.env.target = 1;
       this.env.apply();
     }
-    // Partida en red, por ahora solo por la dirección: ?sala=KTRM&anfitrion la crea y ?sala=KTRM entra.
-    // Con red=local va entre pestañas del mismo navegador, sin salir a internet
-    if (params.get('sala')) this.party = new Party(this, params.get('sala'), params.has('anfitrion'), params.get('red'));
+    // Partida en red: se crea o se entra desde «Jugar con amigos», y un enlace con ?sala=KTRM entra
+    // directamente. Con red=local va entre ventanas del mismo navegador, sin salir a internet
+    if (params.get('sala')) this.lobby.connect(params.get('sala'), params.has('anfitrion'));
 
     this.last = performance.now();
     renderer.setAnimationLoop((t) => this.loop(t));
@@ -348,8 +350,11 @@ class Game {
       box.appendChild(b);
     }
     $('p-char').addEventListener('click', () => {
-      const i = CHARACTERS.indexOf(this.player.char);
-      this.setCharacter(CHARACTERS[(i + 1) % CHARACTERS.length].id);
+      // En red, se salta los que ya lleva un amigo
+      let i = CHARACTERS.indexOf(this.player.char);
+      do i = (i + 1) % CHARACTERS.length;
+      while (this.party?.taken(CHARACTERS[i].id));
+      this.setCharacter(CHARACTERS[i].id);
     });
     $('p-quality').addEventListener('click', () => {
       this.quality = (this.quality + 2) % 3;
@@ -429,19 +434,19 @@ class Game {
 
   // Elige quién sale a la calle: cambia piloto y vehículo, y su doble desaparece del pueblo
   setCharacter(id, silent = false) {
+    if (!silent && this.party?.taken(id)) return;
     const ch = characterById(id);
     const swap = ch !== this.player.char;
     this.player.setCharacter(ch.id, this.save.colors[ch.id]);
     this.minimap.home = this.home.roam ? null : this.home;
     // Elegido en el menú, cada uno empieza en su casa; en la pausa se cambia sobre la marcha
     if (swap && this.state === 'menu') this.goHome();
-    this.folks.setPlayer(ch.id);
-    this.ball.setKeeper(ch.id !== 'teo');
-    this.missions.defs.find((d) => d.id === 'soccer').desc = `Márcale a ${this.ball.teo ? 'Teo' : 'el suplente'} todos los goles que puedas en 60 segundos.`;
+    this.refreshAway();
     this.missions.near = null;
     for (const b of document.querySelectorAll('.char-btn')) b.classList.toggle('sel', b.dataset.id === ch.id);
     document.getElementById('char-blurb').textContent = ch.blurb;
     document.getElementById('p-char').textContent = `Personaje: ${ch.name} · ${ch.vehicle}`;
+    this.lobby.refresh();
     if (silent) return;
     this.save.character = ch.id;
     this.saveGame();
@@ -451,6 +456,36 @@ class Game {
     const intro = this.charIntro();
     if (this.state === 'play') this.hud.toast(intro, '');
     this.hud.voice.say(intro, false, true);
+  }
+
+  // Los vecinos que alguien lleva (el jugador o un amigo de la partida en red) faltan de su sitio
+  refreshAway() {
+    const away = new Set([this.player.char.id]);
+    if (this.party) for (const r of this.party.remotes.values()) away.add(r.char.id);
+    this.folks.setAway(away);
+    this.ball.setKeeper(!away.has('teo'));
+    this.missions.defs.find((d) => d.id === 'soccer').desc = `Márcale a ${this.ball.teo ? 'Teo' : 'el suplente'} todos los goles que puedas en 60 segundos.`;
+  }
+
+  openParty(code, hosting) {
+    this.closeParty();
+    this.party = new Party(this, code, hosting, params.get('red'), params.get('ice') === 'relay');
+    this.lobby.refresh();
+    return this.party;
+  }
+
+  // why: por qué se ha acabado, si no ha sido por gusto
+  closeParty(why = null) {
+    if (this.party) {
+      this.party.close();
+      this.party = null;
+      this.refreshAway();
+    }
+    // Si se ha acabado sin querer, el panel se queda a la vista para decir por qué
+    this.lobby.error = why;
+    this.lobby.on = !!why;
+    this.lobby.refresh();
+    if (why && this.state === 'play') this.hud.toast(`👥 ${WHY[why] || WHY.broker}`);
   }
 
   charIntro() {

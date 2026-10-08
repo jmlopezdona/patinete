@@ -1,9 +1,11 @@
 // Herramienta de desarrollo: abre una partida en red con varias pestañas y comprueba que se ven unas a otras.
 // Uso: node tools/red.mjs            entre pestañas, sin salir a internet (?red=local)
 //      RED=peer node tools/red.mjs   por WebRTC, con el broker público de PeerJS
+//      RED=peer ICE=relay node tools/red.mjs   lo mismo, pero todo retransmitido por el TURN
 import puppeteer from 'puppeteer-core';
 const URL = process.env.GAME_URL || 'http://localhost:5173/';
 const PEER = process.env.RED === 'peer';
+const RELAY = process.env.ICE === 'relay' ? '&ice=relay' : '';
 const SALA = PEER ? 'T' + Math.random().toString(36).slice(2, 8).toUpperCase() : 'TEST';
 const browser = await puppeteer.launch({
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: 'new',
@@ -19,13 +21,13 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? '✓' : '✗'} ${name}${detail === '' ? '' : ` · ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`}`);
 };
 
-async function abrir(nombre, query) {
+async function abrir(nombre, query, auto = true) {
   // Cada una en su ventana: una pestaña tapada por otra deja de pintar
   const page = await browser.newPage({ type: 'window' });
   await page.setViewport({ width: 800, height: 450 });
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`[${nombre}] ${m.text()}`); });
   page.on('pageerror', (e) => errors.push(`[${nombre}] [pageerror] ${e.message}\n${e.stack || ''}`));
-  await page.goto(`${URL}?autostart&q=0${PEER ? '' : '&red=local'}&${query}`, { waitUntil: 'load' });
+  await page.goto(`${URL}?${auto ? 'autostart&' : ''}q=0${PEER ? RELAY : '&red=local'}&${query}`, { waitUntil: 'load' });
   await page.waitForFunction('window.__game && window.__game.env', { timeout: 60000 });
   return page;
 }
@@ -133,14 +135,69 @@ check('el que se va desaparece', (await sala(A, 1)) && (await sala(C, 1)), `${aw
 
 // Entrar donde no hay partida
 const D = await abrir('perdido', 'sala=NOHAY');
-await D.waitForFunction(() => window.__game.party.error, { timeout: PEER ? 30000 : 5000 }).catch(() => {});
-check('un código que no existe se explica', (await D.evaluate(() => window.__game.party.error)) === 'no-room', await D.evaluate(() => document.getElementById('net').textContent));
+await D.waitForFunction(() => window.__game.lobby.error, { timeout: PEER ? 30000 : 5000 }).catch(() => {});
+check('un código que no existe se explica', (await D.evaluate(() => window.__game.lobby.error)) === 'no-room', await D.evaluate(() => document.getElementById('fr-msg').textContent));
 await D.close();
 
 // El anfitrión se va: se acaba la partida para el que queda
 await A.close();
-await C.waitForFunction(() => window.__game.party.error, { timeout: PEER ? 30000 : 5000 }).catch(() => {});
-check('si el anfitrión se va, se acaba la partida', (await C.evaluate(() => window.__game.party.error + ' ' + window.__game.party.remotes.size)) === 'host 0', await C.evaluate(() => document.getElementById('net').textContent));
+await C.waitForFunction(() => window.__game.lobby.error, { timeout: PEER ? 30000 : 5000 }).catch(() => {});
+check('si el anfitrión se va, se acaba la partida', (await C.evaluate(() => `${window.__game.lobby.error} ${window.__game.party}`)) === 'host null', await C.evaluate(() => document.getElementById('fr-msg').textContent));
+await C.close();
+
+// ---------- La sala, desde el menú ----------
+const sala2 = (page) => page.evaluate(() => {
+  const g = window.__game;
+  const go = document.getElementById('fr-go');
+  return { yo: g.player.char.id, estado: g.state, boton: go.textContent.trim(), listo: !go.disabled, fuera: [...g.folks.away].sort().join(' '), cogidos: [...document.querySelectorAll('.char-btn:disabled')].map((b) => b.dataset.id).join(' '), gente: document.getElementById('fr-players').textContent };
+});
+const E = await abrir('crea', 'x', false);
+await E.click('#btn-friends');
+await E.click('#fr-create');
+await E.waitForFunction(() => window.__game.party?.session.slot === 0, { timeout: 30000 });
+const codigo = await E.evaluate(() => document.getElementById('fr-name').textContent);
+check('crear partida da un código de cuatro letras', /^[BCDFGHJKLMNPQRSTVWXZ]{4}$/.test(codigo) && (await sala2(E)).boton === '▶  Empezar', codigo);
+check('y un enlace para mandar', (await E.evaluate(() => window.__game.lobby.link())).endsWith(`?sala=${codigo}`));
+
+// El que entra tenía guardado el mismo personaje: el anfitrión le pone otro
+const G = await abrir('se une', `sala=${codigo}`, false);
+await sala(G, 1);
+await sala(E, 1);
+await wait(500);
+let [e, g2] = [await sala2(E), await sala2(G)];
+check('no se repite personaje', e.yo !== g2.yo && g2.cogidos === e.yo && e.cogidos === g2.yo, `${e.yo} y ${g2.yo}`);
+check('el invitado espera a que el anfitrión empiece', g2.estado === 'menu' && !g2.listo && g2.boton === 'Esperando al anfitrión…', g2.gente);
+check('el vecino que lleva un amigo falta del pueblo', e.fuera === g2.fuera && e.fuera === [e.yo, g2.yo].sort().join(' '), e.fuera);
+check('en la sala todavía no se le ve por la calle', await G.evaluate(() => window.__game.party.remotes.get(0).hidden === true));
+// El personaje cogido no se deja elegir
+await G.evaluate((id) => window.__game.setCharacter(id), e.yo);
+await wait(300);
+check('el personaje cogido no se puede elegir', (await sala2(G)).yo === g2.yo);
+const libre = await G.evaluate(() => [...document.querySelectorAll('.char-btn:not(:disabled):not(.sel)')][0].dataset.id);
+await G.click(`.char-btn[data-id="${libre}"]`);
+await wait(500);
+[e, g2] = [await sala2(E), await sala2(G)];
+check('uno libre sí, y el otro se entera', g2.yo === libre && e.cogidos === libre && e.fuera === [e.yo, libre].sort().join(' '), `${e.yo} y ${g2.yo}`);
+
+await E.click('#fr-go');
+await G.waitForFunction(() => window.__game.state === 'play', { timeout: 5000 }).catch(() => {});
+await wait(500);
+check('el anfitrión da la salida y salen todos', (await sala2(E)).estado === 'play' && (await sala2(G)).estado === 'play' && (await otro(G, 0))?.visible === true && (await otro(E, 1))?.visible === true);
+
+// Con la partida empezada se entra directamente
+const H = await abrir('llega tarde', `sala=${codigo}`, false);
+await sala(H, 2);
+await wait(300);
+const h = await sala2(H);
+check('quien llega tarde puede entrar', h.listo && h.boton === '▶  Entrar' && ![e.yo, g2.yo].includes(h.yo), `${h.yo} · ${h.gente}`);
+await H.click('#fr-go');
+await wait(500);
+check('y sale a la calle con los demás', (await sala2(H)).estado === 'play' && (await otro(E, 2))?.visible === true);
+
+// Salir de la sala: los demás dejan de verlo y él vuelve al menú de siempre
+await H.evaluate(() => document.getElementById('p-menu').click());
+await H.click('#fr-back');
+check('salir de la sala devuelve al menú de siempre', (await sala(E, 1)) && (await H.evaluate(() => window.__game.party === null && window.__game.folks.away.size === 1 && document.getElementById('friends').classList.contains('hidden') && !document.getElementById('menu-buttons').classList.contains('hidden'))));
 
 if (errors.length) console.log('\nERRORES:\n' + [...new Set(errors)].slice(0, 20).join('\n'));
 else console.log('\nSin errores de consola.');
