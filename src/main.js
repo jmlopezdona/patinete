@@ -50,6 +50,9 @@ import { Heist } from './game/heist.js';
 import { Boss } from './game/boss.js';
 import { Party, WHY } from './game/party.js';
 import { NOBODY, NEAR } from './game/fx.js';
+
+// Las hazañas que se cuentan en la partida guardada y que el anfitrión puede apuntarle a otro
+const TALLIES = ['hens'];
 import { Lobby } from './game/lobby.js';
 
 const SAVE_KEY = 'cobena-patinete-v1';
@@ -502,6 +505,13 @@ class Game {
   // el mundo sigue, pero a ese jugador ni lo persigue ni le pasa nada
   busy(p) {
     return p === this.player ? !!this.party && (this.paused || !!this.missions.active) : !!p.busy;
+  }
+
+  // Una hazaña más para la cuenta del jugador de esta pantalla (gallinas burladas…)
+  tally(key) {
+    if (!TALLIES.includes(key)) return;
+    this.save[key] = (this.save[key] || 0) + 1;
+    this.dirty = true;
   }
 
   // Le da un objeto al jugador de esta pantalla (ver game/items.js)
