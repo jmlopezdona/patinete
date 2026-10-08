@@ -1,0 +1,150 @@
+{
+ "_": "Voces de referencia: cada una es <id>.wav, un audio que IndexTTS clona. Todas son ficticias, diseñadas con Qwen3-TTS VoiceDesign a partir de «descripcion» diciendo «texto».",
+ "generador": "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+ "voces": [
+  {
+   "id": "narrador-nodo-s1",
+   "papel": "Narrador solemne, de noticiario antiguo",
+   "origen": "diseñada para el juego",
+   "semilla": 1,
+   "descripcion": "A man in his fifties with a deep, resonant, pompous voice, like the announcer of a 1950s newsreel. He speaks in a solemn, grandiose, declamatory tone, at a steady pace.",
+   "texto": "En la villa de Cobeña, un vecino montado en patinete ha atropellado a una gallina. Las autoridades piden calma, y las gallinas, venganza."
+  },
+  {
+   "id": "narrador-nodo-s2",
+   "papel": "Narrador solemne, de noticiario antiguo",
+   "origen": "diseñada para el juego",
+   "semilla": 2,
+   "descripcion": "A man in his fifties with a deep, resonant, pompous voice, like the announcer of a 1950s newsreel. He speaks in a solemn, grandiose, declamatory tone, at a steady pace.",
+   "texto": "En la villa de Cobeña, un vecino montado en patinete ha atropellado a una gallina. Las autoridades piden calma, y las gallinas, venganza."
+  },
+  {
+   "id": "comentarista-s1",
+   "papel": "Narrador alternativo: comentarista deportivo desatado",
+   "origen": "diseñada para el juego",
+   "semilla": 1,
+   "descripcion": "A man in his thirties with a loud, bright, excited voice, like a football commentator. He speaks very fast and with huge enthusiasm, almost shouting.",
+   "texto": "¡Atención, que sale disparado del half-pipe, se eleva por encima de los tejados y le da un coscorrón al platillo! ¡Qué barbaridad, señoras y señores!"
+  },
+  {
+   "id": "comentarista-s2",
+   "papel": "Narrador alternativo: comentarista deportivo desatado",
+   "origen": "diseñada para el juego",
+   "semilla": 2,
+   "descripcion": "A man in his thirties with a loud, bright, excited voice, like a football commentator. He speaks very fast and with huge enthusiasm, almost shouting.",
+   "texto": "¡Atención, que sale disparado del half-pipe, se eleva por encima de los tejados y le da un coscorrón al platillo! ¡Qué barbaridad, señoras y señores!"
+  },
+  {
+   "id": "padre-s1",
+   "papel": "Los consejos: un padre que explica las cosas",
+   "origen": "diseñada para el juego",
+   "semilla": 1,
+   "descripcion": "A man in his early forties with a warm, friendly, relaxed, medium-pitched voice. He speaks kindly and a little playfully, like a dad giving advice to his kid.",
+   "texto": "A ver, escúchame un momento. Si quieres ir más rápido usa el turbo, pero mira por dónde pisas, que luego pasa lo que pasa y vienen los disgustos."
+  },
+  {
+   "id": "padre-s2",
+   "papel": "Los consejos: un padre que explica las cosas",
+   "origen": "diseñada para el juego",
+   "semilla": 2,
+   "descripcion": "A man in his early forties with a warm, friendly, relaxed, medium-pitched voice. He speaks kindly and a little playfully, like a dad giving advice to his kid.",
+   "texto": "A ver, escúchame un momento. Si quieres ir más rápido usa el turbo, pero mira por dónde pisas, que luego pasa lo que pasa y vienen los disgustos."
+  },
+  {
+   "id": "abuela-s1",
+   "papel": "La abuela de la zapatilla",
+   "origen": "diseñada para el juego",
+   "semilla": 1,
+   "descripcion": "An old woman in her seventies with a raspy, sharp, energetic voice. She speaks firmly and scolding, like an angry grandmother.",
+   "texto": "¡Pero bueno! ¿Tú has visto cómo has dejado la plaza? Ven aquí ahora mismo, que como me quite la zapatilla te vas a enterar de lo que vale un peine."
+  },
+  {
+   "id": "abuela-s2",
+   "papel": "La abuela de la zapatilla",
+   "origen": "diseñada para el juego",
+   "semilla": 2,
+   "descripcion": "An old woman in her seventies with a raspy, sharp, energetic voice. She speaks firmly and scolding, like an angry grandmother.",
+   "texto": "¡Pero bueno! ¿Tú has visto cómo has dejado la plaza? Ven aquí ahora mismo, que como me quite la zapatilla te vas a enterar de lo que vale un peine."
+  },
+  {
+   "id": "municipal-s1",
+   "papel": "El policía municipal",
+   "origen": "diseñada para el juego",
+   "semilla": 1,
+   "descripcion": "A man in his fifties with a flat, nasal, bored voice. He speaks slowly and in a monotone, like a tired civil servant reading a form.",
+   "texto": "Buenas tardes. Ha roto usted tres papeleras, dos bancos y un buzón. Me va a tener que acompañar. Y la multa, ya se lo adelanto, no es pequeña."
+  },
+  {
+   "id": "municipal-s2",
+   "papel": "El policía municipal",
+   "origen": "diseñada para el juego",
+   "semilla": 2,
+   "descripcion": "A man in his fifties with a flat, nasal, bored voice. He speaks slowly and in a monotone, like a tired civil servant reading a form.",
+   "texto": "Buenas tardes. Ha roto usted tres papeleras, dos bancos y un buzón. Me va a tener que acompañar. Y la multa, ya se lo adelanto, no es pequeña."
+  },
+  {
+   "id": "marciano-s1",
+   "papel": "Los marcianos",
+   "origen": "diseñada para el juego",
+   "semilla": 1,
+   "descripcion": "A small strange creature with a very high-pitched, squeaky, nasal, cartoonish voice. It speaks quickly and nervously.",
+   "texto": "¡Venimos en son de paz! Bueno, casi. Solo queremos la estatua dorada, tres vacas y a ese vecino de ahí. Luego nos vamos, prometido."
+  },
+  {
+   "id": "marciano-s2",
+   "papel": "Los marcianos",
+   "origen": "diseñada para el juego",
+   "semilla": 2,
+   "descripcion": "A small strange creature with a very high-pitched, squeaky, nasal, cartoonish voice. It speaks quickly and nervously.",
+   "texto": "¡Venimos en son de paz! Bueno, casi. Solo queremos la estatua dorada, tres vacas y a ese vecino de ahí. Luego nos vamos, prometido."
+  },
+  {
+   "id": "h50-grave",
+   "papel": "Hombre grave y cansado",
+   "origen": "del spike de voces de la mesa de doblaje (mesa-spike-voces)",
+   "semilla": 1,
+   "descripcion": "A man in his fifties with a deep, rough, gravelly voice. He speaks slowly and calmly, weary and stern.",
+   "texto": "Hace diez años que no cruzaba esta ciudad. Las calles siguen igual, pero la gente ya no me reconoce, y quizá sea mejor así."
+  },
+  {
+   "id": "h25-claro",
+   "papel": "Chico joven",
+   "origen": "del spike de voces de la mesa de doblaje (mesa-spike-voces)",
+   "semilla": 1,
+   "descripcion": "A young man in his mid twenties with a clear, bright, medium-pitched voice. He speaks with energy and confidence.",
+   "texto": "Hace diez años que no cruzaba esta ciudad. Las calles siguen igual, pero la gente ya no me reconoce, y quizá sea mejor así."
+  },
+  {
+   "id": "h70-anciano",
+   "papel": "Abuelo",
+   "origen": "del spike de voces de la mesa de doblaje (mesa-spike-voces)",
+   "semilla": 1,
+   "descripcion": "An old man in his seventies with a thin, slightly trembling, warm voice. He speaks slowly, like a wise mentor.",
+   "texto": "Hace diez años que no cruzaba esta ciudad. Las calles siguen igual, pero la gente ya no me reconoce, y quizá sea mejor así."
+  },
+  {
+   "id": "h40-narrador",
+   "papel": "Narrador de documental",
+   "origen": "del spike de voces de la mesa de doblaje (mesa-spike-voces)",
+   "semilla": 1,
+   "descripcion": "A man in his forties with a warm, smooth, resonant baritone voice. He speaks at a steady pace, like a documentary narrator.",
+   "texto": "Hace diez años que no cruzaba esta ciudad. Las calles siguen igual, pero la gente ya no me reconoce, y quizá sea mejor así."
+  },
+  {
+   "id": "m30-serena",
+   "papel": "Mujer serena",
+   "origen": "del spike de voces de la mesa de doblaje (mesa-spike-voces)",
+   "semilla": 1,
+   "descripcion": "A woman in her thirties with a soft, calm, medium-low voice. She speaks gently and thoughtfully.",
+   "texto": "Hace diez años que no cruzaba esta ciudad. Las calles siguen igual, pero la gente ya no me reconoce, y quizá sea mejor así."
+  },
+  {
+   "id": "m60-firme",
+   "papel": "Mujer mayor con autoridad",
+   "origen": "del spike de voces de la mesa de doblaje (mesa-spike-voces)",
+   "semilla": 1,
+   "descripcion": "A woman in her sixties with a low, firm, slightly hoarse voice. She speaks with authority and composure.",
+   "texto": "Hace diez años que no cruzaba esta ciudad. Las calles siguen igual, pero la gente ya no me reconoce, y quizá sea mejor así."
+  }
+ ]
+}

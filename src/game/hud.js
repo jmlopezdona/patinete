@@ -249,6 +249,7 @@ export class Hud {
     void b.offsetWidth;
     b.classList.add('show');
     this.bigT = dur;
+    this.voice?.say(text, true);
   }
 
   toast(text) {
@@ -259,6 +260,7 @@ export class Hud {
     setTimeout(() => d.classList.add('out'), 4600);
     setTimeout(() => d.remove(), 5100);
     while (this.el.toasts.children.length > 4) this.el.toasts.firstChild.remove();
+    this.voice?.say(text);
   }
 
   trick(name, points, mult) {

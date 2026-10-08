@@ -12,6 +12,7 @@ import { Input } from './core/input.js';
 import { setupInstall } from './core/install.js';
 import { setupUpdate } from './core/update.js';
 import { Sfx } from './core/audio.js';
+import { Voice } from './core/voice.js';
 import { BrickBatch } from './lego/batch.js';
 import { Builder } from './lego/builder.js';
 import { createBrickMaterial, plastic, plasticDouble, goldMetal, textTexture } from './lego/materials.js';
@@ -119,6 +120,7 @@ class Game {
     this.sfx = new Sfx();
     this.sfx.muted = !!this.save.muted;
     this.hud = new Hud();
+    this.hud.voice = new Voice(this.sfx);
     this.combo = 0;
     this.lastTrick = -99;
     this.fx = 0;
