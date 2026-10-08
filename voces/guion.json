@@ -117,7 +117,7 @@
   {
    "papel": "consejos",
    "texto": "Busca a los vecinos en el minimapa: Yago en el skatepark, Jose y su padre en la canasta, las corredoras del parque, Emma y sus selfies en El Palmeral, Adrián, el batería de la puerta de la Escuela de Música, Iker, que no para de dar vueltas con su patinete eléctrico, y Leo, que pelotea en la pista de tenis.",
-   "dicho": "Busca a los vecinos en el minimapa, que andan todos por ahí: Yago, Jose, Emma, Adrián, Iker y Leo. Y las corredoras del parque, que no paran."
+   "dicho": "Busca a los vecinos en el minimapa, que andan todos por ahí: Yago, Jóse, Emma, Adrián, Iker y Leo. Y las corredoras del parque, que no paran."
   },
   {
    "papel": "consejos",
@@ -583,7 +583,8 @@
   },
   {
    "papel": "narrador",
-   "texto": "Ahora llevas a Jose con su patinete. De la realidad al juego: equilibrado y con el mejor tailwhip."
+   "texto": "Ahora llevas a Jose con su patinete. De la realidad al juego: equilibrado y con el mejor tailwhip.",
+   "dicho": "Ahora llevas a Jóse con su patinete. De la realidad al juego: equilibrado y con el mejor tailwhip."
   },
   {
    "papel": "narrador",
