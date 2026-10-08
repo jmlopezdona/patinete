@@ -947,6 +947,25 @@ kbd {
   background: var(--yellow);
   animation: pop 0.5s;
 }
+/* Partida en red: una pastilla arriba, a la vista también con el menú delante */
+#net {
+  position: fixed;
+  z-index: 60;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  padding: 3px 14px 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  pointer-events: none;
+  background: rgba(14, 26, 40, 0.84);
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
+#net.bad {
+  background: #c91a09;
+}
 /* La pandilla: una placa roja torcida, como una pegatina encima de los personajes */
 .crew {
   display: inline-flex;

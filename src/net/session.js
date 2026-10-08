@@ -1,0 +1,223 @@
+// Sesión de una partida en red: quién está en la sala, quién manda y el ir y venir de estados.
+// No sabe nada del juego: recibe el estado del jugador local ya relleno y devuelve el de los demás.
+import { RATE_YO, RATE_FOTO, packYo, packFoto, unpack, newer, mixState } from './protocol.js';
+
+// Los demás se pintan con este retraso, entre los dos últimos estados recibidos: es lo que evita
+// los tirones cuando un paquete llega tarde
+const DELAY = 100;
+const KEEP = 12;
+
+export class Session {
+  // me: { v, char, color }. max: cuántos caben, contando al anfitrión
+  constructor(transport, me, max) {
+    this.tr = transport;
+    this.me = me;
+    this.max = max;
+    this.hosting = false;
+    this.slot = -1; // mi sitio en la sala: 0 es el anfitrión; -1, todavía fuera
+    this.players = new Map(); // los demás, por sitio: { slot, char, color, peer, buf, off, seq, last }
+    this.seq = 0;
+    this.fotoSeq = -1;
+    this.next = 0;
+    this.onJoin = this.onLeave = this.onChange = this.onEnd = () => {};
+    transport.onData = (id, data) => (typeof data === 'string' ? this.text(id, data) : this.binary(id, data));
+    transport.onClose = (id) => this.gone(id);
+  }
+
+  async host(code) {
+    this.hosting = true;
+    await this.tr.host(code);
+    this.slot = 0;
+  }
+
+  async join(code) {
+    this.hostId = await this.tr.join(code);
+    this.hello();
+  }
+
+  // Cambio de personaje o de color con la partida empezada
+  setMe(char, color) {
+    this.me.char = char;
+    this.me.color = color;
+    if (this.slot < 0) return;
+    if (this.hosting) this.roster();
+    else this.hello();
+  }
+
+  hello() {
+    this.tr.send(this.hostId, JSON.stringify({ t: 'hola', ...this.me }));
+  }
+
+  close(why = this.hosting ? 'host' : 'bye') {
+    if (this.closed) return;
+    this.closed = true;
+    const bye = JSON.stringify({ t: 'adios', why });
+    if (this.hosting) for (const pl of this.players.values()) this.tr.send(pl.peer, bye);
+    else if (this.hostId) this.tr.send(this.hostId, bye);
+    this.tr.close();
+  }
+
+  byPeer(id) {
+    for (const pl of this.players.values()) if (pl.peer === id) return pl;
+    return null;
+  }
+
+  add(slot, char, color, peer, fresh) {
+    const pl = { slot, char, color, peer, buf: [], off: null, seq: -1, last: null };
+    this.players.set(slot, pl);
+    this.onJoin(pl, fresh);
+    return pl;
+  }
+
+  drop(pl) {
+    this.players.delete(pl.slot);
+    this.onLeave(pl);
+  }
+
+  // ---------- Canal fiable ----------
+  text(id, data) {
+    let m;
+    try {
+      m = JSON.parse(data);
+    } catch {
+      return;
+    }
+    if (this.hosting) {
+      if (m.t === 'hola') this.greet(id, m);
+      else if (m.t === 'adios') this.gone(id);
+    } else if (id === this.hostId) {
+      if (m.t === 'sala') this.sync(m);
+      else if (m.t === 'adios') this.end(m.why);
+    }
+  }
+
+  // Anfitrión: alguien entra, o uno que ya estaba cambia de personaje
+  greet(id, m) {
+    const known = this.byPeer(id);
+    if (known) {
+      known.char = String(m.char);
+      known.color = m.color | 0;
+      this.onChange(known);
+      this.roster();
+      return;
+    }
+    let slot = 1;
+    while (this.players.has(slot)) slot++;
+    const why = m.v !== this.me.v ? 'version' : slot >= this.max ? 'full' : null;
+    if (why) {
+      this.tr.send(id, JSON.stringify({ t: 'adios', why }));
+      return;
+    }
+    this.add(slot, String(m.char), m.color | 0, id, true);
+    this.roster();
+  }
+
+  // Anfitrión: reparte a cada uno quién hay en la sala y cuál es su sitio
+  roster() {
+    const players = [{ slot: 0, char: this.me.char, color: this.me.color }];
+    for (const pl of this.players.values()) players.push({ slot: pl.slot, char: pl.char, color: pl.color });
+    for (const pl of this.players.values()) this.tr.send(pl.peer, JSON.stringify({ t: 'sala', you: pl.slot, players }));
+  }
+
+  // Invitado: la sala según el anfitrión
+  sync(m) {
+    const fresh = this.slot >= 0;
+    this.slot = m.you;
+    const seen = new Set();
+    for (const e of m.players) {
+      if (e.slot === m.you) continue;
+      seen.add(e.slot);
+      const pl = this.players.get(e.slot);
+      if (!pl) this.add(e.slot, e.char, e.color, this.hostId, fresh);
+      else if (pl.char !== e.char || pl.color !== e.color) {
+        pl.char = e.char;
+        pl.color = e.color;
+        this.onChange(pl);
+      }
+    }
+    for (const pl of [...this.players.values()]) if (!seen.has(pl.slot)) this.drop(pl);
+  }
+
+  gone(id) {
+    if (!this.hosting) {
+      if (id === this.hostId) this.end('host');
+      return;
+    }
+    const pl = this.byPeer(id);
+    if (!pl) return;
+    this.drop(pl);
+    this.roster();
+  }
+
+  // Invitado: se acabó la partida (el anfitrión se ha ido o no nos deja entrar)
+  end(why) {
+    if (this.closed) return;
+    for (const pl of [...this.players.values()]) this.drop(pl);
+    this.slot = -1;
+    this.closed = true;
+    this.tr.close();
+    this.onEnd(why);
+  }
+
+  // ---------- Canal sin garantías ----------
+  binary(id, data) {
+    const m = unpack(data);
+    if (!m) return;
+    const now = performance.now();
+    if (m.type === 'yo' && this.hosting) {
+      const pl = this.byPeer(id);
+      if (pl && this.inOrder(pl, m.seq)) this.push(pl, m.t, m.state, now);
+    } else if (m.type === 'foto' && id === this.hostId) {
+      if (!this.inOrder(this, m.seq, 'fotoSeq')) return;
+      for (const e of m.players) {
+        const pl = this.players.get(e.slot);
+        if (pl) this.push(pl, m.t, e.state, now);
+      }
+    }
+  }
+
+  // Los paquetes pueden llegar desordenados: el que es más viejo que el último visto se tira
+  inOrder(who, seq, key = 'seq') {
+    if (who[key] >= 0 && !newer(seq, who[key])) return false;
+    who[key] = seq;
+    return true;
+  }
+
+  push(pl, t, state, now) {
+    // Diferencia entre su reloj y el mío: manda el paquete que menos ha tardado, y se deja llevar
+    // despacio por si los relojes se separan
+    const d = now - t;
+    pl.off = pl.off === null || d < pl.off ? d : pl.off + (d - pl.off) * 0.02;
+    pl.last = state;
+    pl.buf.push({ t, s: state });
+    if (pl.buf.length > KEEP) pl.buf.shift();
+  }
+
+  // Estado de otro jugador para pintarlo ahora, o null si aún no ha llegado nada suyo
+  sample(pl, now, out) {
+    const B = pl.buf;
+    if (!B.length) return null;
+    const t = now - pl.off - DELAY;
+    let i = B.length - 1;
+    while (i > 0 && B[i].t > t) i--;
+    const a = B[i];
+    const b = B[i + 1];
+    if (!b || t <= a.t) return Object.assign(out, a.s);
+    return mixState(a.s, b.s, (t - a.t) / (b.t - a.t), out);
+  }
+
+  // Una vez por fotograma, con el estado del jugador local. Los envíos llevan su propia cadencia
+  update(now, state) {
+    if (this.slot < 0 || this.closed || now < this.next) return;
+    this.next = Math.max(now, this.next) + 1000 / (this.hosting ? RATE_FOTO : RATE_YO);
+    this.seq = (this.seq + 1) & 0xffff;
+    if (!this.hosting) {
+      this.tr.send(this.hostId, packYo(this.seq, now, state));
+      return;
+    }
+    // A cada invitado, el anfitrión y los demás invitados de los que ya se sabe algo
+    const all = [{ slot: 0, state }];
+    for (const pl of this.players.values()) if (pl.last) all.push({ slot: pl.slot, state: pl.last });
+    for (const pl of this.players.values()) this.tr.send(pl.peer, packFoto(this.seq, now, all.filter((e) => e.slot !== pl.slot)));
+  }
+}
