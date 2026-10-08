@@ -6,8 +6,6 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 ## Siguiente tanda: más invasión
 
 - [ ] **Dentro de la nave nodriza.** Con el Mega Salto te cuelas dentro.
-- [ ] **Marcianos disfrazados.** De día hay vecinos a los que les asoma una antena. Si les das un
-  culetazo se les cae el disfraz.
 
 ## Minijuegos en versión marciana
 
@@ -22,6 +20,12 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `marcianos-disfrazados`)
+
+- [x] **Marcianos disfrazados.** De día hay tres vecinos a los que les asoma una antena. Si los
+  embistes se les cae el disfraz y el marciano sale corriendo: cada uno que eches de un culetazo
+  son dos menos en la oleada de esa noche.
 
 ## Ya hecho (rama `nave-nodriza`)
 

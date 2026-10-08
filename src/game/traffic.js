@@ -230,10 +230,13 @@ export class Traffic {
         p.cd -= dt;
         if (pAlive && d2 < 3.4 && Math.abs(player.pos.y - gy) < 3 && p.cd <= 0) {
           if (player.speed > 7) {
-            p.fly = 1.4;
-            p.vy = 13;
             p.cd = 2;
-            this.game.onPedHit(p, x, gy, z);
+            // Si era un marciano disfrazado, lo que sale por los aires es el disfraz
+            if (!this.game.disguise.unmask(p, x, gy, z)) {
+              p.fly = 1.4;
+              p.vy = 13;
+              this.game.onPedHit(p, x, gy, z);
+            }
           } else {
             const d = Math.sqrt(d2) || 1;
             player.bump(dx / d, dz / d, 0.15, 0.9);
