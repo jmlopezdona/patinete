@@ -8,7 +8,8 @@ const EVERY = 26; // segundos entre que se gasta un objeto y aparece el siguient
 const EVERY_DAY = 75; // de día, sin marcianos, salen mucho más de tarde en tarde
 const FOIL_TIME = 20; // lo que el gorro de aluminio te esconde del rayo
 const ROCKET_TIME = 10;
-const ORDER = ['bell', 'foil', 'rocket']; // van saliendo por turnos, para que no repita
+const MOON_TIME = 60;
+const ORDER = ['bell', 'foil', 'rocket', 'moon']; // van saliendo por turnos, para que no repita
 const foilMetal = new THREE.MeshStandardMaterial({ color: 0xd9dee6, roughness: 0.3, metalness: 0.95, flatShading: true });
 
 function bellModel() {
@@ -40,6 +41,16 @@ function rocketModel() {
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * Math.PI * 2;
     b.box(0.1, 0.62, 0.7, Math.sin(a) * 0.62, Math.cos(a) * 0.62, -0.6, C.yellow, { r: 0.03, rz: -a });
+  }
+  return b.mesh(plastic);
+}
+
+// Luna llena con sus cráteres
+function moonModel() {
+  const b = new Builder();
+  b.sphere(1.05, 0, 0.9, 0, C.white, { seg: 18, seg2: 12 });
+  for (const [a, e, r] of [[0.3, 0.5, 0.34], [2.1, -0.2, 0.26], [3.6, 0.7, 0.2], [4.6, 0.1, 0.3], [1.2, -0.7, 0.22], [5.5, -0.5, 0.18]]) {
+    b.sphere(r, Math.cos(a) * Math.cos(e) * 0.9, 0.9 + Math.sin(e) * 0.9, Math.sin(a) * Math.cos(e) * 0.9, C.lgray, { seg: 8, seg2: 6 });
   }
   return b.mesh(plastic);
 }
@@ -130,6 +141,32 @@ const KINDS = {
       for (let i = 0; i < 2; i++) items.game.bits.spawn(p.pos.x - fx * (t + 1.2), p.pos.y + 1.25, p.pos.z - fz * (t + 1.2), -fx * 11 + (Math.random() - 0.5) * 5, (Math.random() - 0.3) * 4, -fz * 11 + (Math.random() - 0.5) * 5, [0xffd23a, 0xff7a1a, 0xffffff][Math.floor(Math.random() * 3)], 0.5, 0.35, p.pos.y);
     },
   },
+  moon: {
+    icon: '🌙', name: 'Gravedad lunar', art: 'la', night: false, model: moonModel, dur: MOON_TIME,
+    tip: 'Actívala con <b>Q</b>: durante un minuto saltas como en la Luna.',
+    use(items, p) {
+      const g = items.game;
+      g.sfx.moon();
+      g.hud.big('¡Gravedad lunar!', '#cfd8ff', 1, true);
+      g.hud.toast(`🌙 Durante ${MOON_TIME} segundos <b>los saltos son gigantes</b>: llegas al rayo, al platillo y a los tejados.`);
+      g.bits.burst(p.pos.x, p.pos.y + 1.5, p.pos.z, [0xcfd8ff, 0xffffff, 0xa0a5a9], 16, 9, p.pos.y, 0.3);
+      return true;
+    },
+    start(items, p) {
+      p.moon = true;
+      items.helmet.visible = true;
+    },
+    end(items, p) {
+      p.moon = false;
+      items.helmet.visible = false;
+      items.game.hud.toast('🌙 Se acabó la gravedad lunar: vuelves a pesar lo de siempre.');
+    },
+    tick(items, p) {
+      // La escafandra va en la cabeza del piloto, que cambia al cambiar de personaje
+      if (items.helmet.parent !== p.rider.head) p.rider.head.add(items.helmet);
+      if (items.fx.t < 3) items.helmet.visible = Math.floor(items.fx.t * 8) % 2 === 0;
+    },
+  },
 };
 
 // Objetos que aparecen por la calle: se recoge uno, se lleva encima y se gasta con Q.
@@ -162,6 +199,10 @@ export class Items {
     this.hat.visible = this.rocket.visible = false;
     this.hat.castShadow = this.rocket.castShadow = true;
     game.player.model.add(this.rocket);
+    // Y la escafandra de la gravedad lunar
+    this.helmet = new THREE.Mesh(new THREE.SphereGeometry(1.25, 20, 14), new THREE.MeshStandardMaterial({ color: 0xcfe6ff, roughness: 0.08, metalness: 0.2, transparent: true, opacity: 0.3, depthWrite: false }));
+    this.helmet.position.y = 0.3;
+    this.helmet.visible = false;
 
     // Onda del timbrazo
     const ring = new THREE.RingGeometry(0.86, 1, 48);
@@ -223,7 +264,7 @@ export class Items {
     g.hud.setItem(K);
     g.hud.big(`¡${K.name}!`, '#ffd23a', 1.2, true);
     g.bits.burst(this.drop.x, p.pos.y + 2, this.drop.z, [0xffd23a, 0xfff27a, 0xffffff], 14, 9, this.drop.y, 0.4);
-    g.hud.toast(`${K.icon} Llevas el <b>${K.name.toLowerCase()}</b>. ${K.tip}`);
+    g.hud.toast(`${K.icon} Llevas ${K.art || 'el'} <b>${K.name.toLowerCase()}</b>. ${K.tip}`);
   }
 
   use(p) {

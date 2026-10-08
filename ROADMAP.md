@@ -20,10 +20,14 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 ## Locuras sin alienígenas
 
 - [ ] **Gallinas.** Si atropellas una, te persiguen todas.
-- [ ] **Gravedad lunar.** Durante un minuto los saltos son gigantes.
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `gravedad-lunar`)
+
+- [x] **Gravedad lunar.** Un objeto más de los que salen por la calle, de día y de noche: durante
+  un minuto se cae mucho más despacio y los saltos son gigantes. El piloto va con escafandra.
 
 ## Ya hecho (rama `robo-estatua`)
 

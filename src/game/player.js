@@ -8,6 +8,7 @@ import { CHARACTERS, COLORS, characterById } from './characters.js';
 import { lift, grade } from '../world/relief.js';
 
 const G = 42;
+const MOON = 0.3; // con gravedad lunar se cae así de despacio
 const V_REV = 9;
 const BRAKE = 40;
 const STEP = 1.0;
@@ -54,6 +55,7 @@ export class Player {
     this.boosting = false;
     this.rocket = false; // con el cohete encendido el turbo entra solo y no se gasta
     this.foil = false; // con el gorro de aluminio el rayo abductor no lo detecta
+    this.moon = false; // con gravedad lunar los saltos son gigantes
     this.slip = 0; // segundos de derrape que quedan tras pisar baba
     this.slipDir = 1;
     this.crashT = 0;
@@ -536,7 +538,7 @@ export class Player {
         this.game.sfx.jump();
       }
     }
-    this.vel.y -= G * h;
+    this.vel.y -= G * (this.moon ? MOON : 1) * h;
     const x = this.pos.x;
     const y = this.pos.y;
     const z = this.pos.z;

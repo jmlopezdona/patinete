@@ -353,6 +353,11 @@ export class Sfx {
     this.tone(90, 1.0, 'sawtooth', 0.1, 4);
     this.tone(1400, 0.35, 'sine', 0.05, 0.3);
   }
+  // Gravedad lunar: todo se vuelve ligero y sube flotando
+  moon() {
+    [392, 523, 659, 880].forEach((f, i) => this.tone(f, 0.7, 'sine', 0.1, 1.5, i * 0.14));
+    this.noise(1.2, 0.08, 900, 1.2, 'bandpass', 0, 4);
+  }
   // Baba marciana: chof al pisarla y muelle al rebotar, más agudo a cada bote
   squelch(vol = 1) {
     this.noise(0.24, 0.3 * vol, 380, 2.5, 'bandpass', 0, 3);
