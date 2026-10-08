@@ -38,6 +38,8 @@ if (orden === 'encargo') {
   console.log(`${hay.length - sobran.length} locuciones en el índice; faltan ${faltan.length}; sobran ${sobran.length} ${sobran.join(' ')}`);
 } else if (orden === 'pagina') {
   const voces = JSON.parse(readFileSync(new URL('voces/voces.json', root), 'utf8')).voces;
+  // Las locuciones van dentro de la página: abierta como fichero, el navegador no la deja leer fuera de su carpeta
+  const clip = (k) => `data:audio/mpeg;base64,${readFileSync(new URL(`public/voz/${k}.mp3`, root)).toString('base64')}`;
   const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const fila = (a, b, src) => `<tr><td>${a}</td><td>${b}</td><td><audio controls preload="none" src="${src}"></audio></td></tr>`;
   const html = `<!doctype html><meta charset="utf-8"><title>Voces · Cobeña</title>
@@ -46,7 +48,7 @@ if (orden === 'encargo') {
 ${voces.map((v) => fila(`<b>${v.id}</b><br><small>${esc(v.papel)}</small>`, `<small>${esc(v.descripcion)}</small>`, `${v.id}.wav`)).join('\n')}
 </table>
 ${Object.entries(guion.papeles).map(([papel, p]) => `<h1>${papel} <small>(${p.voz})</small></h1><table>
-${guion.lineas.filter((l) => l.papel === papel).map((l) => fila(`<small>${l.tono || p.tono}</small>`, esc(dicho(l.dicho || l.texto)), `../public/voz/${voiceKey(l.texto)}.mp3`)).join('\n')}
+${guion.lineas.filter((l) => l.papel === papel).map((l) => fila(`<small>${l.tono || p.tono}</small>`, esc(dicho(l.dicho || l.texto)), clip(voiceKey(l.texto)))).join('\n')}
 </table>`).join('\n')}
 `;
   writeFileSync(new URL('voces/escucha.html', root), html);
