@@ -498,6 +498,17 @@ class Game {
     return this.alone;
   }
 
+  // ¿Está a otra cosa (en la pausa, en un minijuego, con la pestaña tapada)? Solo pasa en red:
+  // el mundo sigue, pero a ese jugador ni lo persigue ni le pasa nada
+  busy(p) {
+    return p === this.player ? !!this.party && (this.paused || !!this.missions.active) : !!p.busy;
+  }
+
+  // Le da un objeto al jugador de esta pantalla (ver game/items.js)
+  giveItem(kind) {
+    this.items.take(kind);
+  }
+
   // A qué distancia (al cuadrado) queda de ahí el jugador más cercano, sea el local o un amigo
   // que ande por la calle
   nearest2(x, z) {

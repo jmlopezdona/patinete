@@ -8,7 +8,7 @@
 // Jugando solo, todo acaba en el jugador local. En red, lo que el anfitrión decide para otro viaja
 // como `efecto`, con el nombre del método y sus argumentos, y se ejecuta en la pantalla de ese jugador
 export const SYS = ['hud', 'sfx', 'bits', 'camera3'];
-const OWN = ['addStuds'];
+const OWN = ['addStuds', 'giveItem'];
 
 // Más lejos que esto, lo que pasa en un sitio ni se ve ni se oye
 export const NEAR = 140;

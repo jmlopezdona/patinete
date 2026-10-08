@@ -397,27 +397,21 @@ export class Wanted {
     this.led = led;
     if (!led) this.simulate(dt, time, g.crowd(p));
     const near = this.present(dt, p, time);
-    if (!this.busy(p)) this.touch(p);
+    if (!this.game.busy(p)) this.touch(p);
     this.hud(near);
-  }
-
-  // ¿Está a otra cosa (en la pausa, en un minijuego, con la pestaña tapada)? Solo pasa en red
-  busy(p) {
-    const g = this.game;
-    return p === g.player ? !!g.party && (g.paused || !!g.missions.active) : !!p.busy;
   }
 
   // A por quién van: el que tengan más cerca de los que no están a otra cosa; antes de salir a la
   // calle, el último que ha roto algo. Se revisa cada segundo
   pick(who, dt) {
     this.preyT -= dt;
-    if (this.preyT > 0 && who.includes(this.prey) && !this.busy(this.prey)) return this.prey;
+    if (this.preyT > 0 && who.includes(this.prey) && !this.game.busy(this.prey)) return this.prey;
     this.preyT = 1;
     const c = this.cop.state !== 'off' ? this.cop : this.granny.state !== 'off' ? this.granny : null;
     let best = null;
     let bd = Infinity;
     for (const p of who) {
-      if (this.busy(p)) continue;
+      if (this.game.busy(p)) continue;
       const d = c ? Math.hypot(p.pos.x - c.x, p.pos.z - c.z) : p === this.culprit ? 0 : 1;
       if (d < bd) {
         bd = d;

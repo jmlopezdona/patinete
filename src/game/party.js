@@ -35,7 +35,7 @@ export class Party {
     this.tmp = blankState();
     // Lo que se mueve solo y viaja en cada `foto`: el anfitrión lo escribe (`write(dv, o)`) y los
     // invitados lo leen entre dos fotos (`read(a, b, o, k)`), cada sistema su trozo y en este orden
-    this.shared = [game.traffic, game.wanted];
+    this.shared = [game.traffic, game.wanted, game.items];
     const bytes = this.shared.reduce((n, s) => n + s.bytes, 0);
     this.world = { time: 0, night: 0, bytes, write: (dv, o) => this.shared.reduce((at, s) => s.write(dv, at), o) };
     this.snap = { a: null, b: null, k: 0 };
@@ -79,6 +79,8 @@ export class Party {
         this.say(pl, k === 'multa' ? 'se ha llevado una multa 👮' : 'se ha llevado un zapatillazo 👵');
       } else if (this.hosting && k === 'lio') game.wanted.stir(Math.max(0, Math.min(5, v)), this.remotes.get(pl.slot));
       else if (this.hosting && k === 'salto') game.wanted.hopped(v);
+      else if (this.hosting && k === 'coge') game.items.claim(v, this.remotes.get(pl.slot));
+      else if (k === 'timbre') game.items.rang(this.remotes.get(pl.slot));
       else if (k === 'arregla' && pl.slot === 0) game.props.fix(v);
       if (k !== 'noche' && k !== 'alba') return;
       if (this.hosting) game.env.target = k === 'noche' && v ? 1 : 0;

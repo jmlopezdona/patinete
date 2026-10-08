@@ -204,6 +204,24 @@ check('al invitado lo multan en su pantalla', lb.studs === 2800 && lb.dicho.incl
 check('y se acaba el lío para todos', la.estrellas === 0 && lb.estrellas === 0 && la.dicho.includes('Adrián se ha llevado una multa'), la.dicho);
 await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
 
+// El objeto de la calle es uno para todos: lo pone el anfitrión y se lo queda quien llega antes
+const objeto = (page) => page.evaluate(() => { const I = window.__game.items; return { hay: I.group.visible, cual: I.drop.kind, x: I.drop.x, y: I.drop.y, z: I.drop.z, llevo: I.held, onda: I.wave.visible }; });
+const serie = await A.evaluate(() => { const I = window.__game.items; I.group.visible = false; I.cd = 0; return I.drop.serial; });
+await B.waitForFunction((n) => window.__game.items.group.visible && window.__game.items.drop.serial !== n, { timeout: 5000, polling: 50 }, serie).catch(() => {});
+let [oa, ob] = [await objeto(A), await objeto(B)];
+check('el objeto que saca el anfitrión lo ve el invitado en el mismo sitio', oa.hay && ob.hay && oa.cual === ob.cual && lejos(oa, ob) < 0.2, `${oa.cual} / ${ob.cual}`);
+// (por si ya había cogido alguno por el camino)
+await B.evaluate((o) => { const g = window.__game; g.items.stop(g.player); g.items.held = null; g.player.place(o.x, o.z, 0); }, ob);
+await B.waitForFunction(() => window.__game.items.held, { timeout: 3000, polling: 50 }).catch(() => {});
+await wait(300);
+[oa, ob] = [await objeto(A), await objeto(B)];
+check('el invitado que llega se lo queda, y desaparece para todos', ob.llevo === ob.cual && !ob.hay && !oa.hay && oa.llevo === null, `lleva ${ob.llevo}`);
+// El timbrazo de uno lo ven los demás
+await B.evaluate(() => { const g = window.__game; g.items.held = 'bell'; g.items.use(g.player); g.items.held = null; g.hud.setItem(null); });
+await A.waitForFunction(() => window.__game.items.wave.visible, { timeout: 2000, polling: 30 }).catch(() => {});
+check('el timbrazo de un invitado se ve en la pantalla del anfitrión', (await objeto(A)).onda);
+await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
+
 // El mobiliario es el mismo para todos: lo rompe uno y lo ven roto los demás
 const mueble = await A.evaluate(() => {
   const g = window.__game;

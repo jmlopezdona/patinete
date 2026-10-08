@@ -25,9 +25,9 @@ estado de un jugador ya son reales** (salen de `src/net/protocol.js`); las del m
   con Chrome por cable y invitado en un móvil con Edge por 4G, fluido. Hay transporte, protocolo,
   jugadores remotos, sala («Jugar con amigos», con código, enlace y personajes sin repetir),
   partida sin pausa y prueba automática. **La fase 2 está empezada**: el reloj y el día y la
-  noche ya son los del anfitrión (C8), el mobiliario roto, el tráfico y el lío con el municipal son los mismos para todos y está hecho el
+  noche ya son los del anfitrión (C8), el mobiliario roto, el tráfico, el lío con el municipal y el objeto de la calle son los mismos para todos y está hecho el
   mecanismo para que lo que decide el anfitrión se vea, se oiga y le pase a quien toca (la base
-  de C9 y C10). Quedan objetos, gallinas y meteoritos. Se hace junto con la parte de la refactorización que se
+  de C9 y C10). Quedan gallinas y meteoritos. Se hace junto con la parte de la refactorización que se
   solapa con ella y sistema a sistema; el orden está en el [plan](#4-plan-de-implementación).
 
 ## 1. La función
@@ -67,7 +67,7 @@ sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 | Municipal y abuela | Compartido | Un solo nivel de búsqueda para la pandilla: los destrozos de todos suman y van a por el que tengan más cerca. **Ya funciona** |
 | Gallinas | Compartido | Si uno atropella a una, persiguen al que la ha atropellado; los demás las ven correr |
 | Mobiliario que se rompe | Compartido | Si uno revienta un banco, los demás lo ven roto. **Ya funciona** |
-| Objetos (timbre, gorro, cohete) | Compartido | El que sale por la calle es uno para todos; se lo queda quien llega antes |
+| Objetos (timbre, gorro, cohete, gravedad lunar) | Compartido | El que sale por la calle es uno para todos; se lo queda quien llega antes. **Ya funciona.** El gorro, el cohete y la escafandra que lleva otro jugador todavía no se le ven |
 | Vecinos con nombre | Compartido a medias | Faltan del pueblo los que lleva algún jugador; sus animaciones van por libre en cada pantalla |
 | Studs y ladrillos dorados | Personal | Cada uno recoge los suyos y los guarda en su progreso |
 | Minijuegos | Personal | Cada uno juega el suyo; mientras tanto ni marcianos ni municipal le hacen caso |
@@ -239,12 +239,14 @@ el anfitrión necesite el rumbo real de un invitado (fase 2) habrá que ver si l
 | Meteoritos | 5 por lluvia | 50 | estimado; solo mientras caen |
 | Coches | 16 (8 circuitos × 2) | 114 | real: 7 cada uno (sitio en décimas, rumbo y velocidad) y 2 para los que tiene el platillo |
 | Municipal, abuela y zapatilla | 3 | 35 | real: 13 cada perseguidor, 7 la zapatilla y 2 las estrellas |
+| Objeto de la calle | 1 | 8 | real: cuál, su número de serie y dónde |
 | Gallinas | 7 | 60 | estimado; solo cuando persiguen |
 | Peatones | hasta 64 | 0 | real: no viajan, salen del reloj |
 | **Una `foto`, con todo a la vez** | | **≈ 750** | |
 
-Hoy, con jugadores, coches y municipal, una `foto` son 196 bytes con dos jugadores (medido en
-`test:red`) y 356 con la sala llena: unos 43 kbps por invitado y 260 de subida en el anfitrión. Con el mundo
+Hoy, con jugadores, coches, municipal y objeto, una `foto` son 204 bytes con dos jugadores
+(medido en `test:red`) y 364 con la sala llena: unos 44 kbps por invitado y 260 de subida en el
+anfitrión. Con el mundo
 entero, a 15 por segundo, serían unos 90 kbps por invitado y **unos 540 kbps de subida en el
 anfitrión** con la sala llena, aunque jefe final, meteoritos y gallinas
 no coinciden casi nunca. Una fibra doméstica lo lleva de sobra; unos datos móviles flojos, no. Lo
@@ -286,8 +288,8 @@ para comparar entre sí, no plazos.
 | C8 | Reloj, día y noche compartidos | `env.js`, `party.js`, `main.js`, `aliens.js`, `src/net/*` | P | 2 | **Hecho** |
 | C9 | Órdenes al jugador en vez de tocarle los campos | `player.js`, `remote-player.js` y los sistemas de cada fase | M | 2 y 3 | Hecha la base |
 | C10 | HUD, sonido y partículas con destinatario | `fx.js`, los sistemas de cada fase, `src/net/*` | G | 2 y 3 | Hecha la base |
-| C11 | Sistemas para varios jugadores | `traffic.js`, `wanted.js`, `props.js`, `items.js`, `hens.js`, `meteors.js`, `cows.js` | G | 2 | Hechos `props.js`, `traffic.js` y `wanted.js` |
-| C12 | Simular en el anfitrión, pintar en todos | los mismos, más `src/net/*`; en la fase 3, los de C13 | G | 2 y 3 | Hechos `traffic.js` y `wanted.js` |
+| C11 | Sistemas para varios jugadores | `traffic.js`, `wanted.js`, `props.js`, `items.js`, `hens.js`, `meteors.js`, `cows.js` | G | 2 | Hechos `props.js`, `traffic.js`, `wanted.js` e `items.js` |
+| C12 | Simular en el anfitrión, pintar en todos | los mismos, más `src/net/*`; en la fase 3, los de C13 | G | 2 y 3 | Hechos `traffic.js`, `wanted.js` e `items.js` |
 | C13 | Invasión cooperativa | `aliens.js`, `boss.js`, `heist.js`, `disguise.js`, `slime.js` | G | 3 | |
 | C14 | Minijuegos con más gente en el pueblo | `missions.js`, `minigames.js` | M | 3 | |
 | C15 | Premios y progreso | `main.js`, `aliens.js`, `boss.js`, `heist.js`, `wanted.js`, `hens.js` | P | 3 | Hecho lo de `wanted.js` |
@@ -410,6 +412,8 @@ tercero con `?red=local` y comprueba:
 - que con la ventana del anfitrión minimizada su partida sigue y los demás lo ven moverse;
 - que la pausa no para el mundo y a quien la abre se le ve ocupado, y que si el anfitrión deja
   de calcular el invitado lo sabe;
+- que el objeto que saca el anfitrión lo ve el invitado en el mismo sitio, que se lo queda el
+  que llega y desaparece para todos, y que el timbrazo de uno se ve en la pantalla de otro;
 - que los destrozos de un invitado sacan al municipal del anfitrión, que va a por él y él lo ve,
   que lo multan en su pantalla con sus studs y que con eso se acaba el lío para todos;
 - que el invitado ve coches y peatones donde el anfitrión, que el coche frena ante un invitado y
@@ -545,7 +549,7 @@ lista y decide a quién mira:
 | `traffic.js` | **Hecho.** Los coches frenan si tienen delante a cualquier jugador (`Game.crowd`) y le pitan a ese (`g.to(p).sfx.honk()`, el primer `efecto` de verdad). El empujón de un coche y el atropello de un peatón los detecta cada jugador en su pantalla; el atropello se avisa (`atropella`) y los studs son para quien lo da |
 | `wanted.js` | **Hecho.** Un solo nivel de búsqueda (D1), que lleva el anfitrión. Los destrozos de todos suman (`lio`). Municipal y abuela salen a por el último que ha roto algo y luego van a por el más cercano que no esté ocupado (`prey`, revisado cada segundo); el rastro de migas es el suyo y se borra al cambiar de presa. Cada jugador detecta en su pantalla si lo pillan, le dan o los salta, y lo avisa (`multa`, `zapatillazo`, `salto`): la multa y el premio del salto son suyos, y **con la multa o el zapatillazo de uno se acaba el lío para todos**. El esquinazo lo decide el anfitrión y el premio es para todos (`g.all.addStuds`). Silbato, sirena y aviso de proximidad suenan en cada pantalla según lo cerca que le quede |
 | `props.js` | **Hecho.** Cada jugador detecta sus propios choques y manda `aviso` (`rompe`, con el número del mueble); el anfitrión lo reparte, lleva la cuenta atrás y avisa al reconstruirlo (`arregla`), cuando no hay ningún jugador a menos de 30 unidades (`Game.nearest2`). Los trozos salen con la velocidad que llevaba quien lo rompió; los studs y el lío con el municipal son solo para él. Al que entra se le dice cuáles están rotos (`mundo`) |
-| `items.js` | El objeto de la calle es uno; lo gana el primer `aviso` que llegue al anfitrión. Gorro, cohete y gravedad lunar (`p.foil`, `p.rocket`, `p.moon`) son del que lo usa. El timbre aturde alrededor de quien lo toca |
+| `items.js` | **Hecho.** El objeto de la calle es uno y lo pone el anfitrión, cerca de un jugador cualquiera que no esté ocupado; va en cada `foto` y se quita si queda lejos de todos. Cada jugador detecta que lo toca y lo pide (`coge`, con el número de serie del objeto); lo gana el primer aviso que llegue al anfitrión, que se lo da con `g.to(p).giveItem(…)`. Lo que se lleva y lo que hace efecto (`p.foil`, `p.rocket`, `p.moon`) son del que lo usa, y quien ya lleva uno no coge otro. En red el siguiente empieza a contar al cogerlo, no al gastarlo. El timbrazo de otro se ve y se oye (`timbre`), pero solo aturde a los marcianos de la pantalla de quien lo toca, hasta la fase 3 |
 | `hens.js` | Persiguen a quien ha atropellado a una (`rage` deja de ser del sistema y pasa a tener dueño); los picotazos le quitan studs a ese jugador |
 | `meteors.js` | La lluvia la decide el anfitrión; las dianas apuntan cerca de cualquier jugador (`aim(p)`), y manda por los aires a quien pille debajo. Los cráteres cambian el terreno: tienen que llegar a todos, también al que entra tarde (`mundo`) |
 | `cows.js`, `folks.js` | Animación local en cada pantalla; solo los empujones (`p.bump`) son contra el jugador local |
@@ -596,7 +600,7 @@ métodos que hay que partir son los más largos del juego.
   juego, que ya es común: 64 peatones a cero bytes, y quien entra tarde los ve en su sitio sin
   que nadie le cuente nada. Para eso un peatón por los aires ya no se queda clavado: sigue
   avanzando mientras vuela (cae un par de unidades más allá).
-- **Lo que no corre con el anfitrión en el menú.** `props.js` y `wanted.js` solo se actualizan con
+- **Lo que no corre con el anfitrión en el menú.** `props.js`, `wanted.js` e `items.js` solo se actualizan con
   la partida en marcha: si el anfitrión vuelve al menú mientras los demás juegan, el mobiliario
   no se reconstruye y municipal y abuela se quedan parados hasta que salga otra vez. El tráfico
   sí sigue. Además, cuando el anfitrión vuelve a casa o al menú se acaba el lío para todos
@@ -665,7 +669,7 @@ métodos que hay que partir son los más largos del juego.
   para quien se lo haya ganado.
 - **Hecho en `wanted.js`:** el premio del esquinazo va a todos con `g.all.addStuds(…)`. Para eso
   los destinatarios de `fx.js` llevan, además de los cuatro sistemas, lo que es del juego y no de
-  un sistema (`OWN`, hoy solo `addStuds`). La multa y lo que requisa la abuela ya salen de los
+  un sistema (`OWN`: `addStuds` y, desde `items.js`, `giveItem`). La multa y lo que requisa la abuela ya salen de los
   studs de quien los sufre, porque es su pantalla la que lo detecta.
 - **Studs que te quitan.** Cinco sitios restan de `g.save.studs`, el progreso de quien ejecuta el
   código: la multa del municipal (`wanted.take`), el rayo y los marcianos (`aliens.js`, dos
@@ -741,7 +745,7 @@ Decidido el 8 de octubre de 2026:
 | 1 | **Reloj, día y noche**. No necesita refactorización y estrena el `aviso` | C8 | **Hecho** |
 | 2 | **El mecanismo y `props.js` entero**: `g.to(p)`, `g.all`, `g.at(x, z)`, las órdenes al jugador y el `mundo` para el que entra tarde | C9 y C10 (la base), C11 | **Hecho**. `props.js` no ha servido para probar `efecto` ni `orden` con un sistema de verdad: como cada jugador detecta sus choques, no los necesita. Eso queda para el paso 3 |
 | 3 | **`traffic.js`**: el primero con `simulate`/`present` y con el mundo en la `foto`. Aquí se mide el peso de verdad (R8) | C11, C12 | **Hecho**. Los coches pesan 114 bytes y los peatones ninguno. `orden` sigue sin uso: los choques han pasado a detectarse en la pantalla de cada jugador |
-| 4 | **`wanted.js`, `items.js`, `hens.js` y `meteors.js`**, ya con el patrón probado, uno por PR | C9–C12 | Hecho `wanted.js`. Quedan los otros tres |
+| 4 | **`wanted.js`, `items.js`, `hens.js` y `meteors.js`**, ya con el patrón probado, uno por PR | C9–C12 | Hechos `wanted.js` e `items.js`. Quedan los otros dos |
 
 Cada paso va en su PR, con el juego de un jugador funcionando igual que antes.
 
