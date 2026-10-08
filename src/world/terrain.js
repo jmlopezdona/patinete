@@ -162,6 +162,14 @@ export class Terrain {
     return r;
   }
 
+  // Quita una primitiva puesta sobre la marcha (los cráteres de los meteoritos van y vienen)
+  remove(p) {
+    for (const c of this.cells.values()) {
+      const i = c.indexOf(p);
+      if (i >= 0) c.splice(i, 1);
+    }
+  }
+
   height(x, z) {
     let best = 0;
     for (let i = 0; i < this.holes.length; i++) {

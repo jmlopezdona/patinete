@@ -7,7 +7,7 @@ export class Hud {
       hud: $('hud'), studs: $('studs'), bricks: $('bricks'), stars: $('stars'), kmh: $('kmh'), boost: $('boostfill'), speedo: $('speedo'),
       prompt: $('prompt'), mission: $('mission'), mTitle: $('m-title'), mMain: $('m-main'), mSub: $('m-sub'), big: $('big'), toasts: $('toasts'),
       trick: $('trick'), results: $('results'), zone: $('zone'), studBox: $('studbox'),
-      alienBox: $('alienbox'), aliens: $('aliens'), spyBox: $('spybox'), spies: $('spies'), henBox: $('henbox'), hens: $('hens'), abduct: $('abduct'), abductFill: $('abductfill'), beam: $('beamwarn'),
+      alienBox: $('alienbox'), aliens: $('aliens'), spyBox: $('spybox'), spies: $('spies'), henBox: $('henbox'), hens: $('hens'), meteorBox: $('meteorbox'), meteors: $('meteors'), abduct: $('abduct'), abductFill: $('abductfill'), beam: $('beamwarn'),
       wantedBox: $('wantedbox'), wanted: $('wanted'), cop: $('copwarn'),
       ufoBox: $('ufobox'), ufoHits: $('ufohits'), heistBox: $('heistbox'), heist: $('heist'), ride: $('ride'), rideFill: $('ridefill'), itemBox: $('itembox'), itemIcon: $('itemicon'), itemName: $('itemname'), itemTime: $('itemtime'), itemBtn: $('tb-item'),
       boss: $('boss'), bossPips: $('bosspips'), bossHint: $('bosshint'),
@@ -68,6 +68,17 @@ export class Hud {
     b.classList.toggle('hidden', n == null);
     if (n == null) return;
     this.el.spies.textContent = `${n}/${total}`;
+    b.classList.remove('pop');
+    void b.offsetWidth;
+    b.classList.add('pop');
+  }
+
+  // Meteoritos recogidos de los que han caído en la última lluvia (null lo esconde)
+  setMeteors(n, total) {
+    const b = this.el.meteorBox;
+    b.classList.toggle('hidden', n == null);
+    if (n == null) return;
+    this.el.meteors.textContent = `${n}/${total}`;
     b.classList.remove('pop');
     void b.offsetWidth;
     b.classList.add('pop');

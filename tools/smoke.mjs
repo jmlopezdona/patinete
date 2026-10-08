@@ -31,6 +31,7 @@ await page.evaluate(() => {
       I.endFrame();
     }
   };
+  g.meteors.cd = 1e9; // la lluvia de meteoritos, cuando le toque su prueba
   // Centro del half-pipe mirando a lo largo de la parcela del skatepark
   window.pipe = () => {
     const T = g.world.places.trick;
@@ -261,6 +262,65 @@ await log('gallinas', () => {
   m.abort();
   g.wanted.reset(true);
   return { despacio, atropello, picotazos, esquinazo, seCansan, vuelven, noche, manana: st(), tregua };
+});
+await log('meteoritos', () => {
+  const g = window.__game; const M = g.meteors; const p = g.player; const m = g.world.places.mega; const T = g.terrain;
+  const box = () => (document.getElementById('meteorbox').classList.contains('hidden') ? 'oculto' : document.getElementById('meteors').textContent);
+  const on = () => M.craters.filter((c) => c.on && !c.sink);
+  const crashes = []; const oCrash = g.onCrash.bind(g); g.onCrash = () => { crashes.push(M.state); oCrash(); };
+  // En el casco viejo no hay descampado donde quepan: la lluvia se deja para más tarde
+  const pz = g.world.places.plaza;
+  p.place(pz.x, pz.z + 20, 0);
+  window.sim(0.5);
+  let enLaPlaza = 0;
+  for (let i = 0; i < 6; i++) if (M.start()) enLaPlaza++;
+  // Junto al Mega Salto sí: caen cinco, lejos del camino de tierra, del gallinero y de las vacas
+  p.place(m.x - 60, m.z - 30, Math.PI / 2);
+  window.sim(0.5);
+  const empieza = M.start();
+  const dianas = M.falls.filter((f) => f.on);
+  const lejos = dianas.every((f) => Math.hypot(f.x - p.pos.x, f.z - p.pos.z) > 44);
+  const camino = dianas.some((f) => Math.abs(f.z - m.z) < f.k * 18.5 + 5 && f.x > m.x - 64 && f.x < m.hole.x0);
+  // Plantado en la primera diana, el meteorito te manda por los aires sin castañazo
+  const f = dianas[0];
+  window.sim(f.wait + 2.9);
+  p.place(f.x + 4, f.z, 0); p.invuln = 0;
+  let alto = 0;
+  for (let i = 0; i < 150; i++) { window.sim(1 / 60); alto = Math.max(alto, p.pos.y); }
+  const impacto = { alto: +alto.toFixed(1), castañazos: crashes.length, enElSuelo: p.grounded };
+  window.sim(14);
+  const cr = on();
+  const perfil = [0, 4, 8, 11, 14, 18].map((r) => +T.height(cr[0].x + r * cr[0].k, cr[0].z).toFixed(1));
+  // Cruzándolo a toda pastilla se salta el labio, se cae dentro y se recoge el meteorito del fondo
+  const s0 = g.save.studs;
+  let aereos = 0; const oLand = g.onLand.bind(g); g.onLand = (r) => { if (r.air > 0.5) aereos++; oLand(r); };
+  for (const c of cr) {
+    p.place(c.x - c.r - 20, c.z, Math.PI / 2); p.v = 28;
+    window.sim(1.6, () => ({ throttle: 1 }));
+    if (c.has) { p.place(c.x - 3, c.z, Math.PI / 2); window.sim(0.5, () => ({ throttle: 1 })); }
+  }
+  g.onLand = oLand;
+  const recogidos = { n: M.found, aereos, premio: g.save.studs - s0 >= 5 * 150 + 1000, contador: box() };
+  window.sim(1);
+  // La lluvia siguiente tapa los cráteres viejos y deja el suelo como estaba
+  const viejo = cr[0];
+  p.place(m.x - 60, m.z - 30, Math.PI / 2);
+  window.sim(0.5);
+  M.start();
+  window.sim(1.5);
+  const tapado = { suelo: [0, 8, 12].map((r) => T.height(viejo.x + r * viejo.k, viejo.z)), nuevos: M.falls.filter((f) => f.on).length };
+  window.sim(22);
+  const segunda = { crateres: on().length, contador: box() };
+  // De noche, con los marcianos, no llueve
+  M.cd = 0;
+  g.env.night = g.env.target = 1; g.env.apply();
+  window.sim(3);
+  const noche = M.state;
+  g.env.night = g.env.target = 0; g.env.apply();
+  window.sim(1);
+  M.cd = 1e9;
+  g.onCrash = oCrash;
+  return { enLaPlaza, empieza, dianas: dianas.length, lejos, camino, impacto, crateres: cr.length, perfil, recogidos, tapado, segunda, noche };
 });
 await log('marcianos: culetazo', () => {
   const g = window.__game; const A = g.aliens; const p = g.player;

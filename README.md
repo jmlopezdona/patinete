@@ -151,6 +151,19 @@ picotean por el corral y se apartan cacareando si pasas cerca; de noche duermen 
 - **Dales esquinazo** dejándolas atrás, mejor con el turbo, y hay premio; si no, acaban cansándose
   ellas y se vuelven al gallinero. No cuentan para el policía municipal.
 
+### Lluvia de meteoritos
+
+De día, de tarde en tarde, el cielo avisa y caen **cinco meteoritos** en los descampados y campos
+que tengas cerca (nunca en las calles; si estás en pleno casco viejo, espera a que salgas).
+
+- Cada uno marca dónde va a dar con una **diana** roja en el suelo y tarda tres segundos en caer. Si
+  te pilla debajo no hay castañazo: **sales por los aires**.
+- Deja un **cráter** con el borde levantado que se patina como un bowl: el talud de fuera es una
+  rampa y, dentro, las paredes te devuelven al centro para encadenar aéreos.
+- En el fondo queda el **meteorito**, todavía al rojo (☄️ en el minimapa): baja a por él antes de
+  que se deshaga y suma studs. Recoger los cinco de una lluvia (el contador ☄️ los lleva) da premio.
+- Los cráteres se quedan hasta la lluvia siguiente, que los tapa y abre otros donde estés entonces.
+
 ### Marcianos disfrazados
 
 De día no hay platillo, pero algunos marcianos se han quedado en Cobeña **disfrazados de vecino**:
@@ -340,6 +353,7 @@ se guarda en el navegador.
   rescates y el robo del platillo), `disguise.js`, los que se pasean de día disfrazados de vecino, `heist.js`, el ladrón de la estatua dorada, `boss.js`, la nave nodriza, `items.js`, los objetos que se recogen por la calle y se gastan
   con `Q` (el timbre sónico, el gorro de aluminio, el cohete y la gravedad lunar), `slime.js`, los charcos de baba
   verde, `cows.js`, las vacas que pastan junto al Mega Salto, `hens.js`, las gallinas del gallinero,
+  `meteors.js`, la lluvia de meteoritos y sus cráteres,
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
   `characters.js` define los personajes elegibles y sus estadísticas (sus casas y puntos de salida
