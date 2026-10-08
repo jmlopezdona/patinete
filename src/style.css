@@ -326,6 +326,63 @@ kbd {
   font-size: 14px;
   font-weight: 600;
 }
+/* La nave nodriza: una casilla por cada coscorrón que le queda */
+#boss {
+  position: absolute;
+  left: 50%;
+  top: max(14px, env(safe-area-inset-top));
+  transform: translateX(-50%);
+  min-width: 300px;
+  padding: 8px 22px 10px;
+  text-align: center;
+  background: var(--panel);
+  border-radius: 18px;
+  border-bottom: 4px solid #8dff6a;
+  backdrop-filter: blur(6px);
+}
+#boss.pop {
+  animation: boss-pop 0.25s ease-out;
+}
+@keyframes boss-pop {
+  40% {
+    transform: translateX(-50%) scale(1.08);
+  }
+}
+#ride:not(.hidden) ~ #boss {
+  top: calc(max(14px, env(safe-area-inset-top)) + 96px);
+}
+#boss .a-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #8dff6a;
+}
+#bosspips {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+#bosspips i {
+  flex: 1;
+  height: 12px;
+  background: linear-gradient(90deg, #4bd13a, #b6ff5a);
+  border-radius: 999px;
+}
+#bosspips i.off {
+  background: rgba(255, 255, 255, 0.18);
+}
+#boss .a-hint {
+  font-size: 14px;
+  font-weight: 600;
+}
+#boss.shield {
+  border-bottom-color: #ff5ad1;
+}
+#boss.shield .a-title {
+  color: #ff5ad1;
+}
+#boss.shield #bosspips i:not(.off) {
+  background: linear-gradient(90deg, #c63aa6, #ff5ad1);
+}
 #ufobox {
   border-left: 4px solid var(--yellow);
 }

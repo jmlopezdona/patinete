@@ -374,6 +374,46 @@ export class Sfx {
     this.tone(1175, 0.5, 'sine', 0.07, 0.97, 0.02);
     this.noise(0.08, 0.3, 2400, 1);
   }
+  // La nave nodriza: llega con un trueno grave y su panza suena a campana gorda
+  mothership() {
+    this.tone(55, 2.8, 'sawtooth', 0.16, 0.6);
+    this.tone(82, 2.8, 'sine', 0.22, 0.5, 0.1);
+    this.noise(2.6, 0.22, 180, 0.7, 'lowpass', 0, 3);
+    [392, 370, 349, 330].forEach((f, i) => this.tone(f, 0.5, 'square', 0.06, 0.94, 0.5 + i * 0.42));
+  }
+  bossHit() {
+    this.tone(98, 0.9, 'triangle', 0.4, 0.5);
+    this.tone(392, 1.1, 'sine', 0.14, 0.96);
+    this.tone(587, 0.9, 'sine', 0.08, 0.96, 0.02);
+    this.noise(0.14, 0.34, 1800, 1);
+  }
+  // Su escudo: zumba al levantarse, tintinea al chocar con él y se apaga con un suspiro
+  shield(up) {
+    this.tone(up ? 220 : 880, 0.5, 'sawtooth', 0.07, up ? 4 : 0.25);
+    this.tone(up ? 330 : 1320, 0.5, 'sine', 0.08, up ? 4 : 0.25, 0.04);
+  }
+  shieldClang() {
+    this.tone(1760, 0.3, 'sine', 0.1, 0.7);
+    this.tone(2637, 0.22, 'triangle', 0.06, 0.8, 0.03);
+    this.noise(0.1, 0.12, 6000, 3);
+  }
+  // Bomba de baba que cae silbando
+  bomb(vol = 1) {
+    this.tone(1250, 1.1, 'sine', 0.06 * vol, 0.3);
+  }
+  // Tocada del todo: petardea, se tambalea... y revienta
+  bossDown() {
+    for (let i = 0; i < 6; i++) {
+      this.noise(0.45, 0.3, 320 + i * 90, 0.8, 'lowpass', i * 0.5, 0.4);
+      this.tone(118 - i * 9, 0.45, 'sawtooth', 0.12, 0.5, i * 0.5);
+    }
+  }
+  bossBoom() {
+    this.noise(1.8, 0.55, 260, 0.6, 'lowpass', 0, 0.3);
+    this.tone(62, 1.5, 'sine', 0.5, 0.4);
+    this.tone(40, 1.8, 'sawtooth', 0.18, 0.6, 0.05);
+    this.bricks(12);
+  }
   slurp() {
     this.tone(260, 0.24, 'sine', 0.14, 4.5);
     this.tone(1400, 0.08, 'triangle', 0.08, 1, 0.22);

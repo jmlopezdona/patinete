@@ -447,13 +447,55 @@ await log('marcianos: robo del platillo', () => {
   n = 0; while (!p.grounded && n++ < 600) window.sim(1 / 60);
   return { golpes: golpes.join(', '), tuyo, vuela, botin, finDelPaseo: fin, vacaDevuelta: !cow.taken && cow.group.visible && !A.lost.length, enElSuelo: p.grounded, castañazo: p.crashT > 0 };
 });
-await log('marcianos: victoria', () => {
-  const g = window.__game; const A = g.aliens; const p = g.player;
-  const st = g.save.studs;
+await log('marcianos: nave nodriza', () => {
+  const g = window.__game; const A = g.aliens; const B = g.boss; const p = g.player; const m = B.m; const H = g.world.places.halfpipe;
+  const pips = () => document.querySelectorAll('#bosspips i:not(.off)').length;
+  // Con el último marciano de la oleada baja la nodriza sobre el half-pipe y el platillo se recoge
   A.wave.count = A.wave.goal - 1;
   A.score(p, g.time, null, 500);
+  window.sim(0.1);
+  const llega = `${m.state}, platillo ${A.u.state}, rechazada ${A.cleared}`;
+  window.sim(5);
+  const plantada = { estado: m.state, minimapa: B.blips.length === 1, vida: `${pips()}/${m.need}`, sobreElHalfPipe: Math.hypot(m.x - H.x, m.z - H.z) < 1 };
+  // De un salto desde la plataforma no se llega; cogiendo carrerilla con el turbo, sí
+  const c = Math.cos(H.rot); const s = Math.sin(H.rot);
+  p.place(H.x + s * 20, H.z + c * 20, H.rot); p.invuln = 99;
+  window.sim(1.2, (t) => ({ jumpPressed: t < 0.02 }));
+  const deUnSalto = m.hits;
+  const pump = (until) => {
+    let n = 0;
+    while (!until() && n++ < 3600) {
+      if (p.grounded && (Math.hypot(p.pos.x - H.x, p.pos.z - H.z) > 26 || (Math.abs(p.v) < 1 && n % 120 === 0))) { p.place(H.x, H.z, H.rot); p.invuln = 99; }
+      window.sim(1 / 60, () => ({ throttle: 1, boost: true }));
+    }
+    return +(n / 60).toFixed(1);
+  };
+  p.place(H.x, H.z, H.rot); p.invuln = 99;
+  const t1 = pump(() => m.hits >= 1);
+  const escudo = { sube: m.shield > 0, hud: document.getElementById('boss').classList.contains('shield'), refuerzos: B.minions };
+  // Con el escudo levantado se rebota sin hacerle nada, llueven bombas y el timbrazo lo rompe
+  let bombas = 0;
+  pump(() => { bombas = Math.max(bombas, B.bombs.filter((b) => b.t >= 0).length); return m.shield < 2.5; });
+  escudo.aguanta = m.hits === 1;
+  escudo.bombas = bombas > 0;
+  escudo.timbrazo = A.sonic(p.pos.x, p.pos.z, 46).boss && m.shield === 0;
+  // Un bombazo de lleno: frenazo y studs por los suelos
+  p.place(H.x, H.z, H.rot); p.invuln = 0; g.save.studs = 500;
+  B.bombs.forEach((b) => { b.t = -1; });
+  m.bombT = 0; window.sim(1 / 60); m.bombT = 99;
+  const b = B.bombs.find((o) => o.t >= 0);
+  b.x = p.pos.x; b.z = p.pos.z; b.gy = p.pos.y;
+  window.sim(1.6);
+  const bombazo = 500 - g.save.studs;
+  m.bombT = 3; m.shield = 0;
+  const st = g.save.studs;
+  const t3 = pump(() => m.state !== 'fight');
+  const cae = { golpes: m.hits, segundos: [t1, t3], estado: m.state, marcianos: A.aliens.filter((a) => a.state !== 'off' && a.state !== 'fly').length };
+  window.sim(4);
+  const revienta = m.state === 'gone' && !B.group.visible && !g.camera3.ceil && document.getElementById('boss').classList.contains('hidden');
   window.sim(6);
-  return { rechazada: g.save.invasions, premio: g.save.studs - st, amanece: g.env.target === 0, platillo: A.u.state, marcianos: A.aliens.filter((a) => a.state !== 'off').length, devueltos: !A.lost.length && !g.cows.list.some((c) => c.taken || !c.group.visible) };
+  // (las vacas que quedan lejos del skatepark no se pintan: solo cuenta que no siga ninguna abducida)
+  return { llega, plantada, deUnSalto, escudo, bombazo, cae, revienta, derribadas: g.save.motherships, rechazada: g.save.invasions, premio: g.save.studs - st, amanece: g.env.target === 0, platillo: A.u.state, marcianos: A.aliens.filter((a) => a.state !== 'off').length, devueltos: !A.lost.length && !g.cows.list.some((c) => c.taken) };
 });
 await log('búsqueda: multa y cuartelillo', () => {
   const g = window.__game; const W = g.wanted; const p = g.player; const sp = g.world.places.spawn;

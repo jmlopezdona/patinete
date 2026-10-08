@@ -15,6 +15,7 @@ export class ChaseCamera {
     this.shake = 0;
     this.roll = 0; // horizonte torcido: solo lo usa el modo foto
     this.rig = null; // a los mandos del platillo robado se mira desde más lejos y más arriba: { dist, height }
+    this.ceil = null; // techo bajo la nave nodriza, para no colarse dentro del casco: { x, z, r, y }
     this.look = new THREE.Vector3();
     this.dist = 13;
   }
@@ -63,6 +64,8 @@ export class ChaseCamera {
       }
     }
     _d.set(px - fx * this.dist * s, py + 2.6 + (height - 2.6) * Math.max(s, 0.55) + (1 - s) * 2.5, pz - fz * this.dist * s);
+    const top = this.ceil;
+    if (top && py < top.y && _d.y > top.y && Math.hypot(_d.x - top.x, _d.z - top.z) < top.r) _d.y = top.y;
     const floor = T.height(_d.x, _d.z);
     if (floor < py + 30 && _d.y < floor + 1.2) _d.y = floor + 1.2;
     _l.set(px + fx * 4, py + 2.9, pz + fz * 4);

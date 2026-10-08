@@ -173,6 +173,8 @@ function skatepark(W) {
     c = hq(sx, sz);
     W.spectators.push({ x: c[0], y: B + q.lip, z: c[1], rot: H.rot + r });
   }
+  // Sobre el half-pipe se planta la nave nodriza: `deck` es la altura de sus plataformas
+  W.places.halfpipe = { x: H.x, z: H.z, rot: H.rot, deck: B + q.lip };
 
   // 2. Bowl circular en el extremo ancho
   const [bwx, bwz] = P(72, -4);

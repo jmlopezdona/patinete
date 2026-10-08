@@ -5,8 +5,7 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 
 ## Siguiente tanda: más invasión
 
-- [ ] **Jefe final: la nave nodriza.** Se planta sobre el skatepark y hay que usar el half-pipe
-  para saltar y darle en la panza. Con el Mega Salto te cuelas dentro.
+- [ ] **Dentro de la nave nodriza.** Con el Mega Salto te cuelas dentro.
 - [ ] **Marcianos disfrazados.** De día hay vecinos a los que les asoma una antena. Si les das un
   culetazo se les cae el disfraz.
 
@@ -23,6 +22,13 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `nave-nodriza`)
+
+- [x] **Jefe final: la nave nodriza.** Echado el último marciano de la oleada, se planta sobre el
+  half-pipe del skatepark: hay que coger carrerilla con el turbo y salir disparado para darle
+  coscorrones en la panza. Después de cada uno levanta el escudo y suelta bombas de baba y
+  refuerzos; al último, revienta y amanece.
 
 ## Ya hecho (rama `gravedad-lunar`)
 

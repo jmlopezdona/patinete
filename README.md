@@ -198,9 +198,21 @@ campanario y empieza a soltar marcianos de ladrillo por las calles.
   marcianos. Con el platillo robado basta con pasarle el rayo por encima. Un robo por oleada.
 - Los objetos van saliendo por turnos (timbre, gorro, cohete, luna), uno cada vez, y mientras dura el
   efecto de uno no aparece el siguiente: el hueco del HUD enseña la cuenta atrás.
-- Cada noche hay que echar a una **oleada** (8 marcianos la primera, 4 más cada vez). Al
-  conseguirlo el platillo huye, amanece y te llevas el premio. No hay «game over».
-- Los puntos verdes del minimapa son marcianos; el 🛸, el platillo; el 🏆, el ladrón de la estatua. Durante los minijuegos se esconden.
+- Cada noche hay que echar a una **oleada** (8 marcianos la primera, 4 más cada vez) y, después,
+  a su nave nodriza. Al conseguirlo amanece y te llevas el premio. No hay «game over».
+- **Jefe final: la nave nodriza** 🛸: con el último marciano de la oleada el platillo se recoge y
+  baja la nodriza, que se planta sobre el **half-pipe del skatepark** (🛸 en el minimapa). Su
+  panza queda fuera del alcance de un salto: hay que **coger carrerilla en la rampa con el turbo**
+  y salir disparado hacia arriba para darle un **coscorrón** con la cabeza (con gravedad lunar se
+  llega de un salto desde lo alto de la rampa). Aguanta 3 la primera noche y uno más cada vez,
+  hasta 5; la barra de arriba lleva la cuenta. Después de cada coscorrón levanta unos segundos el
+  **escudo** (el núcleo pasa de verde a rosa y contra él solo se rebota), llueven **bombas de
+  baba** —un círculo rojo avisa de dónde caen; de lleno te frenan y te tiran 100 studs, y dejan
+  un charco que se seca enseguida— y bajan marcianos de refuerzo, que ya no cuentan para la
+  oleada. Un **timbrazo** cerca le rompe el escudo. Al último coscorrón se tambalea, petardea y
+  revienta en ladrillos y studs: premio extra, los marcianos que quedaban revientan con ella, y
+  amanece. Si amanece antes o empiezas un minijuego, se marcha y vuelve entera.
+- Los puntos verdes del minimapa son marcianos; el 🛸, el platillo (o la nodriza); el 🏆, el ladrón de la estatua. Durante los minijuegos se esconden.
 
 ### Nivel de búsqueda
 
@@ -296,7 +308,7 @@ se guarda en el navegador.
   skatepark funcionan igual que en llano.
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
   entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo, rayo,
-  rescates y el robo del platillo), `heist.js`, el ladrón de la estatua dorada, `items.js`, los objetos que se recogen por la calle y se gastan
+  rescates y el robo del platillo), `heist.js`, el ladrón de la estatua dorada, `boss.js`, la nave nodriza, `items.js`, los objetos que se recogen por la calle y se gastan
   con `Q` (el timbre sónico, el gorro de aluminio, el cohete y la gravedad lunar), `slime.js`, los charcos de baba
   verde, `cows.js`, las vacas que pastan junto al Mega Salto,
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela

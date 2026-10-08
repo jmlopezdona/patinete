@@ -225,7 +225,7 @@ export class Heist {
     }
     if (!A.active) {
       if (this.on) this.abort();
-    } else if (!this.done && this.home && k.state === 'off') {
+    } else if (!this.done && this.home && k.state === 'off' && !g.boss.on) {
       this.cd -= dt;
       if (this.cd <= 0 && !p.held) this.start(p);
     }
