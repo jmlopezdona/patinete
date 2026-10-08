@@ -2,7 +2,7 @@
 //
 // Por el canal fiable va JSON, que son pocos mensajes y se depuran a simple vista:
 //   hola   invitado → anfitrión   { t, v, char, color }       al entrar y cada vez que cambia de personaje o color
-//   sala   anfitrión → invitado   { t, you, players: [{ slot, char, color }] }
+//   sala   anfitrión → invitado   { t, you, on, players: [{ slot, char, color }] }   on: la partida ya ha empezado
 //   adios  cualquiera             { t, why }
 // Por el canal sin garantías va binario, que caduca enseguida:
 //   yo     invitado → anfitrión   el estado de su personaje

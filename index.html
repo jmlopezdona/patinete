@@ -127,8 +127,30 @@
           <button id="btn-update" class="brick-btn">¡La quiero!</button>
         </div>
 
-        <div class="menu-buttons">
+        <!-- Jugar con amigos: crear una partida en red o unirse, y la sala de espera -->
+        <div id="friends" class="hidden">
+          <div id="fr-start">
+            <button id="fr-create" class="brick-btn">🏠 Crear partida</button>
+            <form id="fr-join">
+              <input id="fr-code" maxlength="8" placeholder="Código" aria-label="Código de la sala" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+              <button class="brick-btn">Unirse</button>
+            </form>
+          </div>
+          <div id="fr-room" class="hidden">
+            <div class="fr-head">
+              <span>Sala <b id="fr-name"></b></span>
+              <button id="fr-share" class="brick-btn ghost">📤 Compartir enlace</button>
+            </div>
+            <div id="fr-players"></div>
+            <button id="fr-go" class="brick-btn primary" disabled>Conectando…</button>
+          </div>
+          <p id="fr-msg"></p>
+          <button id="fr-back" class="brick-btn ghost">← Volver</button>
+        </div>
+
+        <div class="menu-buttons" id="menu-buttons">
           <button id="btn-play" class="brick-btn primary" disabled>Cargando…</button>
+          <button id="btn-friends" class="brick-btn ghost">👥 Jugar con amigos</button>
           <button id="btn-install" class="brick-btn ghost hidden">📲 Instalar</button>
           <button id="btn-sound" class="brick-btn ghost">🔊 Sonido</button>
           <button id="btn-reset" class="brick-btn ghost">Borrar progreso</button>

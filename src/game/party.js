@@ -2,18 +2,18 @@ import { CHARACTERS, characterById } from './characters.js';
 import { RemotePlayer, readState } from './remote-player.js';
 import { createTransport } from '../net/transport.js';
 import { Session } from '../net/session.js';
-import { blankState } from '../net/protocol.js';
+import { blankState, F } from '../net/protocol.js';
 import { VERSION } from '../core/update.js';
 
 // Con la pestaña tapada el navegador deja de dar fotogramas y frena los temporizadores de la
 // página, pero no los de un worker: este solo marca el paso, y el juego se calcula al oírlo
 const TICK = 'setInterval(() => postMessage(0), 16);';
 
-const WHY = {
+export const WHY = {
   'no-room': 'No hay ninguna partida con ese código',
   taken: 'Ya hay una partida con ese código',
-  timeout: 'No se ha podido conectar: prueba con otra red',
-  network: 'No se ha podido conectar: prueba con otra red',
+  broker: 'No se llega al servicio de salas: comprueba tu conexión y vuelve a probar',
+  blocked: 'Tu red y la del anfitrión no dejan conectar directamente: prueba con wifi',
   version: 'El anfitrión juega con otra versión: actualiza el juego',
   full: 'La partida está llena',
   host: 'El anfitrión se ha ido: se acabó la partida',
@@ -23,7 +23,7 @@ const WHY = {
 // local y pinta a los que llegan. El mundo (tráfico, marcianos, municipal) va todavía por libre
 // en cada pantalla
 export class Party {
-  constructor(game, code, hosting, kind) {
+  constructor(game, code, hosting, kind, relay) {
     this.game = game;
     this.code = code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
     this.hosting = hosting;
@@ -35,24 +35,39 @@ export class Party {
     const p = game.player;
     this.char = p.char.id;
     this.color = p.colorIdx;
-    const S = (this.session = new Session(createTransport(kind), { v: VERSION, char: this.char, color: this.color }, CHARACTERS.length));
+    const S = (this.session = new Session(createTransport(kind, relay), { v: VERSION, char: this.char, color: this.color }, CHARACTERS.map((c) => c.id)));
     S.onJoin = (pl, fresh) => {
       this.remotes.set(pl.slot, new RemotePlayer(game, pl));
       if (fresh) this.say(pl, 'ha entrado en la partida');
-      this.label();
     };
     S.onLeave = (pl) => {
       this.remotes.get(pl.slot)?.dispose();
       this.remotes.delete(pl.slot);
       if (!S.closed) this.say(pl, 'se ha ido');
-      this.label();
     };
     S.onChange = (pl) => this.remotes.get(pl.slot)?.setLook(pl.char, pl.color);
-    S.onEnd = (why) => this.fail(why);
-    window.addEventListener('pagehide', () => S.close());
-    document.addEventListener('visibilitychange', () => this.keepGoing(document.hidden));
+    // El personaje que pedía ya lo lleva otro: el anfitrión dice con cuál me quedo
+    S.onMe = (char) => game.setCharacter((this.char = char), true);
+    S.onSync = () => {
+      const go = S.started && !this.started && !this.hosting && this.connected;
+      this.started = S.started;
+      this.connected = true;
+      this.label();
+      game.refreshAway();
+      game.lobby.refresh();
+      // El anfitrión da la salida: quien esperaba en la sala sale a la calle con él
+      if (go && game.state === 'menu') game.start();
+    };
+    S.onEnd = (why) => game.closeParty(why);
+    this.onHide = () => this.keepGoing(document.hidden);
+    this.onLeave = () => S.close();
+    window.addEventListener('pagehide', this.onLeave);
+    document.addEventListener('visibilitychange', this.onHide);
     this.label('conectando…');
-    (hosting ? S.host(this.code) : S.join(this.code)).then(() => this.label(), (e) => this.fail(e.message));
+    // Se cumple con el motivo si no se ha podido abrir o entrar, y sin nada si ha ido bien
+    this.opened = (hosting ? S.host(this.code) : S.join(this.code)).then(() => {
+      if (hosting) S.onSync();
+    }, (e) => e.message || 'broker');
   }
 
   say(pl, what) {
@@ -61,15 +76,29 @@ export class Party {
   }
 
   label(text) {
-    this.el.classList.remove('hidden', 'bad');
+    this.el.classList.remove('hidden');
     this.el.textContent = `👥 Sala ${this.code} · ${text ?? (this.remotes.size ? `${this.remotes.size + 1} jugadores` : this.hosting ? 'esperando a los demás' : 'entrando…')}`;
   }
 
-  fail(why) {
-    this.error = why;
-    this.label(WHY[why] || WHY.network);
-    this.el.classList.add('bad');
-    this.game.hud.toast(`👥 ${WHY[why] || WHY.network}`);
+  // ¿Lleva ya otro jugador ese personaje?
+  taken(id) {
+    for (const pl of this.session.players.values()) if (pl.char === id) return true;
+    return false;
+  }
+
+  // Anfitrión: todos a la calle
+  start() {
+    if (this.hosting && !this.session.started) this.session.start();
+  }
+
+  close() {
+    this.session.close();
+    this.keepGoing(false);
+    for (const r of this.remotes.values()) r.dispose();
+    this.remotes.clear();
+    window.removeEventListener('pagehide', this.onLeave);
+    document.removeEventListener('visibilitychange', this.onHide);
+    this.el.classList.add('hidden');
   }
 
   // Tapada, la partida sigue sin pintarse: si no, el mundo se pararía para los demás
@@ -87,14 +116,18 @@ export class Party {
     const S = this.session;
     if (p.char.id !== this.char || p.colorIdx !== this.color) S.setMe((this.char = p.char.id), (this.color = p.colorIdx));
     const now = performance.now();
-    // Fuera de la partida (menú, pausa) el personaje se ve quieto
-    const live = g.state === 'play' && !g.paused && !p.frozen && !p.held && p.crashT <= 0;
-    S.update(now, readState(p, live ? g.input.state : g.input.neutral, this.state));
+    const playing = g.state === 'play';
+    // En la pausa el personaje se ve quieto; en el menú o en la sala todavía no ha salido a la calle
+    const live = playing && !g.paused && !p.frozen && !p.held && p.crashT <= 0;
+    readState(p, live ? g.input.state : g.input.neutral, this.state);
+    if (!playing) this.state.flags |= F.HIDDEN;
+    S.update(now, this.state);
     this.blips.length = 0;
     for (const [slot, r] of this.remotes) {
       const s = S.sample(S.players.get(slot), now, this.tmp);
       if (!s) continue;
       r.apply(s, dt);
+      if (r.hidden) continue;
       // En el minimapa, cada amigo con el icono de su personaje, también cuando queda lejos
       r.blip ??= { x: 0, z: 0, icon: '' };
       r.blip.x = s.x;

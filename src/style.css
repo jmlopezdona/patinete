@@ -963,9 +963,6 @@ kbd {
   border-radius: 999px;
   transform: translateX(-50%);
 }
-#net.bad {
-  background: #c91a09;
-}
 /* La pandilla: una placa roja torcida, como una pegatina encima de los personajes */
 .crew {
   display: inline-flex;
@@ -1065,6 +1062,107 @@ kbd {
 .menu-buttons .ghost {
   width: auto;
   white-space: nowrap;
+}
+/* Jugar con amigos: crear o unirse, y la sala de espera */
+#friends {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  background: rgba(14, 26, 40, 0.7);
+  border-radius: 16px;
+}
+#fr-start,
+#fr-join {
+  display: flex;
+  gap: 10px;
+}
+#fr-create {
+  width: auto;
+  white-space: nowrap;
+}
+#fr-join {
+  flex: 1;
+}
+#fr-join .brick-btn {
+  width: auto;
+}
+#fr-code {
+  flex: 1;
+  min-width: 0;
+  padding: 0 12px;
+  font: 700 22px var(--font);
+  color: var(--ink);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  background: #fff;
+  border: 0;
+  border-radius: 12px;
+}
+#fr-code::placeholder {
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.5;
+}
+#fr-room {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fr-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 18px;
+  font-weight: 600;
+}
+.fr-head b {
+  margin-left: 6px;
+  font-size: 30px;
+  color: var(--yellow);
+  letter-spacing: 0.12em;
+  user-select: all;
+}
+.fr-head .brick-btn,
+#fr-back {
+  width: auto;
+  align-self: flex-start;
+}
+#fr-players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#fr-players span {
+  padding: 4px 12px 5px 8px;
+  font-size: 15px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+}
+#fr-players .me {
+  background: var(--blue);
+}
+#fr-players i {
+  margin-right: 5px;
+  font-style: normal;
+}
+#fr-msg {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffb3a8;
+}
+#fr-msg:empty {
+  display: none;
+}
+/* En red, el personaje que ya lleva un amigo no se puede elegir */
+.char-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
 }
 /* Aviso de versión nueva: la trae un platillo */
 #update {
