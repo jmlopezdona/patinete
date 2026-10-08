@@ -107,6 +107,7 @@ export class Party {
       } else if (k === 'boing') game.slime.wear(v);
       else if (k === 'rompe') game.props.hit(v, this.remotes.get(pl.slot));
       else if (k === 'atropella') game.traffic.knock(v, false);
+      else if (k === 'corredora') game.folks.knock(v, false);
       // El lío con el municipal es de toda la pandilla y lo lleva el anfitrión
       else if (k === 'multa' || k === 'zapatillazo') {
         if (this.hosting) k === 'multa' ? game.wanted.caught(!!v) : game.wanted.slapped();

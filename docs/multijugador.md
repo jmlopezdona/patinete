@@ -78,7 +78,7 @@ sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 | Studs y ladrillos dorados | Personal | Cada uno recoge los suyos y los guarda en su progreso |
 | Bolos y balón | Compartido | Los que tira o chuta uno los ven caer y rodar los demás, también los bolos y el portero marcianos de noche. Los lleva la pantalla del último que los ha tocado. **Ya funciona** |
 | Minijuegos | Personal | Cada uno juega el suyo; mientras tanto ni marcianos ni municipal le hacen caso. Mientras alguien juega a los bolos o al fútbol, la bolera o la pista es suya: los demás lo ven jugar, pero ni pueden empezar ahí ni tocarle los bolos o el balón. **Ya funciona** |
-| Selfie con Emma, seguir a las mamás | Personal | Emma se anima por libre en cada pantalla, así que no hay nada que repartir. Las corredoras sí van a la par en todas: por dónde van sale del reloj del juego, como los peatones. **Ya funciona** |
+| Selfie con Emma, seguir a las mamás | Personal | Emma se anima por libre en cada pantalla, así que no hay nada que repartir. Las corredoras sí van a la par en todas: por dónde van sale del reloj del juego, como los peatones, y la que atropella uno la ven volar los demás. **Ya funciona** |
 | Estrellas, récords, colores | Personal | Siguen en el `localStorage` de cada uno |
 | Calidad gráfica, sonido, cámara | Personal | |
 
@@ -174,7 +174,7 @@ otra cosa, o por un transporte local para las pruebas, no toca el resto.
 | El personaje de cada uno (posición, velocidad, trucos) | Su dueño | Los controles responden al instante, sin esperar al anfitrión |
 | Cosas quietas contra las que choca un jugador (mobiliario, studs, ladrillos, charcos de baba, cráteres) | El jugador que choca, que lo avisa | No se mueven: no hay desfase que resolver |
 | Lo que le pasa a un jugador al tocar algo que se mueve y que no cambia con el golpe (el empujón de un coche) | Ese jugador, contra lo que ve en su pantalla | Rebota en el coche donde lo ve, sin esperar al anfitrión |
-| Un peatón atropellado | El jugador que lo atropella, que lo avisa | Por dónde anda cada peatón no depende de nadie: sale del reloj |
+| Un peatón o una corredora atropellados | El jugador que los atropella, que lo avisa (`atropella`, `corredora`) | Por dónde anda cada uno no depende de nadie: sale del reloj |
 | Todo lo que se mueve solo (marcianos, platillo, nave nodriza y sus bombas, ladrón, meteoritos, coches, peatones, municipal, abuela, zapatilla, gallinas) | El anfitrión | Hace falta una sola verdad |
 | Reloj, día y noche, oleada, nivel de búsqueda, objeto en la calle | El anfitrión | Ídem |
 | Los bolos de la bolera y el balón y el portero de la pista | El jugador que está jugando el minijuego o, si no juega nadie, el último que los ha tocado. Quién es lo dice el anfitrión | Son lo único del mundo que responde al empujón de un jugador fotograma a fotograma: calculados en otra pantalla, el balón saldría tarde y desde donde ya no estás |
