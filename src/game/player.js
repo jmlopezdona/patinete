@@ -731,22 +731,31 @@ export class Player {
     this.crashT = 1.25;
     this.sunk = false;
     this.grind = null;
-    const cols = [...this.rider.colors, COLORS[this.colorIdx], C.white, C.lgray, C.black];
-    const vx = this.grounded ? Math.sin(this.heading) * this.v * 0.4 : this.vel.x * 0.5;
-    const vz = this.grounded ? Math.cos(this.heading) * this.v * 0.4 : this.vel.z * 0.5;
-    this.game.bits.burst(this.pos.x, this.pos.y + 2, this.pos.z, cols, 34, 13, this.terrain.height(this.pos.x, this.pos.z), 1, vx, vz);
-    this.model.visible = false;
+    this.shatter(this.grounded ? Math.sin(this.heading) * this.v * 0.4 : this.vel.x * 0.5, this.grounded ? Math.cos(this.heading) * this.v * 0.4 : this.vel.z * 0.5);
     this.v = 0;
     this.vel.set(0, 0, 0);
     this.game.onCrash();
+  }
+
+  // Lo que se ve de un castañazo: piloto y vehículo saltan en pedazos. Vale también para los
+  // demás jugadores de una partida en red, que no avisan al juego ni mueven la cámara
+  shatter(vx, vz) {
+    const cols = [...this.rider.colors, COLORS[this.colorIdx], C.white, C.lgray, C.black];
+    this.game.bits.burst(this.pos.x, this.pos.y + 2, this.pos.z, cols, 34, 13, this.terrain.height(this.pos.x, this.pos.z), 1, vx, vz);
+    this.model.visible = false;
+  }
+
+  // Lo que se ve al caer al agua
+  sink() {
+    this.game.bits.burst(this.pos.x, -1.2, this.pos.z, [0x7fc8f2, 0xffffff, C.water], 40, 14, -1.4, 0.8);
+    this.model.visible = false;
   }
 
   splash() {
     this.crashT = 1.0;
     this.sunk = true;
     this.grind = null;
-    this.game.bits.burst(this.pos.x, -1.2, this.pos.z, [0x7fc8f2, 0xffffff, C.water], 40, 14, -1.4, 0.8);
-    this.model.visible = false;
+    this.sink();
     this.v = 0;
     this.vel.set(0, 0, 0);
     this.game.onSplash();

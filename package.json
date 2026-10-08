@@ -13,9 +13,11 @@
     "iconos": "node tools/iconos.mjs",
     "test:fisica": "node tools/phys.mjs",
     "test:misiones": "node tools/smoke.mjs shots",
+    "test:red": "node tools/red.mjs",
     "capturas": "node tools/shot.mjs shots"
   },
   "dependencies": {
+    "peerjs": "^1.5.5",
     "three": "^0.186.1"
   },
   "devDependencies": {

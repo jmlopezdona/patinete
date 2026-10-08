@@ -48,6 +48,7 @@ import { Items } from './game/items.js';
 import { Slime } from './game/slime.js';
 import { Heist } from './game/heist.js';
 import { Boss } from './game/boss.js';
+import { Party } from './game/party.js';
 
 const SAVE_KEY = 'cobena-patinete-v1';
 const QUALITY_NAMES = ['Bajos', 'Medios', 'Altos'];
@@ -214,6 +215,9 @@ class Game {
       this.env.night = this.env.target = 1;
       this.env.apply();
     }
+    // Partida en red, por ahora solo por la dirección: ?sala=KTRM&anfitrion la crea y ?sala=KTRM entra.
+    // Con red=local va entre pestañas del mismo navegador, sin salir a internet
+    if (params.get('sala')) this.party = new Party(this, params.get('sala'), params.has('anfitrion'), params.get('red'));
 
     this.last = performance.now();
     renderer.setAnimationLoop((t) => this.loop(t));
@@ -394,7 +398,8 @@ class Game {
     this.input.bindTouch(document.getElementById('touch'));
     window.addEventListener('touchstart', () => document.body.classList.add('touch'), { once: true, passive: true });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.state === 'play' && !this.photo.on && !this.watch.on) this.setPaused(true);
+      // En red no se pausa al tapar la pestaña: la partida de los demás sigue (ver Party)
+      if (document.hidden && this.state === 'play' && !this.photo.on && !this.watch.on && !this.party) this.setPaused(true);
     });
     $('s-mute').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
     setupInstall($('btn-install'), $('install-hint'));
@@ -677,7 +682,8 @@ class Game {
   }
 
   // ---------- Bucle principal ----------
-  loop(t) {
+  // blind: la pestaña está tapada y nadie mira, así que se calcula pero no se pinta
+  loop(t, blind = false) {
     // Tope de fotogramas para no calentar el equipo: 60 por segundo aunque la pantalla sea de 120 Hz,
     // y en la pausa, que es una imagen casi fija, bastan 20
     if (t - this.last < (this.paused && !this.photo.on && !this.watch.on ? 48 : 13)) return;
@@ -706,12 +712,14 @@ class Game {
       this.missions.update(dt, this.time);
     }
     if (this.heist.home) this.statue.rotation.y += dt * 0.35;
+    // Los amigos siguen patinando aunque aquí se esté en el menú o en la pausa
+    this.party?.update(dt);
     this.env.update(dt, (this.watch.on ? this.watch.eye : this.player).pos, this.camera3.cam);
-    this.render(dt);
+    if (!blind) this.render(dt);
     this.input.endFrame();
 
     // Calidad automática si el equipo va justo
-    if (this.autoQuality && this.state === 'play' && !this.paused) {
+    if (this.autoQuality && this.state === 'play' && !this.paused && !blind) {
       this.perf.t += dt;
       this.perf.n++;
       if (this.perf.n >= 150) {
@@ -840,6 +848,7 @@ class Game {
       for (const b of this.hens.blips) blips.push(b);
       for (const b of this.meteors.blips) blips.push(b);
       for (const b of this.items.blips) blips.push(b);
+      if (this.party) for (const b of this.party.blips) blips.push(b);
       this.minimap.draw(p.pos.x, p.pos.z, this.camera3.yaw, p.heading, m.active ? [] : this.markers, m.goalPos, blips);
     }
     if (this.frame % 20 === 0) {
