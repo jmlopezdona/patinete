@@ -1333,6 +1333,9 @@ body.net [data-act='photo'] {
   font-size: 18px;
   padding: 10px 18px 13px;
 }
+#p-friends {
+  display: contents; /* sus botones son uno más de la lista */
+}
 #sound label {
   display: grid;
   grid-template-columns: 104px 1fr 54px;
