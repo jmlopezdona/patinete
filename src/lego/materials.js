@@ -192,8 +192,38 @@ if (fLit) totalEmissiveRadiance += vec3(1.0, 0.72, 0.34) * uNight * 1.05;`
 }
 
 // Plástico brillante con color por vértice (piezas fusionadas con Builder).
+// En «Altos» redondea los cantos de las cajas que traen aBevel (ver Builder), igual que los ladrillos.
 export function createPlastic(opts = {}) {
-  return new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0, ...opts });
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0, ...opts });
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uDetail = legoUniforms.uDetail;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec4 aBevel;\nvarying vec4 vBevel;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBevel = aBevel;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uDetail;\nvarying vec4 vBevel;')
+      .replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+if (uDetail > 0.5 && vBevel.z > 0.0) {
+  // El canto es un escalón redondeado: baja hasta 45° en la arista. La pendiente sale de cómo cambia
+  // la altura de un píxel al de al lado, así no hace falta saber hacia dónde mira la pieza
+  vec2 faceSize = vBevel.zw * vBevel.zw * 64.0;
+  vec2 uv = vBevel.xy * faceSize;
+  float d = min(min(uv.x, faceSize.x - uv.x), min(uv.y, faceSize.y - uv.y));
+  float w = min(0.05, 0.3 * min(faceSize.x, faceSize.y));
+  float t = max(w - d, 0.0);
+  float h = -t * t / (2.0 * w) * (1.0 - smoothstep(0.3 * w, 1.5 * w, fwidth(d)));
+  vec3 sx = dFdx(-vViewPosition);
+  vec3 sy = dFdy(-vViewPosition);
+  vec3 r1 = cross(sy, normal);
+  vec3 r2 = cross(normal, sx);
+  float det = dot(sx, r1) * faceDirection;
+  normal = normalize(abs(det) * normal - sign(det) * (dFdx(h) * r1 + dFdy(h) * r2));
+}`
+      );
+  };
+  return mat;
 }
 
 export const plastic = createPlastic();
