@@ -330,6 +330,7 @@ queda libre para buscar el encuadre.
 | 👽 | Bolos Marcianos | Recinto Ferial, de noche | Los bolos son marcianos y se apartan al verte venir: 10 en dos tiradas |
 | 🍕 | Pizza Exprés | Plaza de la Villa | Repartir 5 pizzas antes de que se enfríen |
 | ⚽ | Chut a Puerta | Pista Polideportiva | Meter goles empujando el balón |
+| 👾 | Chut Marciano | Pista Polideportiva, de noche | Marcarle a un portero marciano con cuatro brazos, que sigue el balón y despeja a puñetazos: hay que chutar cruzado |
 
 Cada uno da hasta 3 estrellas. El progreso (studs, estrellas, ladrillos dorados, récords)
 se guarda en el navegador.

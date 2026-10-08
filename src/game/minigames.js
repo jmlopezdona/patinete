@@ -16,6 +16,10 @@ const G = 34;
 const SEE = 18; // desde aquí te ven venir los bolos marcianos
 const DODGE = 6.5; // y esto es lo que corren apartándose
 const CLEAR = 3.3; // el hueco que te dejan al pasar
+const KEEP = 4; // lo que corre bajo los palos el portero marciano
+const CHEER = 1.1; // lo que se pasa celebrando cada parada, sin moverse
+const PUNCH = 26; // y con qué fuerza despeja el balón
+const SPAN = 2.6; // y hasta dónde llega a cada lado del centro de la portería
 
 // Bolos gigantes: el patinete hace de bola.
 export class Pins {
@@ -372,7 +376,7 @@ export class AlienPins {
   }
 }
 
-// Balón de fútbol con portero.
+// Balón de fútbol con portero. De noche para un marciano con cuatro brazos, que sigue el balón.
 export class Ball {
   constructor(game, place) {
     this.game = game;
@@ -392,25 +396,54 @@ export class Ball {
     tag.position.y = 6.9;
     teo.group.add(tag);
     const sub = createMinifig({ torso: C.orange, arms: C.orange, legs: C.black, hair: 'cap', hairColor: C.black, face: 'cool', print: 'star', printColor: '#1b1d21' });
-    this.keepers = { teo, sub };
-    for (const k of [teo, sub]) {
+    // El marciano: más grande, con guantes y dos brazos de más
+    const alien = createMinifig({ skin: SKIN, face: 'alien', hair: 'antenna', hairColor: C.red, torso: C.purple, arms: C.purple, legs: C.black, print: 'bolt', printColor: '#f7d117' });
+    alien.group.scale.setScalar(1.12);
+    alien.arms = [alien.armL, alien.armR];
+    for (const a of [alien.armL, alien.armR]) {
+      const low = a.clone();
+      low.position.y -= 0.85;
+      alien.group.add(low);
+      alien.arms.push(low);
+    }
+    const atag = nameTag('Portero marciano', '#8dff6a');
+    atag.position.y = 7.4;
+    alien.group.add(atag);
+    this.keepers = { teo, sub, alien };
+    for (const k of [teo, sub, alien]) {
       k.group.rotation.y = -Math.PI / 2;
       k.armL.rotation.z = 1.3;
       k.armR.rotation.z = -1.3;
       game.scene.add(k.group);
     }
-    this.setKeeper(true);
+    this.teo = true;
+    this.alien = false;
+    this.cheer = 0;
+    this.pick();
     this.kz = place.cz;
     this.kx = place.goalX - 1.6;
     this.reset();
   }
 
   setKeeper(teo) {
-    this.keeperName = teo ? 'Teo' : 'el suplente';
-    this.keeper = teo ? this.keepers.teo : this.keepers.sub;
-    this.keepers.teo.group.visible = teo;
-    this.keepers.sub.group.visible = !teo;
-    this.keeper.group.position.copy((teo ? this.keepers.sub : this.keepers.teo).group.position);
+    this.teo = teo;
+    this.pick();
+  }
+
+  // De noche Teo se toma la noche libre y se pone el marciano
+  setAlien(on) {
+    if (on === this.alien) return;
+    this.alien = on;
+    this.pick();
+  }
+
+  pick() {
+    const K = this.keepers;
+    const k = this.alien ? K.alien : this.teo ? K.teo : K.sub;
+    this.keeperName = this.alien ? 'el portero marciano' : this.teo ? 'Teo' : 'el suplente';
+    if (this.keeper && this.keeper !== k) k.group.position.copy(this.keeper.group.position);
+    for (const o of Object.values(K)) o.group.visible = o === k;
+    this.keeper = k;
   }
 
   reset() {
@@ -423,9 +456,22 @@ export class Ball {
     const pl = this.place;
     const far = Math.abs(player.pos.x - pl.cx) > 120 || Math.abs(player.pos.z - pl.cz) > 120;
     if (far) return;
-    // Portero
-    this.kz = pl.cz + Math.sin(time * 1.7) * 4.4;
-    this.keeper.group.position.set(this.kx, BASE + 0.1 + Math.abs(Math.sin(time * 6)) * 0.25, this.kz);
+    // Portero: Teo y el suplente se pasean bajo los palos; el marciano va a por el balón
+    let hop = Math.abs(Math.sin(time * 6)) * 0.25;
+    if (this.alien) {
+      const b = this.pos;
+      this.cheer -= dt;
+      const cheer = this.cheer > 0;
+      // Cada parada la celebra un rato sin moverse
+      if (!cheer) {
+        let aim = pl.cz;
+        if (this.wait <= 0 && b.x > pl.cx - 10) aim = this.vel.x > 3 ? b.z + (this.vel.z * (this.kx - b.x)) / this.vel.x : b.z;
+        aim = Math.max(pl.cz - SPAN, Math.min(pl.cz + SPAN, aim));
+        this.kz += Math.max(-KEEP * dt, Math.min(KEEP * dt, aim - this.kz));
+      } else hop = Math.abs(Math.sin(time * 13)) * 1.1;
+      this.keeper.arms.forEach((a, i) => (a.rotation.z = (i % 2 ? -1 : 1) * (cheer ? 2.7 - (i >> 1) * 0.5 : (i < 2 ? 1.75 : 0.95) + Math.sin(time * 7 + i) * 0.22)));
+    } else this.kz = pl.cz + Math.sin(time * 1.7) * 4.4;
+    this.keeper.group.position.set(this.kx, BASE + 0.1 + hop, this.kz);
     if (this.wait > 0) {
       this.wait -= dt;
       if (this.wait <= 0) this.reset();
@@ -471,7 +517,8 @@ export class Ball {
     let dx = p.x - this.kx;
     let dz = p.z - this.kz;
     let d = Math.hypot(dx, dz);
-    if (d < r + 1.2 && p.y < BASE + 6.5 && this.wait <= 0) {
+    const reach = r + (this.alien ? 1.4 : 1.2);
+    if (d < reach && p.y < BASE + 6.5 && this.wait <= 0) {
       dx /= d;
       dz /= d;
       const vn = v.x * dx + v.z * dz;
@@ -479,9 +526,24 @@ export class Ball {
         v.x -= 1.8 * vn * dx;
         v.z -= 1.8 * vn * dz;
         this.game.sfx.kick();
+        // El marciano no la deja muerta: la despeja a cuatro puños, por encima de ti, y lo celebra
+        if (this.alien && vn < -6) {
+          v.x = dx * PUNCH;
+          v.z = dz * PUNCH;
+          v.y = 14;
+          this.cheer = CHEER;
+          this.game.sfx.boing(2);
+        }
       }
-      p.x = this.kx + dx * (r + 1.2);
-      p.z = this.kz + dz * (r + 1.2);
+      p.x = this.kx + dx * reach;
+      p.z = this.kz + dz * reach;
+    }
+    // Al marciano no se le atropella: con cuatro brazos te para a ti también
+    if (this.alien && player.crashT <= 0 && player.pos.y < BASE + 5) {
+      dx = player.pos.x - this.kx;
+      dz = player.pos.z - this.kz;
+      d = Math.hypot(dx, dz);
+      if (d < 2.6) player.bump(dx / d, dz / d, 2.6 - d, 0.3);
     }
     // Patinete
     dx = p.x - player.pos.x;
@@ -501,6 +563,16 @@ export class Ball {
       }
       p.x = player.pos.x + dx * (r + 1.3);
       p.z = player.pos.z + dz * (r + 1.3);
+    }
+    // Ni empujando se le cuela el balón por debajo
+    if (this.alien && this.wait <= 0 && p.y < BASE + 6.5) {
+      dx = p.x - this.kx;
+      dz = p.z - this.kz;
+      d = Math.hypot(dx, dz);
+      if (d < reach) {
+        p.x = this.kx + (dx / d) * reach;
+        p.z = this.kz + (dz / d) * reach;
+      }
     }
     const sp = Math.hypot(v.x, v.z);
     if (sp > 0.05) {
