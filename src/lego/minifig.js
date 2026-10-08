@@ -20,9 +20,10 @@ function starPath(g, x, y, r) {
   g.closePath();
 }
 
-// glasses: 'square' o 'round' le pone gafas negras a cualquier cara; brows: color de unas cejas pobladas
-function faceTexture(kind, skin = C.skin, glasses = null, brows = null) {
-  const key = [kind, skin, glasses, brows].join();
+// glasses: 'square' o 'round' le pone gafas negras a cualquier cara; brows: color de unas cejas pobladas;
+// lashes: pestañas, con la boca que toque
+function faceTexture(kind, skin = C.skin, glasses = null, brows = null, lashes = false) {
+  const key = [kind, skin, glasses, brows, lashes].join();
   if (faceCache.has(key)) return faceCache.get(key);
   const cv = document.createElement('canvas');
   cv.width = 512;
@@ -118,7 +119,7 @@ function faceTexture(kind, skin = C.skin, glasses = null, brows = null) {
     }
     g.strokeStyle = '#16181c';
   }
-  if (kind === 'lady') {
+  if (kind === 'lady' || lashes) {
     g.lineWidth = 4;
     for (const sx of [-1, 1]) {
       for (let i = 0; i < 3; i++) {
@@ -496,7 +497,7 @@ export function createMinifig(o = {}) {
 
   const head = new THREE.Group();
   head.position.set(0, 3.86, 0);
-  const hm = new THREE.Mesh(getHeadGeo(), new THREE.MeshStandardMaterial({ map: faceTexture(o.face ?? 'smile', skin, o.glasses, o.brows), roughness: 0.5 }));
+  const hm = new THREE.Mesh(getHeadGeo(), new THREE.MeshStandardMaterial({ map: faceTexture(o.face ?? 'smile', skin, o.glasses, o.brows, o.lashes), roughness: 0.5 }));
   hm.rotation.y = Math.PI;
   hm.castShadow = true;
   head.add(hm);
@@ -529,6 +530,51 @@ export function createMinifig(o = {}) {
     hb.add(new THREE.SphereGeometry(0.74, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.76, 0);
     hb.box(1.44, 1.7, 0.46, 0, 0.1, -0.5, hairColor, { r: 0.2 });
     for (const sx of [-1, 1]) hb.box(0.3, 1.5, 0.9, sx * 0.68, 0.16, -0.12, hairColor, { r: 0.14 });
+  } else if (hairType === 'mane') {
+    // Media melena ondulada con la raya en medio: cae a los dos lados de la cara hasta los hombros y se aclara hacia las puntas
+    const tips = o.hairTips ?? hairColor;
+    hb.add(new THREE.SphereGeometry(0.75, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.78, 0);
+    hb.box(1.4, 1.3, 0.44, 0, 0.22, -0.5, hairColor, { r: 0.2 });
+    hb.box(0.05, 0.05, 0.9, 0, 1.52, 0.1, tips, { r: 0.02 });
+    // Cada mechón: ángulo alrededor de la cabeza (0 es la cara) y hasta dónde baja
+    for (const a of [0.98, 1.3, 1.68, 2.1, 2.55, 2.98]) {
+      for (const sx of [-1, 1]) {
+        for (let i = 0; i < 10; i++) {
+          const t = i / 9;
+          const b = sx * (a + 0.1 * Math.sin(t * Math.PI * 2.5 + a * 3));
+          const R = 0.69 + 0.12 * Math.sin(t * Math.PI * 0.8);
+          hb.sphere(0.25 - 0.06 * t, R * Math.sin(b), 1.12 - 1.5 * t, R * Math.cos(b), t > 0.45 && i % 2 ? tips : hairColor, { seg: 8, seg2: 6 });
+        }
+      }
+    }
+  } else if (hairType === 'curls') {
+    // Melena de rizos con mucho volumen: una nube de bucles que se ensancha hacia los hombros y deja la cara despejada
+    const tips = o.hairTips ?? hairColor;
+    hb.add(new THREE.SphereGeometry(0.76, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.8, 0);
+    hb.box(1.3, 1.2, 0.4, 0, 0.2, -0.52, hairColor, { r: 0.18 });
+    let n = 0;
+    for (let row = 0; row < 9; row++) {
+      const y = 1.42 - row * 0.23;
+      const R = row < 2 ? 0.34 + row * 0.3 : 0.8 + 0.22 * Math.sin(((row - 2) / 6) * Math.PI * 0.75);
+      const count = row < 2 ? 5 + row * 4 : 13;
+      for (let i = 0; i < count; i++) {
+        const a = ((i + (row % 2) * 0.5) / count) * Math.PI * 2;
+        // De la frente para abajo, nada por delante de la cara
+        if (row >= 2 && Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < 0.66 + (row > 5 ? 0.12 : 0)) continue;
+        const r = 0.22 + ((n * 7) % 5) * 0.014;
+        hb.sphere(r, R * Math.sin(a), y + ((n * 5) % 3) * 0.03, R * Math.cos(a) - 0.04, n++ % 3 ? hairColor : tips, { seg: 8, seg2: 6 });
+      }
+    }
+  } else if (hairType === 'bob') {
+    // Melena lisa hasta los hombros, con la raya a un lado y un mechón que cruza la frente
+    hb.add(new THREE.SphereGeometry(0.74, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.78, 0);
+    hb.box(1.44, 1.4, 0.46, 0, 0.24, -0.5, hairColor, { r: 0.2 });
+    for (const sx of [-1, 1]) hb.box(0.3, 1.36, 1.0, sx * 0.68, 0.26, -0.1, hairColor, { r: 0.14 });
+    for (let i = 0; i < 6; i++) {
+      const t = i / 5;
+      const b = -0.5 + 1.35 * t;
+      hb.sphere(0.19 - 0.03 * t, 0.66 * Math.sin(b), 1.22 - 0.26 * t, 0.66 * Math.cos(b), hairColor, { seg: 8, seg2: 6, sy: 0.7 });
+    }
   } else if (hairType === 'messy') {
     // Pelo revuelto y con volumen: mechones por arriba y flequillo despeinado sobre la frente
     hb.add(new THREE.SphereGeometry(0.75, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), hairColor, 0, 0.78, 0);
