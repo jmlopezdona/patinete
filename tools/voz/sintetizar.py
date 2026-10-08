@@ -3,8 +3,9 @@
 Cada línea sale con su voz como timbre y su vector de emoción, sin referencia
 de emoción. Usa el motor `indextts` de la mesa de doblaje sin la mesa, como el
 spike de vídeo: su runtime, su receta de fábrica y su unión de referencias. Una
-toma que acaba cortada se repite con la semilla siguiente. Reanudable: lo que
-ya está en la salida no se repite.
+toma que acaba cortada se repite con la semilla siguiente. Los .mp3 salen todos
+a la misma sonoridad (`igualar.py`, que va en la misma carpeta). Reanudable: lo
+que ya está en la salida no se repite.
 
 Uso (con MESA_MODELOS, y el paquete del motor y `colas.py` en el PYTHONPATH):
   python sintetizar.py encargo.json <carpeta de voces> <salida> [semilla]
@@ -14,7 +15,6 @@ volver a llamar con otra semilla (un número que se suma a la de siempre).
 """
 import io
 import json
-import subprocess
 import sys
 import time
 import wave
@@ -26,6 +26,7 @@ from motor_indextts.manifiesto import EMOCIONES, manifiesto
 from motor_indextts.receta import EMOCION_DEL_TIMBRE, peticion_de_audiocpp
 
 import colas
+from igualar import a_mp3
 
 SEMILLA = 20261008
 INTENTOS = 3
@@ -81,10 +82,9 @@ try:
                 break
         wav = salida / "wav" / f'{x["id"]}.wav'
         guardar(m, hz, wav)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-ac", "1",
-                        "-c:a", "libmp3lame", "-b:a", "64k", str(mp3)], check=True)
+        sube = a_mp3(wav, mp3)
         fila = {"id": x["id"], "voz": x["voz"], "toma_s": round(len(m) / hz, 2), "gpu_s": round(gpu, 2),
-                "intentos": intento + 1, "final": final, "texto": x["texto"]}
+                "intentos": intento + 1, "final": final, "sube_db": sube, "texto": x["texto"]}
         resumen.append(fila)
         print(json.dumps(fila, ensure_ascii=False), flush=True)
 finally:

@@ -42,6 +42,11 @@ transcribe con Whisper en el PC y `node tools/voz.mjs comprobar oido.jsonl` list
 con el guion. Avisa de más: no entiende a los marcianos ni las palabras en inglés («studs»,
 «half-pipe»), así que lo que señala hay que oírlo.
 
+Los `.mp3` salen todos a la misma sonoridad (−17 LUFS), no al mismo pico: con el mismo pico, una voz
+grave se oye más baja que una chillona. Lo hace `tools/voz/igualar.py`, que `sintetizar.py` usa y que
+tiene que ir a su lado en el PC; llamado a mano (`python igualar.py <salida>`), rehace los `.mp3` de
+una salida a partir de sus `.wav`, sin volver a sintetizar.
+
 `sintetizar.py` no repite lo que ya está en la salida: para rehacer una frase hay que borrar su
 `.mp3` allí. Una voz nueva se diseña con `tools/voz/disenar.py`, que lee un `voces.json` como el de
 esta carpeta.
