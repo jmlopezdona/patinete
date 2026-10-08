@@ -288,7 +288,7 @@ peatones también cuenta) y aparece la primera estrella bajo el minimapa:
 | 🥁 | **Adrián** | Puerta de la Escuela de Música, en la calle Fuente el Saz | Doble bombo y flequillo a tazón. Cuanto más te acercas, más suena |
 | 🏀 | **Jose** y el **Padre de Jose** | Pista de baloncesto más cercana a Río Júcar, 44 | Padre e hijo echando unas canastas: rueda de pases (de pecho y picados), pase y corte, alley-oops, mates colgándose del aro, triples y entradas. No las meten todas, y los canastones se celebran. Si llevas tú a Jose, su padre se queda tirando solo |
 | 🏃‍♀️ | **Ana, Cintia y Bea** | Parques de al lado de Río Júcar, 44 | Footing dando la vuelta a los dos parques, las tres a la par, hombro con hombro. Con «🏃‍♀️ Seguir a las mamás», en la pausa, la cámara corre con ellas al son de su propia música, y cada poco se aleja para enseñar por dónde van (`C` cambia de vista: en diagonal, de frente, de lado o desde atrás; `Esc` vuelve) mientras tu personaje espera donde estaba |
-| 🤳 | **Emma** | Parque El Palmeral, pasada la puerta | Selfies sin parar, con sus patines: posa, dispara, mira la foto y cambia de ángulo, rodeada de corazones. Si te acercas, se gira para sacarte de fondo |
+| 🤳 | **Emma** | Parque El Palmeral, pasada la puerta | Selfies sin parar, con sus patines: posa, dispara, mira la foto y cambia de ángulo, rodeada de corazones. Si te acercas, se gira para sacarte de fondo, y a su espalda empieza «Selfie con Emma» |
 | ⚡ | **Iker** | Por todo el pueblo, sin parar | Da vueltas por las calles con su patinete eléctrico, por su carril y eligiendo camino en cada cruce. Corre más que los coches; si te tiene delante, frena y toca el timbre |
 | 🎾 | **Leo** | Pista de tenis | De blanco y con su raqueta, pelotea contra una máquina lanzapelotas: corre a por cada bola, la devuelve de derecha por encima de la red… y alguna se le queda en ella |
 
@@ -331,6 +331,15 @@ queda libre para buscar el encuadre.
 | 🍕 | Pizza Exprés | Plaza de la Villa | Repartir 5 pizzas antes de que se enfríen |
 | ⚽ | Chut a Puerta | Pista Polideportiva | Meter goles empujando el balón |
 | 👾 | Chut Marciano | Pista Polideportiva, de noche | Marcarle a un portero marciano con cuatro brazos, que sigue el balón y despeja a puñetazos: hay que chutar cruzado |
+| 🤳 | Selfie con Emma | Parque El Palmeral, junto a Emma | Colarse de fondo en sus 12 fotos: ponerse a su espalda, dentro del abanico rosa, y que el flash te pille haciendo un truco |
+
+En «Selfie con Emma» ella ya no se gira hacia ti: tras cada foto cambia de ángulo y el abanico
+del suelo marca dónde hay que estar para la siguiente (se enciende según se acerca el flash).
+Cada foto se lleva de uno a tres corazones: posando, saltando o con un truco (giro, el truco del
+personaje o voltereta). Repetir el truco de la foto anterior vale la mitad; cambiarlo en cada foto
+sube el multiplicador hasta ×3. Las fotos son de verdad, sacadas desde su móvil: se van colgando
+como polaroids bajo el marcador y, al acabar, la mejor se puede guardar. La misión no está si
+juegas con Emma.
 
 Cada uno da hasta 3 estrellas. El progreso (studs, estrellas, ladrillos dorados, récords)
 se guarda en el navegador.

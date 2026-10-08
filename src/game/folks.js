@@ -64,10 +64,7 @@ export class Folks {
       this.resetJose();
     }
     const E = this.emma;
-    if (E) {
-      E.marker.hidden = id === 'emma';
-      if (id === 'emma') E.fig.group.visible = E.tag.visible = E.fx.visible = false;
-    }
+    if (E && id === 'emma') E.fig.group.visible = E.tag.visible = E.fx.visible = false;
     const K = this.iker;
     if (K) {
       K.marker.hidden = id === 'iker';
@@ -1380,11 +1377,11 @@ export class Folks {
     const tag = nameTag('Emma', '#ff5fa2');
     tag.position.set(spot.x, y + 7.2, spot.z);
     g.scene.add(fig.group, fx, tag);
-    const marker = { x: spot.x, z: spot.z, icon: '🤳' };
-    this.markers.push(marker);
     // Empieza de espaldas a la puerta, que salga de fondo en la primera foto
     const heading = Math.atan2(ux, uz);
-    this.emma = { ...spot, y, fig, phone, flash, fx, hearts, tag, marker, heading, want: heading, t: 0, phase: 0, n: 0, heart: 0, pop: 0, cursor: 0 };
+    // En el minimapa la señala su misión, «Selfie con Emma», que empieza a su espalda
+    const start = { x: spot.x - ux * 9, z: spot.z - uz * 9, heading };
+    this.emma = { ...spot, y, fig, phone, flash, fx, hearts, tag, start, heading, want: heading, t: 0, phase: 0, n: 0, heart: 0, pop: 0, cursor: 0, session: false, onShot: null, joy: 1 };
   }
 
   // Un corazón nuevo alrededor de Emma (o varios de golpe con cada foto)
@@ -1411,7 +1408,8 @@ export class Folks {
     const dx = p.pos.x - E.x;
     const dz = p.pos.z - E.z;
     const d = Math.hypot(dx, dz);
-    const vis = d < SEE;
+    // En plena sesión sigue disparando aunque te vayas lejos: la misión no se queda esperándote
+    const vis = d < SEE || E.session;
     f.group.visible = E.tag.visible = E.fx.visible = vis;
     if (!vis) return;
     const near = live && d < 13 && Math.abs(p.pos.y - E.y) < 4 && !p.hidden;
@@ -1430,17 +1428,22 @@ export class Folks {
       if (E.phase === 2) {
         // ¡Foto!
         E.pop = 1;
-        this.heart(E, 5);
+        // En plena sesión es la misión quien dice cómo ha quedado la foto
+        if (E.onShot) E.onShot();
+        else this.heart(E, 5);
+        // Y ya tiene pensado el ángulo siguiente, uno distinto de verdad y a cualquier lado: da tiempo a recolocarse
+        if (E.session) E.want = E.heading + (1.1 + Math.random() * 1.2) * (Math.random() < 0.5 ? 1 : -1);
         const vol = live ? clamp(1 - d / 45, 0, 1) : 0;
         if (vol > 0.05) g.sfx.selfie(vol);
       } else if (E.phase === 4) {
         E.n++;
-        E.want += (0.7 + Math.random() * 0.9) * (E.n % 2 ? 1 : -1);
+        if (!E.session) E.want += (0.7 + Math.random() * 0.9) * (E.n % 2 ? 1 : -1);
       }
     }
-    // Si te acercas, se gira para sacarte de fondo en la foto
-    if (near) E.want = Math.atan2(-dx, -dz);
-    E.heading += angDiff(E.heading, E.want) * Math.min(1, (E.phase === 4 || near ? 5 : 0) * dt);
+    // Si te acercas, se gira para sacarte de fondo en la foto; en la sesión, quien se coloca eres tú
+    const turn = near && !E.session;
+    if (turn) E.want = Math.atan2(-dx, -dz);
+    E.heading += angDiff(E.heading, E.want) * Math.min(1, (E.phase === 4 || turn ? 5 : 0) * dt);
     const posing = E.phase < 3;
     const k = Math.min(1, 12 * dt);
     const to = (o, key, v) => {
@@ -1457,7 +1460,7 @@ export class Folks {
     to(f.legL, 'x', posing ? pose.leg : 0);
     to(f.group, 'x', posing ? -0.08 : 0);
     // Saltito de alegría cuando la foto ha quedado bien
-    const hop = E.phase === 3 && E.t > 0.55 ? Math.abs(Math.sin((E.t - 0.55) * 7)) * Math.max(0, 1 - (E.t - 0.55) / 0.9) * 0.55 : 0;
+    const hop = E.phase === 3 && E.t > 0.55 ? Math.abs(Math.sin((E.t - 0.55) * 7)) * Math.max(0, 1 - (E.t - 0.55) / 0.9) * 0.55 * E.joy : 0;
     f.group.position.y = E.y + f.group.scale.y * 0.48 + hop;
     f.group.rotation.y = E.heading;
     E.pop = Math.max(0, E.pop - dt * 7);

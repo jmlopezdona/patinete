@@ -6,7 +6,7 @@ export class Hud {
     this.el = {
       hud: $('hud'), studs: $('studs'), bricks: $('bricks'), stars: $('stars'), kmh: $('kmh'), boost: $('boostfill'), speedo: $('speedo'),
       prompt: $('prompt'), mission: $('mission'), mTitle: $('m-title'), mMain: $('m-main'), mSub: $('m-sub'), big: $('big'), toasts: $('toasts'),
-      trick: $('trick'), results: $('results'), zone: $('zone'), studBox: $('studbox'),
+      trick: $('trick'), results: $('results'), selfies: $('selfies'), zone: $('zone'), studBox: $('studbox'),
       alienBox: $('alienbox'), aliens: $('aliens'), spyBox: $('spybox'), spies: $('spies'), henBox: $('henbox'), hens: $('hens'), meteorBox: $('meteorbox'), meteors: $('meteors'), abduct: $('abduct'), abductFill: $('abductfill'), beam: $('beamwarn'),
       wantedBox: $('wantedbox'), wanted: $('wanted'), cop: $('copwarn'),
       ufoBox: $('ufobox'), ufoHits: $('ufohits'), heistBox: $('heistbox'), heist: $('heist'), ride: $('ride'), rideFill: $('ridefill'), itemBox: $('itembox'), itemIcon: $('itemicon'), itemName: $('itemname'), itemTime: $('itemtime'), itemBtn: $('tb-item'),
@@ -272,6 +272,20 @@ export class Hud {
     void t.offsetWidth;
     t.classList.add('show');
     this.trickT = 2.4;
+  }
+
+  // Tira de polaroids de la sesión con Emma: cada foto, con los corazones que se ha llevado
+  selfie(cv, hearts = 0) {
+    const e = this.el.selfies;
+    e.classList.toggle('hidden', !cv);
+    if (!cv) return e.replaceChildren();
+    const d = document.createElement('div');
+    d.className = 'pola' + (hearts ? '' : ' out');
+    d.style.setProperty('--tilt', `${(e.children.length % 2 ? 1 : -1) * (2 + (e.children.length % 3))}deg`);
+    const s = document.createElement('span');
+    s.textContent = hearts ? '♥'.repeat(hearts) : '✕';
+    d.append(cv, s);
+    e.appendChild(d);
   }
 
   zone(name) {

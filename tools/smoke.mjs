@@ -864,6 +864,51 @@ await log('emma', () => {
   return out;
 });
 await shot('s_emma');
+// Selfie con Emma: solo está cuando ella hace de vecina; ya no se gira hacia ti, cada foto se puntúa según
+// salgas (fuera, posando, saltando, con truco, repitiéndolo, con otro) y queda colgada en la tira de polaroids
+await log('selfie', () => {
+  const g = window.__game; const m = g.missions; const E = g.folks.emma; const p = g.player; const out = {};
+  const def = m.defs.find((d) => d.id === 'selfie');
+  g.setCharacter('emma'); window.sim(0.1); out.siendoEmma = def.hidden ? 'sin misión' : 'CON MISIÓN';
+  g.setCharacter('jose'); window.sim(0.1); out.deVecina = def.hidden ? 'SIN MISIÓN' : `a ${Math.hypot(def.x - E.x, def.z - E.z).toFixed(0)} m de Emma`;
+  window.startMission('selfie');
+  const fotos = (window.fotos = []);
+  const big = g.hud.big; g.hud.big = (t, ...a) => { fotos.push(t); big.call(g.hud, t, ...a); };
+  const plan = ['fuera', 'suelo', 'salto', 'truco', 'truco', 'giro'];
+  let aire = 0;
+  window.sim(25.6, () => {
+    const paso = plan[fotos.length]; const c = m.selfieCam.position; const L = m.selfieLook;
+    // Al empezar cada foto, colocado a su espalda (o delante, donde no sale): lo que se prueba es la nota
+    if (E.phase === 0 && E.t < 0.02) {
+      let ux = L.x - c.x, uz = L.z - c.z; const ul = Math.hypot(ux, uz); ux /= ul; uz /= ul;
+      const k = paso === 'fuera' ? -9 : 11;
+      p.place(c.x + ux * k, c.z + uz * k, 0);
+    }
+    const o = {};
+    const falta = E.phase === 1 ? 1.3 - E.t : 9;
+    if (falta < 0.4 && p.grounded && paso !== 'fuera' && paso !== 'suelo') o.jumpPressed = true;
+    aire = p.grounded ? 0 : aire + 1 / 60;
+    if (paso === 'truco' && aire > 0.14 && aire < 0.17) o.trickPressed = true;
+    if (paso === 'giro' && aire > 0) o.steer = 1;
+    return o;
+  });
+  out.fotos = fotos.slice();
+  // De vecina se giraría para sacarte de fondo; en la sesión, nada más disparar ya piensa en otro ángulo
+  const aTi = Math.atan2(E.x - p.pos.x, E.z - p.pos.z);
+  out.otroAngulo = Math.abs(Math.atan2(Math.sin(E.want - aTi), Math.cos(E.want - aTi))) > 0.5;
+  out.tira = [...document.querySelectorAll('#selfies .pola span')].map((e) => e.textContent).join(' ');
+  out.marcador = document.getElementById('m-sub').textContent;
+  return out;
+});
+await shot('s_selfie');
+await log('selfie fin', () => {
+  const g = window.__game; const m = g.missions; const E = g.folks.emma;
+  window.sim(30);
+  const img = document.querySelector('#results a.pola img');
+  return { st: m.state, fotos: window.fotos.length, puntos: m.score, stars: g.save.stars.selfie || 0, mejorFoto: !!img && img.src.length > 5000, tira: document.querySelectorAll('#selfies .pola').length, sesion: E.session, abanico: m.guide.visible };
+});
+await shot('s_selfie_fin');
+await page.evaluate(() => { delete window.__game.hud.big; window.sim(2, (t) => (t > 1.8 ? { keys: ['KeyE'] } : {})); });
 await log('foto', async () => {
   const g = window.__game; const P = g.photo; const c = g.camera3; const U = g.final.uniforms;
   const t = g.time; const antes = c.cam.position.clone();
