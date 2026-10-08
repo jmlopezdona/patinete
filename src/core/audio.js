@@ -63,6 +63,11 @@ export class Sfx {
     this._startMusic();
     this._startEerie();
     this._startDrums();
+    this.jog = false;
+    this.jogBus = ctx.createGain();
+    this.jogBus.gain.value = 0;
+    this.jogBus.connect(this.master);
+    this._startJog();
   }
 
   _loop(type, freq, q) {
@@ -258,6 +263,21 @@ export class Sfx {
   shutter() {
     this.noise(0.035, 0.5, 3200, 1.2, 'bandpass', 0, 0, this.master);
     this.noise(0.06, 0.4, 1400, 1, 'bandpass', 0.075, 0, this.master);
+  }
+
+  // ---------- Seguir a las mamás ----------
+  // Calla el juego y pone la música del footing. Como en el modo foto, el reloj del audio sigue
+  // andando aunque la partida esté en pausa.
+  jogging(on) {
+    if (!this.ctx || on === this.jog) return;
+    this.jog = on;
+    if (on) this.ctx.resume();
+    const t = this.ctx.currentTime;
+    this.sfxBus.gain.setTargetAtTime(on ? 0 : 0.9, t, 0.03);
+    this.musicBus.gain.setTargetAtTime(this._musicVol(), t, 0.03);
+    this.drumBus.gain.setTargetAtTime(on ? 0 : this.drumVol * 0.85, t, 0.03);
+    this.eerieBus.gain.setTargetAtTime(this._eerieVol(), t, 0.03);
+    this.jogBus.gain.setTargetAtTime(on ? 0.62 : 0, t, on ? 0.25 : 0.03);
   }
 
   // ---------- Marcianos ----------
@@ -490,17 +510,17 @@ export class Sfx {
     if (!this.ctx || Math.abs(vol - this.drumVol) < 0.01) return;
     this.drumVol = vol;
     const t = this.ctx.currentTime;
-    this.drumBus.gain.setTargetAtTime(vol * 0.85, t, 0.12);
+    this.drumBus.gain.setTargetAtTime(this.jog ? 0 : vol * 0.85, t, 0.12);
     this.musicBus.gain.setTargetAtTime(this._musicVol(), t, 0.2);
     this.eerieBus.gain.setTargetAtTime(this._eerieVol(), t, 0.2);
   }
 
   _musicVol() {
-    return this.eerie ? 0 : 0.34 * (1 - this.drumVol * 0.9);
+    return this.eerie || this.jog ? 0 : 0.34 * (1 - this.drumVol * 0.9);
   }
 
   _eerieVol() {
-    return this.eerie ? 0.3 * (1 - this.drumVol * 0.9) : 0;
+    return this.eerie && !this.jog ? 0.3 * (1 - this.drumVol * 0.9) : 0;
   }
 
   _startDrums() {
@@ -639,6 +659,100 @@ export class Sfx {
       }
     };
     this.musicTimer = setInterval(tick, 80);
+  }
+
+  // Música del footing: una marimba saltarina en re mayor sobre un bajo que bota, palmas y
+  // maracas, a 105 pulsos por minuto para que cada corchea caiga con una zancada
+  _startJog() {
+    const ctx = this.ctx;
+    const step = 60 / 105 / 4;
+    // Re, si menor, sol, la · re, si menor, mi menor, la
+    const chords = [[50, 66, 69, 74], [47, 66, 71, 74], [43, 67, 71, 74], [45, 64, 69, 73], [50, 66, 69, 74], [47, 66, 71, 74], [52, 67, 71, 76], [45, 64, 69, 73]];
+    // Una nota por corchea, ocho por compás
+    const melody = [
+      78, 81, 78, 74, 78, -1, 81, -1, 83, 81, 78, 74, 78, -1, 74, -1, 79, 83, 79, 74, 79, -1, 83, -1, 81, 79, 76, 73, 76, -1, 81, -1,
+      78, 81, 86, 81, 78, -1, 81, -1, 83, 86, 83, 78, 83, -1, 78, -1, 79, 76, 79, 83, 79, -1, 76, -1, 81, 85, 88, 85, 81, 76, 73, -1,
+    ];
+    const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+    let i = 0;
+    let next = ctx.currentTime + 0.1;
+    const play = (m, t, dur, type, vol, attack = 0.006) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type;
+      o.frequency.value = hz(m);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g);
+      g.connect(this.jogBus);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    };
+    const hit = (t, freq, dur, vol, type, q = 1) => {
+      const src = ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
+      f.Q.value = q;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(f);
+      f.connect(g);
+      g.connect(this.jogBus);
+      src.start(t, Math.random());
+      src.stop(t + dur + 0.02);
+    };
+    const tick = () => {
+      if (!this.jog || ctx.state !== 'running') {
+        // Cada vez que se las sigue, la canción empieza por el principio
+        next = ctx.currentTime + 0.12;
+        i = 0;
+        return;
+      }
+      while (next < ctx.currentTime + 0.25) {
+        const s = i % 128;
+        const b = s % 16;
+        const ch = chords[s >> 4];
+        const lap = Math.floor(i / 128);
+        // Bajo que bota: fundamental en los pulsos y su octava a contratiempo
+        if (b % 4 === 0) play(ch[0] - 12, next, step * 2.6, 'triangle', 0.3);
+        if (b % 4 === 2) play(ch[0], next, step * 1.3, 'triangle', 0.16);
+        // Acorde cortito a contratiempo, que es lo que da el trote
+        if (b % 4 === 2) for (let k = 1; k < 4; k++) play(ch[k], next, step * 1.1, 'square', 0.014);
+        // La vuelta de presentación va sin melodía los cuatro primeros compases
+        const m = b % 2 === 0 ? melody[s >> 1] : -1;
+        if (m > 0 && (lap > 0 || s >= 64)) {
+          // Marimba: un golpe seco con su armónico. En las vueltas impares la dobla un silbido
+          play(m, next, step * 2.4, 'sine', 0.19, 0.004);
+          play(m + 12, next, step * 0.9, 'sine', 0.05, 0.003);
+          if (lap % 2 === 1) play(m + 12, next, step * 1.9, 'triangle', 0.03, 0.03);
+        }
+        if (b % 8 === 0) {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.frequency.setValueAtTime(130, next);
+          o.frequency.exponentialRampToValueAtTime(48, next + 0.1);
+          g.gain.setValueAtTime(0.38, next);
+          g.gain.exponentialRampToValueAtTime(0.0001, next + 0.15);
+          o.connect(g);
+          g.connect(this.jogBus);
+          o.start(next);
+          o.stop(next + 0.18);
+        }
+        // Palmas en el 2 y el 4 (dos golpes muy juntos) y maracas en cada corchea
+        if (b % 8 === 4) {
+          hit(next, 1500, 0.07, 0.16, 'bandpass', 1.4);
+          hit(next + 0.012, 1700, 0.09, 0.13, 'bandpass', 1.4);
+        }
+        if (b % 2 === 0) hit(next, 7500, b % 4 === 2 ? 0.05 : 0.03, b % 4 === 2 ? 0.06 : 0.035, 'highpass');
+        next += step;
+        i++;
+      }
+    };
+    this.jogTimer = setInterval(tick, 80);
   }
 
   // Música de la invasión: bajo machacón que tropieza en el semitono, arpegio en menor,

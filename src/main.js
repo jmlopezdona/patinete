@@ -39,6 +39,7 @@ import { Folks } from './game/folks.js';
 import { Dropoff } from './game/dropoff.js';
 import { Wanted } from './game/wanted.js';
 import { Photo } from './game/photo.js';
+import { Watch } from './game/watch.js';
 import { Items } from './game/items.js';
 import { Slime } from './game/slime.js';
 import { Heist } from './game/heist.js';
@@ -183,6 +184,7 @@ class Game {
     this.dropoff = new Dropoff(this);
     this.wanted = new Wanted(this);
     this.photo = new Photo(this);
+    this.watch = new Watch(this);
     this.blips = [];
     this.minimap = new Minimap(document.getElementById('minimap'), this.world);
     this.markers = [...this.missions.defs, ...this.folks.markers];
@@ -316,6 +318,7 @@ class Game {
     });
     $('p-night').addEventListener('click', () => this.env.toggle());
     $('p-photo').addEventListener('click', () => this.photo.open());
+    $('p-watch').addEventListener('click', () => this.watch.open());
     // Selector de personaje: tarjetas en el menú y botón que va rotando en la pausa
     const box = $('chars');
     for (const ch of CHARACTERS) {
@@ -357,7 +360,7 @@ class Game {
     this.input.bindTouch(document.getElementById('touch'));
     window.addEventListener('touchstart', () => document.body.classList.add('touch'), { once: true, passive: true });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.state === 'play' && !this.photo.on) this.setPaused(true);
+      if (document.hidden && this.state === 'play' && !this.photo.on && !this.watch.on) this.setPaused(true);
     });
     $('p-sound').textContent = `Sonido: ${this.sfx.muted ? 'No' : 'Sí'}`;
     setupInstall($('btn-install'), $('install-hint'));
@@ -426,6 +429,7 @@ class Game {
     if (p) this.checkUpdate();
     document.getElementById('pause').classList.toggle('hidden', !p);
     document.getElementById('p-abort').classList.toggle('hidden', !this.missions.active);
+    document.getElementById('p-watch').classList.toggle('hidden', !this.watch.can);
     if (this.sfx.ctx) {
       if (p) this.sfx.ctx.suspend();
       else this.sfx.ctx.resume();
@@ -614,13 +618,14 @@ class Game {
   loop(t) {
     // Tope de fotogramas para no calentar el equipo: 60 por segundo aunque la pantalla sea de 120 Hz,
     // y en la pausa, que es una imagen casi fija, bastan 20
-    if (t - this.last < (this.paused && !this.photo.on ? 48 : 13)) return;
+    if (t - this.last < (this.paused && !this.photo.on && !this.watch.on ? 48 : 13)) return;
     const dt = Math.min(0.05, Math.max(0.001, (t - this.last) / 1000));
     this.last = t;
     this.frame++;
     const inp = this.input.update();
     if (this.state === 'play') {
       if (this.photo.on) this.photo.update(dt);
+      else if (this.watch.on) this.watch.update(dt);
       else {
         if (this.input.hit('pause')) this.setPaused(!this.paused);
         if (this.input.hit('photo')) this.photo.open();
@@ -637,7 +642,7 @@ class Game {
       this.missions.update(dt, this.time);
     }
     if (this.heist.home) this.statue.rotation.y += dt * 0.35;
-    this.env.update(dt, this.player.pos, this.camera3.cam);
+    this.env.update(dt, (this.watch.on ? this.watch.eye : this.player).pos, this.camera3.cam);
     this.render(dt);
     this.input.endFrame();
 
