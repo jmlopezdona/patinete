@@ -147,7 +147,7 @@ class Ground {
   build() {
     const group = new THREE.Group();
     this.layers.forEach((sectors, k) => {
-      const mat = createBrickMaterial({ vertexColors: true, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -(k + 1) * 0.5, polygonOffsetUnits: -(k + 1) * 2 });
+      const mat = createBrickMaterial({ ground: true, vertexColors: true, roughness: 0.62, polygonOffset: true, polygonOffsetFactor: -(k + 1) * 0.5, polygonOffsetUnits: -(k + 1) * 2 });
       for (const L of sectors.values()) {
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(L.p), 3));
