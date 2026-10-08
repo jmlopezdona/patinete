@@ -13,7 +13,7 @@ import { angDiff, damp, clamp } from '../core/rng.js';
 
 const TAU = Math.PI * 2;
 const SEE = 260; // más lejos no se dibujan
-const BLOND = 0xf0d27a;
+const TEE = 0xf3cad6;
 const BPM = 168;
 // Los tiros de la canasta: lo que dura el salto y lo que sube, cuándo suelta el balón, cuántos entran
 // y el vuelo del balón hasta el aro. La entrada, además, se hace a la carrera.
@@ -1180,16 +1180,17 @@ export class Folks {
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     const len = cum[cum.length - 1];
     if (len < 60) return;
+    // Las tres con la camiseta rosa de su Camino de Santiago, y cada una con su pelo
     const LOOKS = [
-      ['Ana', C.magenta, C.brown, 0],
-      ['Cintia', C.turquoise, C.black, 1.5],
-      ['Bea', C.orange, BLOND, -1.5],
+      ['Ana', 0, { legs: C.black, hair: 'curls', hairColor: 0x2a1b14, hairTips: 0x4a3021, face: 'grin', brows: 0x2a1b14, earrings: C.lgray }],
+      ['Cintia', 1.5, { legs: 0x4a262b, hair: 'mane', hairColor: 0xb8935a, hairTips: 0xe8cb8a, face: 'grin', brows: 0x8a6a3e }],
+      ['Bea', -1.5, { legs: C.black, hair: 'bob', hairColor: 0x1d1512, face: 'smile', brows: 0x1d1512, earrings: C.white }],
     ];
-    const list = LOOKS.map(([name, top, hair, off], i) => {
-      const fig = createMinifig({ torso: top, arms: C.skin, legs: C.black, hips: C.black, hair: 'ponytail', hairColor: hair, face: 'lady', print: i === 1 ? 'star' : i === 2 ? 'bolt' : 'stripes', printColor: '#ffffff' });
+    const list = LOOKS.map(([name, off, look], i) => {
+      const fig = createMinifig({ torso: TEE, arms: TEE, lashes: true, shirt: { front: 'camino', long: true }, ...look });
       fig.group.rotation.order = 'YXZ';
       shadows(fig.group);
-      const tag = nameTag(name, '#' + top.toString(16).padStart(6, '0'));
+      const tag = nameTag(name, '#f3a9c2');
       g.scene.add(fig.group, tag);
       return { name, fig, tag, off, lag: i === 0 ? 0 : 2.8, s: 0, seg: 0, x: 0, z: 0, heading: 0, dodge: 0, fly: 0, vy: 0, y: 0, cd: 0, ph: i * 2.1, init: false };
     });
