@@ -19,6 +19,7 @@ export class Session {
     this.players = new Map(); // los demás, por sitio: { slot, char, color, peer, buf, off, seq, last }
     this.seq = 0;
     this.fotoSeq = -1;
+    this.heard = 0;
     this.next = 0;
     // onMe: el anfitrión me ha puesto otro personaje. onSync: ha cambiado algo de la sala
     this.onJoin = this.onLeave = this.onChange = this.onEnd = this.onMe = this.onSync = () => {};
@@ -193,6 +194,7 @@ export class Session {
       if (pl && this.inOrder(pl, m.seq)) this.push(pl, m.t, m.state, now);
     } else if (m.type === 'foto' && id === this.hostId) {
       if (!this.inOrder(this, m.seq, 'fotoSeq')) return;
+      this.heard = now; // la última vez que se supo del anfitrión
       for (const e of m.players) {
         const pl = this.players.get(e.slot);
         if (pl) this.push(pl, m.t, e.state, now);

@@ -963,6 +963,23 @@ kbd {
   border-radius: 999px;
   transform: translateX(-50%);
 }
+/* En red no hay modo foto ni seguir a las mamás: paran el tiempo, y ahí no se puede */
+body.net #p-photo,
+body.net #p-watch,
+body.net .solo,
+body.net [data-act='photo'] {
+  display: none !important;
+}
+#net i {
+  margin-left: 2px;
+  font-style: normal;
+}
+#net i.off {
+  opacity: 0.35;
+}
+#net.wait {
+  background: #b25a00;
+}
 /* La pandilla: una placa roja torcida, como una pegatina encima de los personajes */
 .crew {
   display: inline-flex;
@@ -1059,9 +1076,29 @@ kbd {
 .menu-buttons .primary {
   flex: 1;
 }
+/* Los botones pequeños, en dos filas: arriba amigos e instalar, abajo sonido y borrar */
+.menu-more {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 8px;
+}
 .menu-buttons .ghost {
   width: auto;
   white-space: nowrap;
+}
+/* Donde el juego no se puede instalar, «Jugar con amigos» ocupa la fila entera */
+#btn-friends:has(+ #btn-install.hidden) {
+  grid-column: span 2;
+}
+/* En un móvil de pie no caben al lado de «Jugar»: van debajo, a lo ancho */
+@media (max-width: 620px) {
+  .menu-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .menu-more {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 /* Jugar con amigos: crear o unirse, y la sala de espera */
 #friends {

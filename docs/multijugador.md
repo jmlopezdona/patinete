@@ -21,11 +21,11 @@ estado de un jugador ya son reales** (salen de `src/net/protocol.js`); las del m
   objetos) y lo reparte.
 - **El trabajo no está en la red, está en el juego.** Los sistemas dan por hecho que hay un solo
   jugador y mezclan simulación con HUD, sonido y partículas. Separar eso es el grueso.
-- **Dónde estamos.** La fase 1 está casi entera: transporte, protocolo, jugadores remotos, la
-  sala («Jugar con amigos», con código, enlace y personajes sin repetir) y la prueba automática.
-  Probado a mano con dos ordenadores con Chrome **en la misma red local**, fluido en los dos.
-  **Falta probarlo entre dos redes distintas**, que es lo único que dice si la conexión entre
-  casas funciona; el orden de lo que viene está en el [plan](#4-plan-de-implementación).
+- **Dónde estamos.** **La fase 1 está hecha y probada entre redes**: anfitrión en un ordenador
+  con Chrome por cable y invitado en un móvil con Edge por 4G, fluido. Hay transporte, protocolo,
+  jugadores remotos, sala («Jugar con amigos», con código, enlace y personajes sin repetir),
+  partida sin pausa y prueba automática. Lo siguiente es la fase 2, que empieza por decidir
+  qué se hace con la refactorización: está en el [plan](#4-plan-de-implementación).
 
 ## 1. La función
 
@@ -76,8 +76,8 @@ sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 
 - **No hay pausa de verdad.** El menú de pausa se abre, pero el mundo sigue. Tu personaje se
   queda quieto y, mientras tengas el menú abierto, nadie te persigue.
-- **El modo foto** para el tiempo, y en red el tiempo no se puede parar (decisión abierta D3). Lo
-  mismo vale para **seguir a las mamás** (`watch.js`), que deja la partida «como estaba».
+- **No hay modo foto ni seguir a las mamás.** Los dos paran el tiempo, y en red no se puede:
+  sus botones y la tecla `T` desaparecen mientras dura la partida (decisión D3).
 - **Cambiar de personaje a mitad de partida** solo deja elegir entre los libres.
 - **Teo deja la portería** del Chut a Puerta en cuanto alguien lo lleva, igual que ahora.
 - **Si el anfitrión se va, la partida se acaba** para todos. Nadie pierde progreso: cada uno
@@ -139,7 +139,8 @@ otra cosa, o por un transporte local para las pruebas, no toca el resto.
   había STUN, y eso no basta en redes que cambian de puerto con cada destino. La lista de
   servidores es ahora nuestra (`ICE`), con dos STUN y el TURN de ExpressTURN. Con `?ice=relay`
   se obliga a ir solo por él: así pasa entera la prueba automática
-  (`RED=peer ICE=relay npm run test:red`). **Falta repetir la prueba con el móvil.**
+  (`RED=peer ICE=relay npm run test:red`). Repetida la prueba con el móvil por 4G: conecta y va
+  fluido.
 - **El modo `raw` de PeerJS sí manda el texto sin envolver**, así que el JSON lo hace la sesión y
   los dos transportes llevan exactamente lo mismo.
 - **Probado por WebRTC de verdad**, con el broker público, entre ventanas del mismo equipo
@@ -180,7 +181,7 @@ Dos canales por conexión: uno **sin garantías** para el estado, que caduca ens
 | `hola` | invitado → anfitrión | fiable | al entrar y al cambiar de personaje o color | versión del juego, personaje, color | Hecho |
 | `sala` | anfitrión → todos | fiable | al cambiar | qué sitio te toca, si la partida ha empezado, y quién está con qué personaje y color | Hecho |
 | `mundo` | anfitrión → invitado | fiable | al entrar | estado completo: hora, oleada, estatua, charcos, cráteres, mobiliario roto, abducidos, objeto en la calle | Fase 2 |
-| `yo` | invitado → anfitrión | sin garantías | 20/s | estado de su personaje (37 bytes) | Hecho, sin los contadores de controles |
+| `yo` | invitado → anfitrión | sin garantías | 20/s | estado de su personaje (38 bytes) | Hecho, sin los contadores de controles |
 | `foto` | anfitrión → invitado | sin garantías | 15/s | reloj y los demás jugadores; más adelante, todo lo que se mueve | Hecho para los jugadores |
 | `orden` | anfitrión → un invitado | fiable | cuando pasa | algo que el mundo le hace a su personaje: empujón, castañazo, rayo, lanzamiento, congelar | Fase 2 |
 | `aviso` | jugador → anfitrión → todos | fiable | cuando pasa | «he roto el banco 12», «he cogido el timbre», «hago de noche» | Fase 2 |
@@ -209,8 +210,8 @@ Lo que lee `Player.updateVisual` para pintar a alguien, que es justo lo que se m
 | `flip + visFlip`, `pitch` | 2 × ángulo de 16 bits | 4 | Volteretas y cuesta |
 | `whipT` | 8 bits | 1 | Truco en curso |
 | `steer`, `throttle` | 2 × 8 bits con signo | 2 | Inclinarse, girar la cabeza, empujar con el pie |
-| `grounded`, `grind`, `boosting`, `crashT > 0`, `sunk`, `hidden`, `invuln > 0`, `held` | 8 bits sueltos | 1 | Postura, turbo, castañazo o chapuzón, oculto, parpadeo, en el rayo |
-| | | **30** | |
+| `grounded`, `grind`, `boosting`, `crashT > 0`, `sunk`, `hidden`, `invuln > 0`, `held`, ocupado | 16 bits sueltos, 9 en uso | 2 | Postura, turbo, castañazo o chapuzón, oculto (o aún en el menú), parpadeo, en el rayo, a otra cosa |
+| | | **31** | |
 | `char`, `colorIdx` | en `hola` y `sala` | | No van en cada paquete |
 
 Los giros viajan **como se ven**, no como los lleva la física. Para pintar es lo exacto; cuando
@@ -221,7 +222,7 @@ el anfitrión necesite el rumbo real de un invitado (fase 2) habrá que ver si l
 | Qué | Unidades | Bytes aprox. | |
 | --- | ---: | ---: | --- |
 | Cabecera | | 8 | real |
-| Jugadores (los otros 6) | 6 | 186 | real: 31 cada uno |
+| Jugadores (los otros 6) | 6 | 192 | real: 32 cada uno |
 | Marcianos | 9 (`POOL`) | 150 | estimado |
 | Platillo, ladrón y estatua | 3 | 60 | estimado |
 | Nave nodriza y sus bombas | 1 + 4 | 70 | estimado; solo durante el jefe final |
@@ -232,7 +233,7 @@ el anfitrión necesite el rumbo real de un invitado (fase 2) habrá que ver si l
 | Peatones | hasta 64 | 130 | estimado: solo su avance por el recorrido |
 | **Una `foto`, con todo a la vez** | | **≈ 880** | |
 
-Hoy, que solo viajan jugadores, una `foto` con la sala llena son 194 bytes: unos 23 kbps por
+Hoy, que solo viajan jugadores, una `foto` con la sala llena son 200 bytes: unos 24 kbps por
 invitado. Con el mundo entero, a 15 por segundo, serían unos 105 kbps por invitado y **unos
 630 kbps de subida en el anfitrión** con la sala llena, aunque jefe final, meteoritos y gallinas
 no coinciden casi nunca. Una fibra doméstica lo lleva de sobra; unos datos móviles flojos, no. Lo
@@ -265,8 +266,8 @@ para comparar entre sí, no plazos.
 | C2 | Sala: crear, unirse, elegir personaje | `index.html`, `style.css`, `lobby.js`, `party.js`, `main.js` | M | 1 | **Hecho** |
 | C3 | Jugadores remotos | `remote-player.js`, `party.js`, `player.js`, `main.js` | M | 1 | **Hecho**, sin sonido de los demás |
 | C4 | Varios vecinos fuera a la vez | `folks.js`, `missions.js`, `main.js` | P | 1 | **Hecho** |
-| C5 | Minimapa y HUD con los demás | `minimap.js`, `hud.js` | P | 1 | Minimapa y avisos hechos; falta la tira de iconos |
-| C6 | Partida sin pausa | `main.js`, `party.js`, `photo.js`, `watch.js` | P | 1 | Hecho lo de la pestaña tapada y que los demás se muevan en tu pausa; falta el resto |
+| C5 | Minimapa y HUD con los demás | `party.js`, `main.js` | P | 1 | **Hecho** |
+| C6 | Partida sin pausa | `main.js`, `party.js`, `photo.js`, `watch.js` | P | 1 | **Hecho** |
 | C7 | Pruebas con varios navegadores | `tools/red.mjs`, `package.json` | M | 1 | **Hecho** |
 | C8 | Reloj, día y noche compartidos | `env.js`, `main.js`, `src/net/*` | P | 2 | |
 | C9 | Órdenes al jugador en vez de tocarle los campos | `player.js` y todos los sistemas | M | 2 | |
@@ -355,29 +356,32 @@ posición (C10) es preferible el silencio a oírlos como si fueran tuyos.
   los vecinos que faltan, si hay portero (nadie lleva a Teo) y la descripción del Chut a Puerta.
   Se llama al cambiar de personaje y cada vez que cambia la sala.
 
-### C5 · Minimapa y HUD
+### C5 · Minimapa y HUD — hecho
 
-- Hecho: cada amigo sale en el minimapa con el icono de su personaje, también cuando queda lejos
-  (va en la lista de `blips` que ya se le pasa a `draw()`), y las entradas y salidas se avisan con
-  el `toast` que ya existía.
-- Falta en `hud.js`: una tira pequeña con los iconos de quién está en la partida.
+- Cada amigo sale en el minimapa con el icono de su personaje, también cuando queda lejos (va en
+  la lista de `blips` que ya se le pasa a `draw()`), y las entradas y salidas se avisan con el
+  `toast` que ya existía.
+- La tira de iconos es la pastilla de arriba (`#net`): la sala y un icono por jugador, apagado
+  el de quien aún no ha salido a la calle o está ocupado. No ha hecho falta tocar `hud.js`.
 
-### C6 · Partida sin pausa
+### C6 · Partida sin pausa — hecho
 
-- Hecho: con tu pausa abierta, los demás se siguen moviendo y a ti se te ve quieto.
-- Hecho: **con la pestaña tapada la partida sigue.** `Party.keepGoing()` arranca al ocultarse la
-  página un worker que solo marca el paso, y cada mensaje suyo llama a `Game.loop(t, true)`, que
-  calcula y envía pero se salta `render()` y la calidad automática. Al volver, el worker se
-  suelta y manda otra vez `requestAnimationFrame`. En red, tapar la pestaña ya no abre la pausa.
-- `main.js`, `loop()`: en red, `this.paused` no detiene `update()`; solo congela los controles
-  propios y marca al jugador como **ocupado** (ver C14).
-- Con la pestaña tapada falta marcar al jugador como ocupado: hoy se queda quieto, pero cuando
-  el mundo sea compartido no deben perseguirle.
-- **Anfitrión en un móvil:** si bloquea la pantalla o cambia de aplicación, el sistema congela la
-  página y no hay worker que valga. Mientras dure la partida se pide `navigator.wakeLock` para
-  que no se apague la pantalla, y los invitados ven «El anfitrión está en pausa» si pasan 2
-  segundos sin `foto`.
-- `photo.js` y `watch.js`: según la decisión D3.
+- **La pausa no para el mundo.** En red, con el menú de pausa abierto `Game.loop` sigue llamando
+  a `update()`, sin manos en el manillar y sin contar lo que se pulse. El sonido sí se calla.
+- **Ocupado.** Un bit del estado (`F.BUSY`) que pone la pandilla cuando el jugador está en la
+  pausa, en un minijuego o con la pestaña tapada. Hoy
+  solo apaga su icono en la pastilla; en la fase 2 es lo que hará que no le persigan (C14).
+- **Con la pestaña tapada la partida sigue.** `Party.keepGoing()` arranca al ocultarse la página
+  un worker que solo marca el paso, y cada mensaje suyo llama a `Game.loop(t, true)`, que calcula
+  y envía pero se salta `render()` y la calidad automática. Al volver, el worker se suelta y
+  manda otra vez `requestAnimationFrame`. En red, tapar la pestaña ya no abre la pausa.
+- **Pantalla despierta.** Mientras dura la partida se pide `navigator.wakeLock`, y se vuelve a
+  pedir al destapar la pestaña, que es cuando el navegador lo suelta.
+- **«El anfitrión está en pausa».** Si un invitado pasa 2 segundos sin `foto`, la pastilla lo
+  dice y se pone naranja. Es lo que se ve cuando al anfitrión se le duerme el móvil o cambia de
+  aplicación: ahí el sistema congela la página y no hay worker que valga.
+- **Sin modo foto ni seguir a las mamás** (decisión D3): `photo.open()` y `watch.open()` no
+  hacen nada con partida en red, y `body.net` esconde sus botones y la ayuda de la tecla `T`.
 
 ### C7 · Pruebas con varios navegadores — hecho
 
@@ -390,6 +394,8 @@ tercero con `?red=local` y comprueba:
   sentidos;
 - que dos invitados se ven entre sí a través del anfitrión, con su nombre encima;
 - que con la ventana del anfitrión minimizada su partida sigue y los demás lo ven moverse;
+- que la pausa no para el mundo y a quien la abre se le ve ocupado, y que si el anfitrión deja
+  de calcular el invitado lo sabe;
 - que el castañazo de otro se ve, pero no te saca el cartel;
 - que el que se va desaparece, que un código que no existe se explica y que, si se va el
   anfitrión, se acaba la partida;
@@ -552,8 +558,8 @@ pueblo sale igual en todas las pantallas porque se construye con la misma semill
 
 ### C14 · Minijuegos
 
-- Cada jugador lleva una marca **ocupado** (en un minijuego, en la pausa, en el modo foto,
-  siguiendo a las mamás, con la pestaña oculta) que viaja en `yo`. Los que persiguen no eligen a
+- Cada jugador lleva una marca **ocupado** (en un minijuego, en la pausa, con la pestaña
+  oculta) que viaja en `yo`. Los que persiguen no eligen a
   un ocupado.
 - `wanted.update` hace `reset(true)` si hay misión activa: en red, solo deja de contar al ocupado.
 - Carrera, trucos, pizza y **Selfie con Emma** son personales y no tocan nada compartido: siguen
@@ -619,18 +625,12 @@ resuelve programando, y la sala bonita al final.
 | 1 | **Prototipo de conexión**: transporte con sus dos implementaciones, `yo` y `foto`, y un jugador remoto que solo se pinta. Sin panel: se entra por la dirección | C1, C3 mínimo | **Hecho** |
 | 2 | **Prueba automática** con varias ventanas, `npm run test:red` | C7 | **Hecho** |
 | 3 | **Separar en `player.js` lo que se ve de lo que le pasa al jugador local**, para que el castañazo de un amigo no te sacuda la cámara | parte de C3 | **Hecho** (salió con el paso 1) |
-| 3b | **Probar entre dos redes**: uno con fibra y otro en otra red, y otra vez con uno en datos móviles. No es código: es jugar un rato. Ver [cómo](#cómo-probarlo) | — | Misma red local, dos ordenadores con Chrome: fluido. Móvil con datos contra fibra: no conectó, no había TURN; **ya lo hay, falta repetirla**. Sin probar: dos fibras distintas |
+| 3b | **Probar entre dos redes**. No es código: es jugar un rato. Ver [cómo](#cómo-probarlo) | — | **Hecho**: ordenador con Chrome por cable y móvil con Edge por 4G, fluido. La primera vez no conectó, no había TURN. Sin probar: Safari, y el anfitrión en un móvil |
 | 4 | **Sala de verdad y varios vecinos fuera**: panel, código generado, compartir, personajes cogidos; `folks.setAway(ids)` y el portero | C2, C4 | **Hecho** |
-| 5 | **Lo que queda de HUD y la partida sin pausa**: tira de iconos, ocupado, `wakeLock`, «el anfitrión está en pausa» | C5, C6 | Pendiente; adelantado que la partida siga con la pestaña tapada |
+| 5 | **Lo que queda de HUD y la partida sin pausa**: tira de iconos, ocupado, `wakeLock`, «el anfitrión está en pausa» | C5, C6 | **Hecho** |
 
-El paso 4 se ha adelantado a la prueba entre redes porque no depende de ella: la sala va por
-encima del transporte y vale igual si este cambia. Según salga el paso 3b:
-
-- **Conecta y se ve fluido:** se sigue con el paso 5.
-- **Conecta pero va a tirones:** antes de seguir, mirar la hora de los estados reenviados (ver
-  Suavizado) y subir el retraso de 100 ms.
-- **No conecta en alguna red:** decidir TURN propio u otro transporte antes de seguir. El resto
-  del código no cambia: es lo que compra la interfaz de C1.
+Con esto la fase 1 está cerrada. Lo que queda suelto es de la fase 4 (reconexión, cortes sin
+despedida).
 
 ### Antes de empezar la fase 2
 
@@ -688,7 +688,7 @@ informe de deuda técnica) queda para más adelante y no bloquea ninguna fase.
 | --- | --- | --- |
 | D1 | ¿Nivel de búsqueda de la pandilla o de cada uno? | **De la pandilla.** Solo hay un municipal y una abuela, y es más divertido que te persigan por lo que ha roto tu amigo |
 | D2 | ¿La invasión crece con los jugadores? | **Sí:** más marcianos a la vez, más culetazos para ganar y más coscorrones a la nodriza, a ajustar jugando |
-| D3 | ¿Modo foto (y seguir a las mamás) en red? | **Sin parar el tiempo:** la cámara se suelta y tú quedas ocupado, pero el mundo sigue. Si queda raro, desactivarlos en red |
+| D3 | ¿Modo foto (y seguir a las mamás) en red? | **Decidido: desactivados en red.** Paran el tiempo y dejarían al jugador clavado a la vista de los demás |
 | D4 | ¿Cambiar de personaje a mitad de partida? | **Sí**, entre los libres, como ahora en la pausa. Ya funciona así |
 | D5 | ¿Quién puede hacer de noche? | **Cualquiera**, con aviso de quién ha sido |
 | D6 | ¿Entrar con la partida empezada? | **Sí**; es lo que hace falta cuando a alguien se le cae la conexión. Ya funciona así |

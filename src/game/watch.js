@@ -45,7 +45,8 @@ export class Watch {
 
   open() {
     const g = this.game;
-    if (this.on || g.state !== 'play' || !this.can) return;
+    // En red no: deja la partida parada mientras se mira
+    if (this.on || g.state !== 'play' || !this.can || g.party) return;
     this.on = true;
     this.back = g.paused; // si se entra desde la pausa, al salir se vuelve a ella
     g.paused = true;

@@ -111,6 +111,38 @@ await tapar(A, false);
 await wait(300);
 check('al volver, pinta otra vez y suelta el metrónomo', await A.evaluate(() => !document.hidden && !window.__game.party.ticker));
 
+// En red no hay pausa de verdad: a quien abre el menú se le sigue moviendo el mundo, y los demás lo ven ocupado
+const pastilla = (page) => page.evaluate(() => { const el = document.getElementById('net'); return { texto: el.textContent, apagados: el.querySelectorAll('i.off').length, iconos: el.querySelectorAll('i').length, espera: el.classList.contains('wait') }; });
+check('la pastilla enseña quién está', (await pastilla(A)).iconos === 2 && (await pastilla(A)).apagados === 0, (await pastilla(A)).texto);
+const t0 = await B.evaluate(() => { window.__game.setPaused(true); return window.__game.time; });
+await wait(800);
+const enPausa = await B.evaluate((t0) => ({ pausa: window.__game.paused, corre: window.__game.time - t0 }), t0);
+check('con la pausa abierta el mundo sigue', enPausa.pausa && enPausa.corre > 0.5, `${enPausa.corre.toFixed(2)} s`);
+check('y los demás lo ven ocupado', (await A.evaluate(() => window.__game.party.remotes.get(1).busy)) && (await pastilla(A)).apagados === 1);
+await B.evaluate(() => window.__game.setPaused(false));
+await wait(400);
+check('al volver deja de estarlo', (await A.evaluate(() => !window.__game.party.remotes.get(1).busy)) && (await pastilla(A)).apagados === 0);
+
+// En red no hay modo foto ni seguir a las mamás: paran el tiempo
+const sinFoto = await B.evaluate(() => {
+  const g = window.__game;
+  g.photo.open();
+  g.watch.open();
+  g.setPaused(true);
+  const ocultos = ['p-photo', 'p-watch'].every((id) => getComputedStyle(document.getElementById(id)).display === 'none');
+  g.setPaused(false);
+  return !g.photo.on && !g.watch.on && ocultos;
+});
+check('en red no hay modo foto ni seguir a las mamás', sinFoto);
+
+// Al anfitrión se le duerme el equipo: deja de calcular y los invitados se enteran
+await A.evaluate(() => window.__game.renderer.setAnimationLoop(null));
+await wait(2600);
+const parado = await pastilla(B);
+await A.evaluate(() => window.__game.renderer.setAnimationLoop((t) => window.__game.loop(t)));
+await wait(600);
+check('si el anfitrión se para, el invitado lo sabe', parado.espera && parado.texto.includes('en pausa') && !(await pastilla(B)).espera, parado.texto);
+
 // Un tercero: los invitados no se conectan entre sí, se ven a través del anfitrión
 const C = await abrir('tercero', `sala=${SALA}`);
 check('entra un tercero', (await sala(A, 2)) && (await sala(B, 2)) && (await sala(C, 2)), `${await quien(A)} | ${await quien(B)} | ${await quien(C)}`);

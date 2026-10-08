@@ -14,10 +14,11 @@ export const RATE_YO = 20;
 export const RATE_FOTO = 15;
 
 // Bits de `flags` en el estado de un jugador
-export const F = { GROUND: 1, GRIND: 2, BOOST: 4, CRASH: 8, SUNK: 16, HIDDEN: 32, INVULN: 64, HELD: 128 };
+// BUSY: está a otra cosa (pausa, minijuego, modo foto, pestaña tapada) y el mundo no debe ir a por él
+export const F = { GROUND: 1, GRIND: 2, BOOST: 4, CRASH: 8, SUNK: 16, HIDDEN: 32, INVULN: 64, HELD: 128, BUSY: 256 };
 
 const HEAD = 7; // tipo (1) + número de orden (2) + reloj del que envía en ms (4)
-const STATE = 30;
+const STATE = 31;
 const TAU = Math.PI * 2;
 const ANG = 32767 / Math.PI;
 const WHIP = 255 / 0.45;
@@ -42,7 +43,7 @@ function putState(dv, o, s) {
   dv.setUint8(o + 26, Math.max(0, Math.min(255, Math.round(s.whip * WHIP))));
   dv.setInt8(o + 27, Math.round(Math.max(-1, Math.min(1, s.steer)) * 127));
   dv.setInt8(o + 28, Math.round(Math.max(-1, Math.min(1, s.throttle)) * 127));
-  dv.setUint8(o + 29, s.flags);
+  dv.setUint16(o + 29, s.flags, true);
 }
 
 function getState(dv, o) {
@@ -52,7 +53,7 @@ function getState(dv, o) {
     v: dv.getInt16(o + 18, true) / 100,
     yaw: dv.getInt16(o + 20, true) / ANG, flip: dv.getInt16(o + 22, true) / ANG, pitch: dv.getInt16(o + 24, true) / ANG,
     whip: dv.getUint8(o + 26) / WHIP, steer: dv.getInt8(o + 27) / 127, throttle: dv.getInt8(o + 28) / 127,
-    flags: dv.getUint8(o + 29),
+    flags: dv.getUint16(o + 29, true),
   };
 }
 
