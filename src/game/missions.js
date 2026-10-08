@@ -33,7 +33,7 @@ function beamMaterial(color, opacity) {
   return new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
 }
 
-// Minijuegos: carrera, trucos, bolos, reparto de pizza y fútbol.
+// Minijuegos: carrera, trucos, bolos (de noche, marcianos), reparto de pizza y fútbol.
 export class Missions {
   constructor(game) {
     this.game = game;
@@ -42,7 +42,9 @@ export class Missions {
     this.defs = [
       { id: 'race', name: 'Gran Premio de Cobeña', icon: '🏁', color: 0xffc61a, x: sp.x - Math.sin(sp.heading) * 14, z: sp.z - Math.cos(sp.heading) * 14, desc: 'Da la vuelta al barrio de los ríos lo más rápido que puedas.', lower: true, unit: (v) => fmt(v) },
       { id: 'tricks', name: 'Rey del Skatepark', icon: '🛹', color: 0xfe8a18, x: P.trick.marker.x, z: P.trick.marker.z, desc: '75 segundos para encadenar tus mejores trucos.', unit: (v) => `${Math.round(v)} pts` },
-      { id: 'bowling', name: 'Bolos Gigantes', icon: '🎳', color: 0x2f7dff, x: P.bowling.x - 5.5, z: P.bowling.z + 1.5, desc: 'Tú eres la bola: derriba los 10 bolos en dos tiradas.', unit: (v) => `${v} bolos` },
+      { id: 'bowling', name: 'Bolos Gigantes', icon: '🎳', color: 0x2f7dff, x: P.bowling.x - 5.5, z: P.bowling.z + 1.5, desc: 'Tú eres la bola: derriba los 10 bolos en dos tiradas.', night: false, unit: (v) => `${v} bolos` },
+      // De noche, en el mismo sitio, los bolos son marcianos
+      { id: 'alienbowl', name: 'Bolos Marcianos', icon: '👽', color: 0x7ddc1f, x: P.bowling.x - 5.5, z: P.bowling.z + 1.5, desc: 'Los bolos son marcianos y se apartan: tumba los 10 en dos tiradas.', night: true, unit: (v) => `${v} marcianos` },
       { id: 'pizza', name: 'Pizza Exprés', icon: '🍕', color: 0xe23b2a, x: P.pizza.x, z: P.pizza.z, desc: 'Reparte 5 pizzas por las calles de Cobeña antes de que se enfríen.', lower: true, unit: (v) => fmt(v) },
       { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Márcale a Teo todos los goles que puedas en 60 segundos.', unit: (v) => `${v} goles` },
     ];
@@ -59,6 +61,7 @@ export class Missions {
     const beamGeo = new THREE.CylinderGeometry(2.9, 2.9, 16, 28, 1, true);
     beamGeo.translate(0, 8, 0);
     for (const d of this.defs) {
+      d.hidden = !!d.night;
       const g = new THREE.Group();
       const y = game.terrain.height(d.x, d.z);
       g.position.set(d.x, y, d.z);
@@ -169,9 +172,12 @@ export class Missions {
     const g = this.game;
     const p = g.player;
     const idle = this.state === 'idle';
+    const night = g.env.target > 0.5;
     for (const d of this.defs) {
-      d.group.visible = idle;
-      if (!idle) continue;
+      // Los que son solo de día o solo de noche se relevan en el mismo sitio
+      d.hidden = d.night != null && d.night !== night;
+      d.group.visible = idle && !d.hidden;
+      if (!d.group.visible) continue;
       d.ring.rotation.y = time * 1.5;
       d.ring.scale.setScalar(1 + Math.sin(time * 4) * 0.06);
       d.sprite.position.y = 8 + Math.sin(time * 2.2) * 0.5;
@@ -179,7 +185,7 @@ export class Missions {
     }
     if (idle) {
       let near = null;
-      for (const d of this.defs) if (Math.hypot(p.pos.x - d.x, p.pos.z - d.z) < 5.5) near = d;
+      for (const d of this.defs) if (!d.hidden && Math.hypot(p.pos.x - d.x, p.pos.z - d.z) < 5.5) near = d;
       if (near !== this.near) {
         this.near = near;
         if (near) {
@@ -299,9 +305,18 @@ export class Missions {
 
   // ---------- Bolos ----------
   _bowling() {
+    return this._lane(this.game.pins, 'bolos');
+  }
+
+  // De noche los bolos son marcianos: se apartan, así que hay que entrar rápido y engañarlos
+  _alienbowl() {
+    return this._lane(this.game.alienPins, 'marcianos');
+  }
+
+  _lane(pins, what) {
     const g = this.game;
     const P = g.world.places.bowling;
-    const pins = g.pins;
+    const alien = pins !== g.pins;
     pins.reset();
     g.player.place(P.x, P.z, P.heading);
     g.player.boost = 1;
@@ -313,7 +328,7 @@ export class Missions {
     return {
       update: (dt) => {
         const down = pins.downCount;
-        g.hud.mission(`🎳 ${this.def.name}`, `${down}/10`, `Tirada ${roll} de 2 · ¡Coge carrerilla y embiste!`);
+        g.hud.mission(`${this.def.icon} ${this.def.name}`, `${down}/10`, `Tirada ${roll} de 2 · ${alien ? '¡Con turbo no les da tiempo a apartarse!' : '¡Coge carrerilla y embiste!'}`);
         if (phase === 'aim') {
           aim += dt;
           const moved = pins.pins.some((p) => p.down && !p.gone);
@@ -327,16 +342,21 @@ export class Missions {
             if (roll === 1) first = down;
             if (down === 10 || roll === 2) {
               const stars = first === 10 ? 3 : down === 10 ? 2 : down >= 6 ? 1 : 0;
-              const msg = first === 10 ? '¡¡PLENO!! Todos de una tirada.' : down === 10 ? '¡Semipleno! Para el oro, tíralos todos a la primera.' : down >= 6 ? 'No está mal. Entra más rápido y por el centro.' : 'Necesitas al menos 6 bolos.';
-              this.finish(stars, down + (first === 10 ? 1 : 0), [`Bolos derribados: <b>${down}/10</b>`, msg]);
+              const tip = alien ? 'Entra con turbo y tuerce en el último momento: se apartan hacia donde no vas.' : 'No está mal. Entra más rápido y por el centro.';
+              const msg = first === 10 ? '¡¡PLENO!! Todos de una tirada.' : down === 10 ? '¡Semipleno! Para el oro, tíralos todos a la primera.' : down >= 6 ? tip : `Necesitas al menos 6 ${what}.`;
+              this.finish(stars, down + (first === 10 ? 1 : 0), [`${alien ? 'Marcianos' : 'Bolos'} derribados: <b>${down}/10</b>`, msg]);
             } else {
               roll = 2;
               phase = 'aim';
               aim = 0;
               pins.clearFallen();
+              if (alien) {
+                pins.taunt();
+                g.player.boost = 1;
+              }
               g.player.place(P.x, P.z, P.heading);
               g.camera3.snap = true;
-              g.hud.big(`${down} bolos`, '#ffd23a', 1.2);
+              g.hud.big(`${down} ${what}`, alien ? '#8dff6a' : '#ffd23a', 1.2);
             }
           }
         }

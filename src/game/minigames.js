@@ -11,6 +11,11 @@ const _q = new THREE.Quaternion();
 const _a = new THREE.Vector3();
 const _v = new THREE.Vector3();
 const PIN_S = 1.12;
+const SKIN = 0x7ddc1f;
+const G = 34;
+const SEE = 18; // desde aquí te ven venir los bolos marcianos
+const DODGE = 6.5; // y esto es lo que corren apartándose
+const CLEAR = 3.3; // el hueco que te dejan al pasar
 
 // Bolos gigantes: el patinete hace de bola.
 export class Pins {
@@ -31,6 +36,14 @@ export class Pins {
     }
     this.y = BASE + 0.1;
     this.idle = 0;
+    this.shown = true;
+    this.reset();
+  }
+
+  // De noche los bolos se guardan: se ponen los marcianos
+  show(on) {
+    if (on === this.shown) return;
+    this.shown = on;
     this.reset();
   }
 
@@ -42,7 +55,7 @@ export class Pins {
       p.tilt = 0;
       p.down = false;
       p.gone = false;
-      p.mesh.visible = true;
+      p.mesh.visible = this.shown;
       p.mesh.position.set(p.x, this.y, p.z);
       p.mesh.quaternion.identity();
     }
@@ -73,6 +86,7 @@ export class Pins {
   }
 
   update(dt, player, inMission) {
+    if (!this.shown) return;
     const pl = this.place;
     const px = player.pos.x;
     const pz = player.pos.z;
@@ -146,6 +160,215 @@ export class Pins {
 
   get moving() {
     return this.pins.some((p) => p.down && !p.gone && Math.hypot(p.vx, p.vz) > 0.6);
+  }
+}
+
+// Bolos marcianos: de noche los bolos son marcianos vestidos de bolo, y se apartan al verte venir.
+export class AlienPins {
+  constructor(game, place) {
+    this.game = game;
+    this.place = place;
+    this.pins = [];
+    for (let r = 0; r < 4; r++) {
+      for (let i = 0; i <= r; i++) {
+        const fig = createMinifig({ skin: SKIN, face: 'alien', hair: 'antenna', hairColor: C.red, torso: C.white, arms: C.white, legs: C.white, print: 'star', printColor: '#c91a09' });
+        fig.group.rotation.order = 'YXZ';
+        game.scene.add(fig.group);
+        const n = this.pins.length;
+        const x0 = place.pinX + (i - r / 2) * 2.9;
+        const z0 = place.pinZ - r * 2.55;
+        // Cada uno tarda lo suyo en reaccionar, y los del centro echan cada uno para un lado
+        this.pins.push({ fig, x0, z0, x: x0, y: 0, z: z0, vx: 0, vy: 0, vz: 0, rot: 0, spin: 0, heading: 0, walk: n * 1.7, slow: 0.1 + (n % 3) * 0.07, side: n % 2 ? 1 : -1, seen: 0, down: false, gone: false });
+      }
+    }
+    this.y = BASE + 0.1;
+    this.idle = 0;
+    this.laugh = 0;
+    this.shown = false;
+    this.reset();
+  }
+
+  show(on) {
+    if (on === this.shown) return;
+    this.shown = on;
+    this.reset();
+  }
+
+  reset() {
+    this.laugh = 0;
+    for (const a of this.pins) {
+      a.x = a.x0;
+      a.z = a.z0;
+      a.y = this.y;
+      a.vx = a.vy = a.vz = 0;
+      a.rot = a.seen = 0;
+      a.down = false;
+      a.gone = false;
+      a.fig.group.visible = this.shown;
+      a.fig.group.position.set(a.x, a.y, a.z);
+      a.fig.group.rotation.set(0, 0, 0);
+    }
+  }
+
+  clearFallen() {
+    for (const a of this.pins) {
+      if (a.down) {
+        a.gone = true;
+        a.fig.group.visible = false;
+      }
+    }
+  }
+
+  get downCount() {
+    return this.pins.filter((a) => a.down).length;
+  }
+
+  get moving() {
+    return this.pins.some((a) => a.down && !a.gone);
+  }
+
+  // Los que siguen en pie se ríen de ti
+  taunt() {
+    this.laugh = 2.2;
+  }
+
+  knock(a, vx, vz) {
+    a.down = true;
+    a.vx = vx;
+    a.vz = vz;
+    a.vy = 9 + Math.hypot(vx, vz) * 0.12;
+    a.spin = 10 + Math.random() * 8;
+    a.heading = Math.atan2(vx, vz);
+    a.y += 0.6;
+    this.game.bits.burst(a.x, a.y + 1.5, a.z, [0xfff27a, 0xffffff, SKIN], 6, 8, this.y, 0.5);
+  }
+
+  // Revienta en ladrillos al caer
+  pop(a) {
+    const g = this.game;
+    g.bits.burst(a.x, this.y + 1.5, a.z, [SKIN, 0xb6ff5a, C.white, C.red], 16, 10, this.y);
+    g.studs.burst(a.x, this.y + 1, a.z, 2, 0, this.y, 7);
+    g.sfx.alienPop();
+    a.gone = true;
+    a.fig.group.visible = false;
+  }
+
+  update(dt, player, inMission, time) {
+    if (!this.shown) return;
+    const pl = this.place;
+    const px = player.pos.x;
+    const pz = player.pos.z;
+    const near = Math.abs(px - pl.pinX) < 40 && Math.abs(pz - pl.pinZ) < 50;
+    if (!near) {
+      if (!inMission && this.pins.some((a) => a.down)) this.reset();
+      return;
+    }
+    const pv = player.velocity(_v);
+    const psp = Math.hypot(pv.x, pv.z);
+    const coming = psp > 4 && player.crashT <= 0;
+    const x0 = pl.laneX0 + 1.2;
+    const x1 = pl.laneX1 - 1.2;
+    this.laugh -= dt;
+    for (const a of this.pins) {
+      if (a.gone) continue;
+      const f = a.fig;
+      if (a.down) {
+        // Por los aires: rebota en las bandas y se lleva por delante a los que pille
+        a.vy -= G * dt;
+        a.x += a.vx * dt;
+        a.y += a.vy * dt;
+        a.z += a.vz * dt;
+        a.rot += a.spin * dt;
+        if (a.x < x0) {
+          a.x = x0;
+          a.vx = Math.abs(a.vx) * 0.5;
+        } else if (a.x > x1) {
+          a.x = x1;
+          a.vx = -Math.abs(a.vx) * 0.5;
+        }
+        if (a.z < pl.backZ + 1.4) {
+          a.z = pl.backZ + 1.4;
+          a.vz = Math.abs(a.vz) * 0.4;
+        }
+        if (Math.hypot(a.vx, a.vz) > 2.5 && a.y < this.y + 2.6) {
+          for (const o of this.pins) {
+            if (o.down || o.gone) continue;
+            const dx = o.x - a.x;
+            const dz = o.z - a.z;
+            const d = Math.hypot(dx, dz);
+            if (d < 2.3) {
+              this.knock(o, a.vx * 0.6 + (dx / d) * 3.5, a.vz * 0.6 + (dz / d) * 3.5);
+              this.game.sfx.culetazo(false);
+              a.vx *= 0.62;
+              a.vz *= 0.62;
+            }
+          }
+        }
+        if (a.y <= this.y && a.vy < 0) {
+          this.pop(a);
+          continue;
+        }
+        f.armL.rotation.x = f.armR.rotation.x = -2.8;
+        f.group.position.set(a.x, a.y, a.z);
+        f.group.rotation.set(a.rot, a.heading, 0);
+        continue;
+      }
+      const dx = a.x - px;
+      const dz = a.z - pz;
+      const d = Math.hypot(dx, dz);
+      if (d < 2.25 && player.pos.y < this.y + 5 && player.crashT <= 0) {
+        if (psp > 4) {
+          this.knock(a, pv.x * 0.85 + (dx / d) * 5, pv.z * 0.85 + (dz / d) * 5);
+          this.game.sfx.culetazo(player.boosting);
+          if (player.grounded) player.v *= 0.94;
+          continue;
+        }
+        player.bump(-dx / d, -dz / d, 2.25 - d, 0.8);
+      }
+      // Te ve venir: calcula por dónde vas a pasar y se aparta hacia el lado que le pilla más cerca
+      let wx = a.x0 - a.x;
+      let wz = a.z0 - a.z;
+      let run = false;
+      const along = (dx * pv.x + dz * pv.z) / (psp || 1);
+      if (coming && along > 0 && along < SEE) {
+        const nx = pv.z / psp;
+        const nz = -pv.x / psp;
+        const off = dx * nx + dz * nz;
+        wx = wz = 0;
+        if (Math.abs(off) < CLEAR) {
+          a.seen += dt;
+          run = a.seen > a.slow;
+          if (run) {
+            const k = (Math.abs(off) < 0.3 ? a.side : Math.sign(off)) * CLEAR - off;
+            wx = nx * k;
+            wz = nz * k;
+          }
+        }
+      } else a.seen = 0;
+      const w = Math.hypot(wx, wz);
+      const step = Math.min(w, (run ? DODGE : 2.5) * dt);
+      const moving = step > 0.001;
+      if (moving) {
+        a.x = Math.max(x0, Math.min(x1, a.x + (wx / w) * step));
+        a.z = Math.max(pl.backZ + 1.4, Math.min(pl.pinZ + 4, a.z + (wz / w) * step));
+        a.walk += dt * (run ? 18 : 9);
+      }
+      const laugh = this.laugh > 0 && !run;
+      const hop = laugh ? Math.abs(Math.sin(time * 9 + a.walk)) * 0.7 : run ? Math.abs(Math.sin(a.walk)) * 0.25 : 0;
+      f.legL.rotation.x = moving ? Math.sin(a.walk) * 0.6 : 0;
+      f.legR.rotation.x = -f.legL.rotation.x;
+      f.armL.rotation.x = f.armR.rotation.x = run || laugh ? -2.8 : 0;
+      f.group.position.set(a.x, this.y + hop, a.z);
+      f.group.rotation.set(0, run ? Math.atan2(wx, wz) : Math.atan2(-dx, -dz), 0);
+    }
+    // En modo libre vuelven a formar al rato
+    if (!inMission && this.pins.some((a) => a.down)) {
+      this.idle += dt;
+      if (this.idle > 9 && Math.hypot(px - pl.pinX, pz - pl.pinZ) > 14) {
+        this.idle = 0;
+        this.reset();
+      }
+    } else this.idle = 0;
   }
 }
 
