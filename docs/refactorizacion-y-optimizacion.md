@@ -274,3 +274,8 @@ O6: moverlos a una carpeta de datos y cargarlos como recurso.
 | 6 | R3 y R4: trocear marcianos y vecinos | Sobre las interfaces del paso 5 |
 | 7 | O3 (mobiliario y studs), O4 y O6 | Pensando en móviles; medir en uno real |
 | 8 | R6 y R7 | Se pueden ir haciendo a la vez que 5 y 6 |
+
+**R2 y R3 se hacen con el multijugador** (decidido el 8 de octubre de 2026): el bus de eventos
+nace con destinatario y los métodos largos se parten en simular y pintar, primero en los sistemas
+de su fase 2 y luego en los marcianos. El detalle está en `docs/multijugador.md`, «La fase 2 y la
+refactorización». R1 y R4 no entran ahí y siguen pendientes por su cuenta.

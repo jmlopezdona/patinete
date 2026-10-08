@@ -6,6 +6,8 @@ import { RATE_YO, RATE_FOTO, packYo, packFoto, unpack, newer, mixState } from '.
 // los tirones cuando un paquete llega tarde
 const DELAY = 100;
 const KEEP = 12;
+// Si el anfitrión deja de mandar, su reloj no se da por avanzado más que esto: el mundo se para con él
+const AHEAD = 250;
 
 export class Session {
   // me: { v, char, color }. chars: los personajes que hay; no se repiten, así que caben tantos como haya
@@ -21,8 +23,11 @@ export class Session {
     this.fotoSeq = -1;
     this.heard = 0;
     this.next = 0;
-    // onMe: el anfitrión me ha puesto otro personaje. onSync: ha cambiado algo de la sala
-    this.onJoin = this.onLeave = this.onChange = this.onEnd = this.onMe = this.onSync = () => {};
+    this.world = null; // invitado: lo último que ha dicho el anfitrión del mundo: { t, time, night }
+    this.off = null; // y la diferencia entre su reloj y el mío
+    // onMe: el anfitrión me ha puesto otro personaje. onSync: ha cambiado algo de la sala.
+    // onAviso(pl, k, v): otro jugador ha hecho algo
+    this.onJoin = this.onLeave = this.onChange = this.onEnd = this.onMe = this.onSync = this.onAviso = () => {};
     transport.onData = (id, data) => (typeof data === 'string' ? this.text(id, data) : this.binary(id, data));
     transport.onClose = (id) => this.gone(id);
   }
@@ -64,6 +69,19 @@ export class Session {
     this.tr.send(this.hostId, JSON.stringify({ t: 'hola', ...this.me }));
   }
 
+  // Algo que ha hecho el jugador local y tienen que saber los demás (k: qué, v: un número). Pasa
+  // siempre por el anfitrión, que es quien lo reparte
+  aviso(k, v) {
+    if (this.slot < 0 || this.closed) return;
+    if (this.hosting) this.relay(0, k, v);
+    else this.tr.send(this.hostId, JSON.stringify({ t: 'aviso', k, v }));
+  }
+
+  relay(from, k, v) {
+    const msg = JSON.stringify({ t: 'aviso', from, k, v });
+    for (const pl of this.players.values()) if (pl.slot !== from) this.tr.send(pl.peer, msg);
+  }
+
   close(why = this.hosting ? 'host' : 'bye') {
     if (this.closed) return;
     this.closed = true;
@@ -100,11 +118,21 @@ export class Session {
     }
     if (this.hosting) {
       if (m.t === 'hola') this.greet(id, m);
+      else if (m.t === 'aviso') this.told(this.byPeer(id), m, true);
       else if (m.t === 'adios') this.gone(id);
     } else if (id === this.hostId) {
       if (m.t === 'sala') this.sync(m);
+      else if (m.t === 'aviso') this.told(this.players.get(m.from), m, false);
       else if (m.t === 'adios') this.end(m.why);
     }
+  }
+
+  told(pl, m, pass) {
+    if (!pl) return;
+    const k = String(m.k);
+    const v = +m.v || 0;
+    this.onAviso(pl, k, v);
+    if (pass) this.relay(pl.slot, k, v);
   }
 
   // Anfitrión: alguien entra, o uno que ya estaba cambia de personaje
@@ -195,6 +223,8 @@ export class Session {
     } else if (m.type === 'foto' && id === this.hostId) {
       if (!this.inOrder(this, m.seq, 'fotoSeq')) return;
       this.heard = now; // la última vez que se supo del anfitrión
+      this.off = this.lag(this.off, now - m.t);
+      this.world = m;
       for (const e of m.players) {
         const pl = this.players.get(e.slot);
         if (pl) this.push(pl, m.t, e.state, now);
@@ -209,11 +239,20 @@ export class Session {
     return true;
   }
 
+  // Diferencia entre su reloj y el mío: manda el paquete que menos ha tardado, y se deja llevar
+  // despacio por si los relojes se separan
+  lag(off, d) {
+    return off === null || d < off ? d : off + (d - off) * 0.02;
+  }
+
+  // Invitado: la hora del mundo ahora mismo según el anfitrión, o null si aún no ha dicho nada
+  worldTime(now) {
+    const w = this.world;
+    return w ? w.time + Math.min(AHEAD, now - this.off - w.t) / 1000 : null;
+  }
+
   push(pl, t, state, now) {
-    // Diferencia entre su reloj y el mío: manda el paquete que menos ha tardado, y se deja llevar
-    // despacio por si los relojes se separan
-    const d = now - t;
-    pl.off = pl.off === null || d < pl.off ? d : pl.off + (d - pl.off) * 0.02;
+    pl.off = this.lag(pl.off, now - t);
     pl.last = state;
     pl.buf.push({ t, s: state });
     if (pl.buf.length > KEEP) pl.buf.shift();
@@ -232,8 +271,9 @@ export class Session {
     return mixState(a.s, b.s, (t - a.t) / (b.t - a.t), out);
   }
 
-  // Una vez por fotograma, con el estado del jugador local. Los envíos llevan su propia cadencia
-  update(now, state) {
+  // Una vez por fotograma, con el estado del jugador local y, en el anfitrión, el del mundo
+  // ({ time, night }). Los envíos llevan su propia cadencia
+  update(now, state, world) {
     if (this.slot < 0 || this.closed || now < this.next) return;
     this.next = Math.max(now, this.next) + 1000 / (this.hosting ? RATE_FOTO : RATE_YO);
     this.seq = (this.seq + 1) & 0xffff;
@@ -244,6 +284,6 @@ export class Session {
     // A cada invitado, el anfitrión y los demás invitados de los que ya se sabe algo
     const all = [{ slot: 0, state }];
     for (const pl of this.players.values()) if (pl.last) all.push({ slot: pl.slot, state: pl.last });
-    for (const pl of this.players.values()) this.tr.send(pl.peer, packFoto(this.seq, now, all.filter((e) => e.slot !== pl.slot)));
+    for (const pl of this.players.values()) this.tr.send(pl.peer, packFoto(this.seq, now, world, all.filter((e) => e.slot !== pl.slot)));
   }
 }

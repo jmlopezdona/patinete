@@ -127,8 +127,12 @@ export class Environment {
     this.apply();
   }
 
-  toggle() {
-    this.target = this.target > 0.5 ? 0 : 1;
+  // quiet: amanece solo, sin que lo pida el jugador. Solo importa en red, donde se avisa de quién ha sido
+  toggle(quiet = false) {
+    const night = this.target > 0.5 ? 0 : 1;
+    const party = this.game.party;
+    if (party) party.night(night, quiet);
+    else this.target = night;
   }
 
   apply() {
