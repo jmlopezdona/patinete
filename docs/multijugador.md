@@ -25,9 +25,9 @@ estado de un jugador ya son reales** (salen de `src/net/protocol.js`); las del m
   con Chrome por cable y invitado en un móvil con Edge por 4G, fluido. Hay transporte, protocolo,
   jugadores remotos, sala («Jugar con amigos», con código, enlace y personajes sin repetir),
   partida sin pausa y prueba automática. **La fase 2 está empezada**: el reloj y el día y la
-  noche ya son los del anfitrión (C8), el mobiliario roto es el mismo para todos y está hecho el
+  noche ya son los del anfitrión (C8), el mobiliario roto y el tráfico son los mismos para todos y está hecho el
   mecanismo para que lo que decide el anfitrión se vea, se oiga y le pase a quien toca (la base
-  de C9 y C10). Se hace junto con la parte de la refactorización que se
+  de C9 y C10). Quedan municipal, objetos, gallinas y meteoritos. Se hace junto con la parte de la refactorización que se
   solapa con ella y sistema a sistema; el orden está en el [plan](#4-plan-de-implementación).
 
 ## 1. La función
@@ -63,7 +63,7 @@ sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 | Marcianos disfrazados | Compartido | Los mismos vecinos con antena en todas las pantallas; el que eches le falta a la oleada de todos |
 | Baba verde | Compartido | Resbala y rebota cualquiera |
 | Lluvia de meteoritos | Compartido | Las mismas dianas y los mismos cráteres; el meteorito del fondo, para el primero que baje |
-| Tráfico y peatones | Compartido | Los coches frenan y atropellan a cualquiera |
+| Tráfico y peatones | Compartido | Los coches frenan y atropellan a cualquiera. **Ya funciona** |
 | Municipal y abuela | Compartido | Un solo nivel de búsqueda para la pandilla (decisión abierta D1) |
 | Gallinas | Compartido | Si uno atropella a una, persiguen al que la ha atropellado; los demás las ven correr |
 | Mobiliario que se rompe | Compartido | Si uno revienta un banco, los demás lo ven roto. **Ya funciona** |
@@ -162,14 +162,20 @@ otra cosa, o por un transporte local para las pruebas, no toca el resto.
 | --- | --- | --- |
 | El personaje de cada uno (posición, velocidad, trucos) | Su dueño | Los controles responden al instante, sin esperar al anfitrión |
 | Cosas quietas contra las que choca un jugador (mobiliario, studs, ladrillos, charcos de baba, cráteres) | El jugador que choca, que lo avisa | No se mueven: no hay desfase que resolver |
+| Lo que le pasa a un jugador al tocar algo que se mueve y que no cambia con el golpe (el empujón de un coche) | Ese jugador, contra lo que ve en su pantalla | Rebota en el coche donde lo ve, sin esperar al anfitrión |
+| Un peatón atropellado | El jugador que lo atropella, que lo avisa | Por dónde anda cada peatón no depende de nadie: sale del reloj |
 | Todo lo que se mueve solo (marcianos, platillo, nave nodriza y sus bombas, ladrón, meteoritos, coches, peatones, municipal, abuela, zapatilla, gallinas) | El anfitrión | Hace falta una sola verdad |
 | Reloj, día y noche, oleada, nivel de búsqueda, objeto en la calle | El anfitrión | Ídem |
 | Un jugador **mientras lo tiene el platillo** (`held`) o va montado en él | El anfitrión | Hoy ya es el platillo quien mueve su posición |
 
-Los choques entre un jugador y algo que se mueve los decide el anfitrión con la posición que le
-llega de ese jugador. Es lo que menos código cambia, porque los sistemas ya reciben un `p` con
-`pos` y `vel` y les da igual que sea local o remoto; el precio es un desfase que se trata en
-riesgos (R1).
+**Los choques los detecta cada jugador en su pantalla**, contra lo que ve. Es un cambio sobre la
+primera versión de este plan, que los dejaba en manos del anfitrión con la posición que le llega
+de cada uno. Con el tráfico se ha visto que no sirve: el empujón de un coche se resuelve fotograma
+a fotograma mientras dura el contacto, y hecho en el anfitrión llegaría tarde, desde una posición
+vieja y como un chorro de órdenes. El anfitrión sigue decidiendo lo que el mundo hace por su
+cuenta mirando a los jugadores (frenar, pitar, perseguir); lo que cambia es que **el contacto lo
+dice quien lo sufre o lo da**, y si cambia algo que ven todos, lo avisa. El desfase que queda
+(R1) es que cada uno ve el mundo con unos 100 ms de retraso respecto al anfitrión.
 
 Como solo el anfitrión ejecuta la lógica del mundo, **el juego no tiene que ser determinista**:
 los 164 `Math.random()` del juego se quedan como están.
@@ -225,21 +231,22 @@ el anfitrión necesite el rumbo real de un invitado (fase 2) habrá que ver si l
 
 | Qué | Unidades | Bytes aprox. | |
 | --- | ---: | ---: | --- |
-| Cabecera, reloj del mundo y noche | | 13 | real |
+| Cabecera, reloj del mundo, noche y cuánto ocupa lo que se mueve solo | | 15 | real |
 | Jugadores (los otros 6) | 6 | 192 | real: 32 cada uno |
 | Marcianos | 9 (`POOL`) | 150 | estimado |
 | Platillo, ladrón y estatua | 3 | 60 | estimado |
 | Nave nodriza y sus bombas | 1 + 4 | 70 | estimado; solo durante el jefe final |
 | Meteoritos | 5 por lluvia | 50 | estimado; solo mientras caen |
-| Coches | 16 (8 circuitos × 2) | 130 | estimado |
+| Coches | 16 (8 circuitos × 2) | 114 | real: 7 cada uno (sitio en décimas, rumbo y velocidad) y 2 para los que tiene el platillo |
 | Municipal, abuela y zapatilla | 3 | 40 | estimado |
 | Gallinas | 7 | 60 | estimado; solo cuando persiguen |
-| Peatones | hasta 64 | 130 | estimado: solo su avance por el recorrido |
-| **Una `foto`, con todo a la vez** | | **≈ 880** | |
+| Peatones | hasta 64 | 0 | real: no viajan, salen del reloj |
+| **Una `foto`, con todo a la vez** | | **≈ 750** | |
 
-Hoy, que solo viajan jugadores, una `foto` con la sala llena son 205 bytes: unos 24 kbps por
-invitado. Con el mundo entero, a 15 por segundo, serían unos 105 kbps por invitado y **unos
-630 kbps de subida en el anfitrión** con la sala llena, aunque jefe final, meteoritos y gallinas
+Hoy, con jugadores y coches, una `foto` son 161 bytes con dos jugadores (medido en `test:red`)
+y 321 con la sala llena: unos 39 kbps por invitado y 230 de subida en el anfitrión. Con el mundo
+entero, a 15 por segundo, serían unos 90 kbps por invitado y **unos 540 kbps de subida en el
+anfitrión** con la sala llena, aunque jefe final, meteoritos y gallinas
 no coinciden casi nunca. Una fibra doméstica lo lleva de sobra; unos datos móviles flojos, no. Lo
 sensato es que haga de anfitrión quien juegue con ordenador.
 
@@ -247,7 +254,7 @@ sensato es que haga de anfitrión quien juegue con ordenador.
 
 - **Los demás jugadores se pintan con 100 ms de retraso**, interpolando entre los dos últimos
   estados recibidos (`Session.sample`). Es lo que evita los tirones cuando un paquete llega tarde.
-  El mundo compartido irá igual.
+  Los coches van igual (`Session.moving`).
 - **La diferencia entre relojes** se saca del paquete que menos ha tardado en llegar, y se deja
   llevar despacio por si los relojes se separan.
 - **Reaparecer no se interpola.** Si entre dos estados hay más de 20 unidades, el jugador salta
@@ -279,8 +286,8 @@ para comparar entre sí, no plazos.
 | C8 | Reloj, día y noche compartidos | `env.js`, `party.js`, `main.js`, `aliens.js`, `src/net/*` | P | 2 | **Hecho** |
 | C9 | Órdenes al jugador en vez de tocarle los campos | `player.js`, `remote-player.js` y los sistemas de cada fase | M | 2 y 3 | Hecha la base |
 | C10 | HUD, sonido y partículas con destinatario | `fx.js`, los sistemas de cada fase, `src/net/*` | G | 2 y 3 | Hecha la base |
-| C11 | Sistemas para varios jugadores | `traffic.js`, `wanted.js`, `props.js`, `items.js`, `hens.js`, `meteors.js`, `cows.js` | G | 2 | Hecho `props.js` |
-| C12 | Simular en el anfitrión, pintar en todos | los mismos, más `src/net/*`; en la fase 3, los de C13 | G | 2 y 3 | |
+| C11 | Sistemas para varios jugadores | `traffic.js`, `wanted.js`, `props.js`, `items.js`, `hens.js`, `meteors.js`, `cows.js` | G | 2 | Hechos `props.js` y `traffic.js` |
+| C12 | Simular en el anfitrión, pintar en todos | los mismos, más `src/net/*`; en la fase 3, los de C13 | G | 2 y 3 | Hecho `traffic.js` |
 | C13 | Invasión cooperativa | `aliens.js`, `boss.js`, `heist.js`, `disguise.js`, `slime.js` | G | 3 | |
 | C14 | Minijuegos con más gente en el pueblo | `missions.js`, `minigames.js` | M | 3 | |
 | C15 | Premios y progreso | `main.js`, `aliens.js`, `boss.js`, `heist.js`, `wanted.js`, `hens.js` | P | 3 | |
@@ -403,6 +410,9 @@ tercero con `?red=local` y comprueba:
 - que con la ventana del anfitrión minimizada su partida sigue y los demás lo ven moverse;
 - que la pausa no para el mundo y a quien la abre se le ve ocupado, y que si el anfitrión deja
   de calcular el invitado lo sabe;
+- que el invitado ve coches y peatones donde el anfitrión, que el coche frena ante un invitado y
+  le pita a él, que el invitado rebota en el coche que ve, que un peatón atropellado vuela en
+  todas las pantallas y que al irse el anfitrión los coches siguen por su circuito;
 - que el banco que rompe uno lo ven roto los demás y quien entra tarde, que los studs son solo
   para quien lo rompe y que lo reconstruye el anfitrión para todos;
 - que un cartel para todos, para uno o para quien esté cerca de un sitio sale donde debe y sin
@@ -530,7 +540,7 @@ lista y decide a quién mira:
 
 | Sistema | Qué cambia |
 | --- | --- |
-| `traffic.js` | Los coches frenan si tienen delante a cualquier jugador; atropellos y empujones, contra cada uno |
+| `traffic.js` | **Hecho.** Los coches frenan si tienen delante a cualquier jugador (`Game.crowd`) y le pitan a ese (`g.to(p).sfx.honk()`, el primer `efecto` de verdad). El empujón de un coche y el atropello de un peatón los detecta cada jugador en su pantalla; el atropello se avisa (`atropella`) y los studs son para quien lo da |
 | `wanted.js` | Un solo nivel de búsqueda (D1). Los destrozos de todos suman; municipal y abuela van a por el más cercano que no esté ocupado; el rastro de migas (`trail`) es el de su objetivo |
 | `props.js` | **Hecho.** Cada jugador detecta sus propios choques y manda `aviso` (`rompe`, con el número del mueble); el anfitrión lo reparte, lleva la cuenta atrás y avisa al reconstruirlo (`arregla`), cuando no hay ningún jugador a menos de 30 unidades (`Game.nearest2`). Los trozos salen con la velocidad que llevaba quien lo rompió; los studs y el lío con el municipal son solo para él. Al que entra se le dice cuáles están rotos (`mundo`) |
 | `items.js` | El objeto de la calle es uno; lo gana el primer `aviso` que llegue al anfitrión. Gorro, cohete y gravedad lunar (`p.foil`, `p.rocket`, `p.moon`) son del que lo usa. El timbre aturde alrededor de quien lo toca |
@@ -567,9 +577,27 @@ métodos que hay que partir son los más largos del juego.
 | `aliens.js` · `updateUfo` | 152 |
 | `wanted.js` · `updateChaser` | 122 |
 
-Para los peatones no hace falta mandar posición: van por un recorrido fijo (`loop`, `s`) y el
-pueblo sale igual en todas las pantallas porque se construye con la misma semilla
-(`makeRng(20261007)`). Basta su avance por el recorrido y si están por los aires.
+**Hecho en `traffic.js`**, que ha fijado la forma:
+
+- `update` ya no es un método de 180 líneas: reparte en `simulate(dt, who)` (por dónde van los
+  coches; solo jugando solo o en el anfitrión), `present(player)` (cada coche en su sitio),
+  `touch(player)` (el choque del jugador de esta pantalla) y `walk(dt, player, time)` (peatones).
+- **Lo que viaja lo escribe y lo lee el sistema**: `bytes`, `write(dv, o)` y `read(a, b, o, k)`,
+  que mezcla dos fotos. `Party.shared` es la lista de sistemas que viajan, en orden; la sesión
+  lleva ese trozo de la `foto` sin mirarlo y da las dos fotos entre las que toca pintar
+  (`Session.moving`), con el mismo retraso de 100 ms que los jugadores.
+- Un invitado deja de simular en cuanto le llega la primera foto (`Party.fed`). **Al acabar la
+  partida** los coches vuelven a ser suyos: cada uno busca el tramo de su circuito en el que lo
+  ha dejado el anfitrión (`rejoin`) y sigue desde ahí.
+- **Los peatones no viajan.** Van por un recorrido fijo y el pueblo se construye con la misma
+  semilla (`makeRng(20261007)`), así que por dónde anda cada uno es una cuenta sobre el reloj del
+  juego, que ya es común: 64 peatones a cero bytes, y quien entra tarde los ve en su sitio sin
+  que nadie le cuente nada. Para eso un peatón por los aires ya no se queda clavado: sigue
+  avanzando mientras vuela (cae un par de unidades más allá).
+- **Lo que la invasión de cada pantalla se lleva** (hasta la fase 3 cada una tiene la suya) no
+  cuadra entre pantallas: el coche que tiene el platillo del anfitrión desaparece de la calle en
+  los invitados, y el que tiene el de un invitado solo falta en su pantalla. El peatón cogido se
+  queda atrasado respecto al de los demás en esa pantalla hasta que se recarga.
 
 ### C13 · Invasión cooperativa
 
@@ -701,7 +729,7 @@ Decidido el 8 de octubre de 2026:
 | :---: | --- | --- | --- |
 | 1 | **Reloj, día y noche**. No necesita refactorización y estrena el `aviso` | C8 | **Hecho** |
 | 2 | **El mecanismo y `props.js` entero**: `g.to(p)`, `g.all`, `g.at(x, z)`, las órdenes al jugador y el `mundo` para el que entra tarde | C9 y C10 (la base), C11 | **Hecho**. `props.js` no ha servido para probar `efecto` ni `orden` con un sistema de verdad: como cada jugador detecta sus choques, no los necesita. Eso queda para el paso 3 |
-| 3 | **`traffic.js`**: el primero con `simulate`/`present` y con el mundo en la `foto`. Aquí se mide el peso de verdad (R8) | C11, C12 | |
+| 3 | **`traffic.js`**: el primero con `simulate`/`present` y con el mundo en la `foto`. Aquí se mide el peso de verdad (R8) | C11, C12 | **Hecho**. Los coches pesan 114 bytes y los peatones ninguno. `orden` sigue sin uso: los choques han pasado a detectarse en la pantalla de cada jugador |
 | 4 | **`wanted.js`, `items.js`, `hens.js` y `meteors.js`**, ya con el patrón probado | C9–C12 | |
 
 Cada paso va en su PR, con el juego de un jugador funcionando igual que antes.
@@ -737,14 +765,14 @@ informe de deuda técnica) queda para más adelante y no bloquea ninguna fase.
 
 | # | Riesgo | Qué se nota | Cómo se trata |
 | --- | --- | --- | --- |
-| R1 | Desfase en los choques con cosas que se mueven | A 30 unidades/s, 150 ms de retardo son 4–5 unidades: un culetazo que tú ves claro puede no contar, o te atropella un coche que ya habías pasado | El anfitrión adelanta la posición del jugador con su velocidad (que ya viaja en `yo`) antes de comprobar. Si no basta, los culetazos pasan a detectarse en el juego de quien los da (más código en C13) |
+| R1 | Desfase en los choques con cosas que se mueven | A 30 unidades/s, 150 ms de retardo son 4–5 unidades: un culetazo que tú ves claro puede no contar, o te atropella un coche que ya habías pasado | Los contactos los detecta cada jugador en su pantalla, contra lo que ve: así no hay culetazo claro que no cuente. Queda que el mundo se ve con unos 100 ms de retraso, y que el anfitrión frena o persigue según una posición igual de vieja |
 | R2 | El anfitrión va lento | `loop()` limita `dt` a 0,05 s: por debajo de 20 fotogramas por segundo el mundo va a cámara lenta para todos | Avisar al crear partida en un equipo justo; la calidad automática ya baja sola |
 | R3 | Anfitrión con el juego tapado | En ordenador, cambiar de pestaña o minimizar ya no para la partida (metrónomo con worker, C6). En un móvil, bloquear la pantalla o cambiar de aplicación la congela para todos. Sin probar: Safari y el ahorro de energía de Chrome | `wakeLock`, aviso a los invitados y recomendar que haga de anfitrión quien juegue con ordenador |
 | R4 | Redes que no dejan conexión directa | Alguien no consigue entrar. **Ha pasado a la primera con datos móviles** | Mensaje claro y el TURN de ExpressTURN. Con `?ice=relay` se comprueba que sigue vivo. Si se acaba el cupo o alguien abusa de las credenciales, que están a la vista, se cambian o se pasa a Cloudflare con un Worker |
 | R5 | Depender del broker público de PeerJS | Si está caído no se pueden crear salas (las ya empezadas siguen) | El transporte es intercambiable (C1); se puede pasar a otro servicio sin tocar el juego |
 | R6 | Textos con HTML por la red | Los carteles del HUD son HTML y los invitados pintarían lo que mande el anfitrión | Hecho: al recibir un `efecto` solo se dejan las etiquetas que ya se usan (`b`, `i`, `kbd`, `small`, `span`) |
 | R7 | Las refactorizaciones rompen el juego de un jugador | Fallos en algo que hoy funciona | Sistema a sistema, un PR cada uno, con las pruebas pasando en cada paso |
-| R8 | Las estimaciones de peso del mundo están sin medir | El anfitrión sube más de lo previsto | Medir en la fase 2; bajar la cadencia de `foto` o mandar solo lo cercano a cada invitado |
+| R8 | Las estimaciones de peso del mundo están sin medir | El anfitrión sube más de lo previsto | Medidos jugadores y coches, que salen algo por debajo de lo estimado; el resto sigue estimado. Si hiciera falta: bajar la cadencia de `foto` o mandar solo lo cercano a cada invitado |
 | R9 | El juego crece más deprisa que el multijugador | Las fases 2 y 3 son cada vez más grandes | Lo dicho en «La fase 2 y la refactorización»: que lo nuevo nazca ya con la forma de C9 y C10 |
 
 ## 6. Decisiones abiertas

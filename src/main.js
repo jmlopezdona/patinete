@@ -127,6 +127,7 @@ class Game {
     this.hud.voice = new Voice(this.sfx);
     this.combo = 0;
     this.lastTrick = -99;
+    this.alone = [null];
     this.fx = 0;
     this.frame = 0;
     this.perf = { t: 0, n: 0 };
@@ -488,6 +489,13 @@ class Game {
   near(x, z) {
     const p = this.player.pos;
     return (p.x - x) ** 2 + (p.z - z) ** 2 < NEAR * NEAR;
+  }
+
+  // Los jugadores que andan por la calle: `p` (el de esta pantalla) y, en red, los amigos
+  crowd(p = this.player) {
+    if (this.party) return this.party.crowd(p);
+    this.alone[0] = p;
+    return this.alone;
   }
 
   // A qué distancia (al cuadrado) queda de ahí el jugador más cercano, sea el local o un amigo
