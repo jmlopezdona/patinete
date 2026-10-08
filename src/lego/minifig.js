@@ -181,9 +181,10 @@ function printTexture(kind, color) {
   const key = kind + color;
   if (printCache.has(key)) return printCache.get(key);
   const cv = document.createElement('canvas');
-  cv.width = cv.height = 128;
+  cv.width = cv.height = 256;
   const g = cv.getContext('2d');
-  g.clearRect(0, 0, 128, 128);
+  // Los dibujos están medidos sobre 128: el lienzo va al doble para que el estampado no se vea borroso de cerca
+  g.scale(2, 2);
   g.fillStyle = color;
   g.strokeStyle = color;
   g.lineWidth = 6;
@@ -254,6 +255,7 @@ function printTexture(kind, color) {
   }
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
   printCache.set(key, tex);
   return tex;
 }
@@ -308,7 +310,9 @@ function argentinaShirt(front) {
       g.fill();
     }
   }
-  return new THREE.CanvasTexture(cv);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 // Camiseta blanca de la selección española: cuello de pico granate con ribete dorado, tres tiras
@@ -385,7 +389,9 @@ function espanaShirt(front) {
     }
     g.fillRect(58, 122, 36, 5);
   }
-  return new THREE.CanvasTexture(cv);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 const DRAWN_SHIRTS = {
