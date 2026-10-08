@@ -491,6 +491,64 @@ kbd {
   opacity: 0.9;
 }
 
+/* Sesión de fotos con Emma: las polaroids se van colgando bajo el marcador */
+#selfies {
+  position: absolute;
+  top: calc(max(14px, env(safe-area-inset-top)) + 104px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  width: min(720px, 60vw);
+}
+.pola {
+  flex: 0 1 54px;
+  min-width: 0;
+  padding: 3px 3px 0;
+  background: #fff;
+  border-radius: 3px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  text-align: center;
+  text-shadow: none;
+  transform: rotate(var(--tilt, 0deg));
+  animation: drop 0.35s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+.pola canvas,
+.pola img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #12202e;
+}
+.pola span {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 15px;
+  color: #ff2f5f;
+  white-space: nowrap;
+}
+.pola.out canvas {
+  filter: grayscale(1) brightness(0.8);
+}
+.pola.out span {
+  color: #7a8794;
+}
+a.pola.best {
+  display: inline-block;
+  width: 210px;
+  margin-top: 8px;
+  padding: 7px 7px 0;
+  text-decoration: none;
+  transform: rotate(-2deg);
+}
+a.pola.best span {
+  font-size: 15px;
+  line-height: 32px;
+  color: #12202e;
+}
+
 #prompt {
   position: absolute;
   left: 50%;
@@ -1450,6 +1508,18 @@ body.touch #speedo .num {
   }
   #m-sub {
     font-size: 11px;
+  }
+  #selfies {
+    top: calc(max(14px, env(safe-area-inset-top)) + 74px);
+    gap: 3px;
+    width: 44vw;
+  }
+  .pola span {
+    font-size: 8px;
+    line-height: 10px;
+  }
+  a.pola.best {
+    width: 130px;
   }
   .menu-cards .card:nth-child(n + 2) {
     display: none;

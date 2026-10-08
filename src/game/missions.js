@@ -1,8 +1,16 @@
 import * as THREE from 'three';
 import { C } from '../lego/colors.js';
 import { BASE } from '../world/city.js';
+import { lift } from '../world/relief.js';
 
 const ALIEN_GOALS = [1, 2, 4]; // goles para bronce, plata y oro contra el portero marciano
+const SHOTS = 12; // fotos de la sesión con Emma
+const SELFIE = [1500, 3500, 6500]; // puntos para bronce, plata y oro
+// Cómo te pilla el flash: nombre y puntos de más (el truco del personaje toma su nombre de él)
+const POSES = { suelo: ['Posando', 0], air: ['Salto', 150], spin: ['Giro', 300], whip: ['', 300], flip: ['Voltereta', 450] };
+const FRAME = 0.92; // hasta dónde del borde de la foto se sale entero
+const REACH = [13, 21]; // hasta dónde de la cámara se sale bien y hasta dónde, sin más, se sale
+const GUIDE = { near: 7.5, far: 19, nr: 4, na: 12 }; // el abanico del suelo que marca lo que coge la cámara
 
 const fmt = (t) => {
   t = Math.max(0, t);
@@ -35,7 +43,7 @@ function beamMaterial(color, opacity) {
   return new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
 }
 
-// Minijuegos: carrera, trucos, bolos, reparto de pizza y fútbol; de noche, bolos y portero son marcianos.
+// Minijuegos: carrera, trucos, bolos, reparto de pizza, fútbol y la sesión de fotos con Emma; de noche, bolos y portero son marcianos.
 export class Missions {
   constructor(game) {
     this.game = game;
@@ -50,6 +58,8 @@ export class Missions {
       { id: 'pizza', name: 'Pizza Exprés', icon: '🍕', color: 0xe23b2a, x: P.pizza.x, z: P.pizza.z, desc: 'Reparte 5 pizzas por las calles de Cobeña antes de que se enfríen.', lower: true, unit: (v) => fmt(v) },
       { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Márcale a Teo todos los goles que puedas en 60 segundos.', night: false, unit: (v) => `${v} goles` },
       // De noche Teo se toma la noche libre: para un marciano con cuatro brazos
+      // Solo cuando Emma está de vecina en el parque; dónde, lo dice ella (ver place)
+      { id: 'selfie', name: 'Selfie con Emma', icon: '🤳', color: 0xff5fa2, x: 0, z: 0, desc: `Cuélate en las ${SHOTS} fotos de Emma: sal bien de fondo y que el flash te pille haciendo un truco distinto cada vez.`, when: () => !!game.folks?.emma && game.folks.away !== 'emma', linger: 40, unit: (v) => `${Math.round(v)} pts` },
       { id: 'aliensoccer', name: 'Chut Marciano', icon: '👾', color: 0x7ddc1f, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'El portero es un marciano con cuatro brazos que no le quita ojo al balón: márcale en 60 segundos.', night: true, unit: (v) => `${v} goles` },
     ];
     this.state = 'idle';
@@ -98,6 +108,37 @@ export class Missions {
       game.scene.add(o);
     }
     this.goalPos = null;
+
+    // Sesión de fotos: la cámara del móvil de Emma y, en el suelo, el abanico de lo que coge
+    this.selfieCam = new THREE.PerspectiveCamera(64, 1, 0.5, 1700);
+    this.selfieLook = new THREE.Vector3();
+    const gg = new THREE.BufferGeometry();
+    gg.setAttribute('position', new THREE.BufferAttribute(new Float32Array((GUIDE.nr + 1) * (GUIDE.na + 1) * 3), 3));
+    const idx = [];
+    for (let i = 0; i < GUIDE.nr; i++) {
+      for (let j = 0; j < GUIDE.na; j++) {
+        const a = i * (GUIDE.na + 1) + j;
+        const b = a + GUIDE.na + 1;
+        idx.push(a, b, a + 1, a + 1, b, b + 1);
+      }
+    }
+    gg.setIndex(idx);
+    this.guide = new THREE.Mesh(gg, beamMaterial(0xff5fa2, 0.2));
+    this.guide.frustumCulled = false;
+    this.guide.userData.fixed = true; // sus vértices ya van a la cota del terreno, uno por uno
+    this.guide.visible = false;
+    game.scene.add(this.guide);
+    this._v = new THREE.Vector3();
+    this._size = new THREE.Vector2();
+  }
+
+  // Algunas empiezan donde diga quien se construye después
+  place(id, at) {
+    if (!at) return;
+    const d = this.defs.find((d) => d.id === id);
+    d.x = at.x;
+    d.z = at.z;
+    d.group.position.set(at.x, this.game.terrain.height(at.x, at.z), at.z);
   }
 
   get active() {
@@ -179,7 +220,7 @@ export class Missions {
     const night = g.env.target > 0.5;
     for (const d of this.defs) {
       // Los que son solo de día o solo de noche se relevan en el mismo sitio
-      d.hidden = d.night != null && d.night !== night;
+      d.hidden = (d.night != null && d.night !== night) || (!!d.when && !d.when());
       d.group.visible = idle && !d.hidden;
       if (!d.group.visible) continue;
       d.ring.rotation.y = time * 1.5;
@@ -220,7 +261,8 @@ export class Missions {
       this.cur.update(dt, time);
     } else if (this.state === 'result') {
       this.t += dt;
-      if ((this.t > 0.8 && (g.input.hit('action') || g.input.hit('jump'))) || this.t > 12) {
+      // Donde se acaba saltando, que el último salto no cierre el resultado sin querer
+      if ((this.t > (this.def.linger ? 1.6 : 0.8) && (g.input.hit('action') || g.input.hit('jump'))) || this.t > (this.def.linger || 12)) {
         g.hud.results(null);
         this.state = 'idle';
         this.near = null;
@@ -455,6 +497,176 @@ export class Missions {
       },
       cleanup: () => g.ball.reset(),
     };
+  }
+
+  // ---------- Selfie con Emma ----------
+  // Ella sigue con su sesión de fotos, pero ya no se gira hacia ti: cambia de ángulo tras cada foto y
+  // hay que recolocarse a su espalda, dentro del abanico, y que el flash te pille en el aire
+  _selfie() {
+    const g = this.game;
+    const F = g.folks;
+    const E = F.emma;
+    const p = g.player;
+    p.place(E.start.x, E.start.z, E.start.heading);
+    p.boost = 1;
+    this.score = 0;
+    let n = 0;
+    let seen = 0;
+    let streak = 0;
+    let last = null;
+    let best = null;
+    let started = false;
+    let end = 0;
+    E.session = true;
+    E.onShot = () => {
+      if (this.state !== 'run' || !started || n >= SHOTS) return F.heart(E, 5);
+      n++;
+      const r = this.rate(E, last, streak);
+      streak = r.streak;
+      last = r.pose;
+      this.score += r.pts;
+      if (r.hearts) seen++;
+      const cv = this.snap();
+      if (r.pts && (!best || r.pts > best.pts)) best = { cv, pts: r.pts };
+      g.hud.selfie(cv, r.hearts);
+      F.heart(E, [0, 3, 6, 11][r.hearts]);
+      E.joy = [0, 0.4, 0.8, 1.3][r.hearts];
+      g.hud.big(r.hearts ? `${'♥'.repeat(r.hearts)} ${r.name} +${r.pts}` : r.name, r.hearts ? '#ff8fc2' : '#ff6b5a', 1.3, true);
+      if (r.hearts === 3) g.sfx.trick(Math.min(6, streak));
+      else if (r.hearts) g.sfx.checkpoint();
+      if (n >= SHOTS) end = 1.9;
+    };
+    this.guide.visible = true;
+    g.hud.selfie(null);
+    return {
+      update: (dt) => {
+        if (!started) {
+          // La primera foto, enseguida y desde otro ángulo
+          started = true;
+          E.phase = 4;
+          E.t = 0;
+          E.want = E.heading + (Math.random() < 0.5 ? 1.3 : -1.3);
+        }
+        // El abanico marca ya el sitio de la foto siguiente, y se enciende según se acerca el flash
+        this.frame(E, E.want);
+        const k = E.phase === 0 ? E.t / 1.8 : E.phase === 1 ? (0.5 + E.t) / 1.8 : 0;
+        this.guide.material.opacity = n >= SHOTS ? 0 : 0.14 + k * k * 0.34;
+        const mult = 1 + Math.max(0, Math.min(4, streak - 1)) * 0.5;
+        g.hud.mission(`🤳 ${this.def.name}`, `${this.score} pts`, `Foto ${Math.min(n + 1, SHOTS)}/${SHOTS}${mult > 1 ? ` · ×${mult}` : ''} · Oro ${SELFIE[2]} · Plata ${SELFIE[1]}`);
+        if (end > 0 && (end -= dt) <= 0) {
+          const s = this.score;
+          const stars = s >= SELFIE[2] ? 3 : s >= SELFIE[1] ? 2 : s >= SELFIE[0] ? 1 : 0;
+          const tip = stars === 3 ? '¡Menuda sesión! Emma las sube todas.' : stars === 0 ? `Necesitas ${SELFIE[0]} puntos. Colócate en el abanico rosa, a la espalda de Emma, y salta (Espacio) cuando levante el móvil.` : `Que el flash te pille en el aire girando (A/D), con un ${p.char.trick.toLowerCase()} (F) o una voltereta (S), y cambia de truco en cada foto para subir el multiplicador.`;
+          const lines = [`Puntuación: <b>${s}</b> · Sales en <b>${seen}/${SHOTS}</b> fotos`, tip];
+          if (best) {
+            const c = best.cv.getContext('2d');
+            g.photo.stamp(c, best.cv.width, best.cv.height);
+            const url = best.cv.toDataURL('image/jpeg', 0.9);
+            lines.push(`<a class="pola best" href="${url}" download="selfie-con-emma.jpg"><img src="${url}" alt="La mejor foto de la sesión"><span>⬇ Guardar la mejor foto</span></a>`);
+          }
+          this.finish(stars, s, lines);
+        }
+      },
+      cleanup: () => {
+        E.session = false;
+        E.onShot = null;
+        E.joy = 1;
+        this.guide.visible = false;
+        g.hud.selfie(null);
+      },
+    };
+  }
+
+  // Coloca la cámara donde Emma tiene el móvil (algo más lejos y más alta, como con palo de selfie),
+  // mirando por encima de su hombro a lo que tiene detrás, y tiende el abanico por el suelo.
+  // heading: hacia dónde mira Emma, o hacia dónde va a mirar en la foto siguiente
+  frame(E, heading) {
+    const T = this.game.terrain;
+    const cam = this.selfieCam;
+    const fx = Math.sin(heading);
+    const fz = Math.cos(heading);
+    cam.position.set(E.x + fx * 4.4 - fz * 1.5, E.y + 6.4, E.z + fz * 4.4 + fx * 1.5);
+    this.selfieLook.set(E.x - fx * 7, E.y + 2.6, E.z - fz * 7);
+    cam.lookAt(this.selfieLook);
+    cam.updateMatrixWorld(true);
+    const cx = cam.position.x;
+    const cz = cam.position.z;
+    const yaw = Math.atan2(this.selfieLook.x - cx, this.selfieLook.z - cz);
+    const half = Math.atan(FRAME * Math.tan((cam.fov * Math.PI) / 360));
+    const pos = this.guide.geometry.attributes.position;
+    let i = 0;
+    for (let r = 0; r <= GUIDE.nr; r++) {
+      const d = GUIDE.near + ((GUIDE.far - GUIDE.near) * r) / GUIDE.nr;
+      for (let a = 0; a <= GUIDE.na; a++) {
+        const ang = yaw + half * ((2 * a) / GUIDE.na - 1);
+        const x = cx + Math.sin(ang) * d;
+        const z = cz + Math.cos(ang) * d;
+        pos.setXYZ(i++, x, T.height(x, z) + lift(x, z) + 0.3, z);
+      }
+    }
+    pos.needsUpdate = true;
+  }
+
+  // Cómo ha quedado la foto: si sales, cómo de centrado y de cerca, y en qué postura te pilla el flash
+  rate(E, last, streak) {
+    const p = this.game.player;
+    const cam = this.selfieCam;
+    this.frame(E, E.heading);
+    const c = cam.position;
+    const v = this._v.set(p.pos.x, p.pos.y + 2.4, p.pos.z);
+    const dx = v.x - c.x;
+    const dy = v.y - c.y;
+    const dz = v.z - c.z;
+    const dist = Math.hypot(dx, dy, dz);
+    // ¿Te tapa Emma? Queda entre la cámara y tú, pegada a la línea que os une
+    const ex = E.x - c.x;
+    const ey = E.y + 2.8 - c.y;
+    const ez = E.z - c.z;
+    const k = (ex * dx + ey * dy + ez * dz) / (dist * dist || 1);
+    const covered = k > 0 && k < 1 && Math.hypot(ex - dx * k, ey - dy * k, ez - dz * k) < 1.5;
+    const ahead = dx * (this.selfieLook.x - c.x) + dz * (this.selfieLook.z - c.z) > 0;
+    v.project(cam);
+    const off = Math.max(Math.abs(v.x), Math.abs(v.y));
+    if (p.hidden || !ahead || off > FRAME) return { pose: null, streak: 0, hearts: 0, pts: 0, name: '¡No sales en la foto!' };
+    if (dist > REACH[1]) return { pose: null, streak: 0, hearts: 0, pts: 0, name: '¡Sales muy lejos!' };
+    if (covered) return { pose: null, streak: 0, hearts: 0, pts: 0, name: '¡Te tapa Emma!' };
+    let pose = 'suelo';
+    if (!p.grounded && p.crashT <= 0) pose = p.flipAbs > 0.8 ? 'flip' : p.whipT > 0 || p.whips > 0 ? 'whip' : p.spinAbs > 0.9 ? 'spin' : 'air';
+    const trick = pose !== 'suelo';
+    const again = trick && pose === last;
+    // Truco distinto al de la foto anterior: sube el multiplicador; repetido o en el suelo, vuelta a empezar
+    streak = trick && !again ? streak + 1 : 0;
+    const mult = 1 + Math.max(0, Math.min(4, streak - 1)) * 0.5;
+    const q = (1 - 0.5 * off) * (dist <= REACH[0] ? 1 : 1 - (0.5 * (dist - REACH[0])) / (REACH[1] - REACH[0]));
+    const pts = Math.round(((100 + POSES[pose][1] * (again ? 0.5 : 1)) * (0.5 + 0.5 * q) * mult) / 10) * 10;
+    const name = (POSES[pose][0] || p.char.trick) + (again ? ' repetido' : '') + (mult > 1 ? ` ×${mult}` : '');
+    return { pose, streak, hearts: !trick ? 1 : again || pose === 'air' ? 2 : 3, pts, name };
+  }
+
+  // La foto de verdad: lo que ve el móvil, pintado en una esquina del lienzo y copiado antes de que
+  // el fotograma de turno lo tape
+  snap() {
+    const g = this.game;
+    const r = g.renderer;
+    const E = g.folks.emma;
+    const size = r.getSize(this._size);
+    const s = Math.floor(Math.min(640, size.x, size.y));
+    const px = Math.floor(s * r.getPixelRatio());
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 640;
+    // Ni el móvil (la cámara va dentro), ni rótulos ni ayudas
+    const hide = [E.phone, E.tag, this.guide, this.arrow].filter((o) => o.visible);
+    for (const o of hide) o.visible = false;
+    try {
+      r.setRenderTarget(null);
+      r.setViewport(0, 0, s, s);
+      g.render(0, { cam: this.selfieCam, look: this.selfieLook });
+      cv.getContext('2d').drawImage(g.canvas, 0, g.canvas.height - px, px, px, 0, 0, cv.width, cv.height);
+    } finally {
+      r.setViewport(0, 0, size.x, size.y);
+      for (const o of hide) o.visible = true;
+    }
+    return cv;
   }
 
   goal(side) {

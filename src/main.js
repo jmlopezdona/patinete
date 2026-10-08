@@ -193,6 +193,8 @@ class Game {
     this.boss = new Boss(this);
     this.items = new Items(this);
     this.folks = new Folks(this);
+    // La sesión de fotos empieza a la espalda de Emma, que elige su claro del parque al construirse
+    this.missions.place('selfie', this.folks.emma?.start);
     this.dropoff = new Dropoff(this);
     this.wanted = new Wanted(this);
     this.photo = new Photo(this);
@@ -726,18 +728,20 @@ class Game {
 
   // El juego calcula en plano, con las alturas medidas desde el suelo. Solo para pintar,
   // cada objeto (y la cámara) sube a la cota del terreno que tiene debajo.
-  render(dt) {
+  // shot: otra cámara que mira a otro sitio (el móvil de Emma), pintada tal cual, sin pasadas de después
+  render(dt, shot = null) {
     const L = this.lifted;
-    const cam = this.camera3.cam;
+    const cam = shot ? shot.cam : this.camera3.cam;
     L.length = 0;
     L.push(cam, cam.position.y);
     for (const o of this.scene.children) if (!o.isInstancedMesh && !o.isLight && !o.userData.fixed) L.push(o, o.position.y);
     for (let i = 0; i < L.length; i += 2) L[i].position.y += lift(L[i].position.x, L[i].position.z);
-    const look = this.camera3.look;
+    const look = shot ? shot.look : this.camera3.look;
     cam.lookAt(look.x, look.y + lift(look.x, look.z), look.z);
-    if (this.camera3.roll) cam.rotateZ(this.camera3.roll);
+    if (!shot && this.camera3.roll) cam.rotateZ(this.camera3.roll);
     // Los filtros del modo foto van en la pasada final: ahí se pinta siempre con ella
-    if (this.quality > 0 || this.photo.on) this.composer.render(dt);
+    if (shot) this.renderer.render(this.scene, cam);
+    else if (this.quality > 0 || this.photo.on) this.composer.render(dt);
     else this.renderer.render(this.scene, cam);
     for (let i = 0; i < L.length; i += 2) L[i].position.y = L[i + 1];
   }
