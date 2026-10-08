@@ -35,9 +35,10 @@ export class Party {
     this.tmp = blankState();
     // Lo que se mueve solo y viaja en cada `foto`: el anfitrión lo escribe (`write(dv, o)`) y los
     // invitados lo leen entre dos fotos (`read(a, b, o, k)`), cada sistema su trozo y en este orden
-    this.shared = [game.traffic, game.wanted, game.items];
-    const bytes = this.shared.reduce((n, s) => n + s.bytes, 0);
-    this.world = { time: 0, night: 0, bytes, write: (dv, o) => this.shared.reduce((at, s) => s.write(dv, at), o) };
+    this.shared = [game.traffic, game.wanted, game.items, game.hens];
+    // Lo que ocupa cambia de una foto a otra: hay sistemas que solo viajan cuando tienen algo que contar
+    const shared = this.shared;
+    this.world = { time: 0, night: 0, get bytes() { return shared.reduce((n, s) => n + s.bytes, 0); }, write: (dv, o) => shared.reduce((at, s) => s.write(dv, at), o) };
     this.snap = { a: null, b: null, k: 0 };
     this.fed = false; // invitado: ya le llega del anfitrión lo que se mueve solo
     this.crew = [];
@@ -81,6 +82,7 @@ export class Party {
       else if (this.hosting && k === 'salto') game.wanted.hopped(v);
       else if (this.hosting && k === 'coge') game.items.claim(v, this.remotes.get(pl.slot));
       else if (k === 'timbre') game.items.rang(this.remotes.get(pl.slot));
+      else if (this.hosting && k === 'gallina') game.hens.rammed(v, this.remotes.get(pl.slot));
       else if (k === 'arregla' && pl.slot === 0) game.props.fix(v);
       if (k !== 'noche' && k !== 'alba') return;
       if (this.hosting) game.env.target = k === 'noche' && v ? 1 : 0;
@@ -161,6 +163,15 @@ export class Party {
     return this.crew;
   }
 
+  // El sitio en la sala de un jugador, sea el de esta pantalla o un amigo, y al revés
+  slotOf(p) {
+    return p === this.game.player ? this.session.slot : p.slot;
+  }
+
+  isMe(slot) {
+    return slot === this.session.slot;
+  }
+
   // Algo que ha hecho el jugador local y cambia el mundo de todos
   tell(k, v) {
     this.session.aviso(k, v);
@@ -235,8 +246,9 @@ export class Party {
         g.env.target = S.world.night;
       }
       const w = S.moving(now, this.snap);
-      this.fed = !!w && w.a.byteLength === this.world.bytes;
-      if (this.fed) this.shared.reduce((o, s) => s.read(w.a, w.b, o, w.k), 0);
+      this.fed = !!w;
+      // Dos fotos que no ocupan lo mismo no llevan lo mismo: no se mezclan, vale la más antigua
+      if (this.fed) this.shared.reduce((o, s) => s.read(w.a, w.a.byteLength === w.b.byteLength ? w.b : w.a, o, w.k), 0);
     }
     S.update(now, this.state, this.world);
     this.blips.length = 0;

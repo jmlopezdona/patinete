@@ -206,8 +206,9 @@ await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
 
 // El objeto de la calle es uno para todos: lo pone el anfitrión y se lo queda quien llega antes
 const objeto = (page) => page.evaluate(() => { const I = window.__game.items; return { hay: I.group.visible, cual: I.drop.kind, x: I.drop.x, y: I.drop.y, z: I.drop.z, llevo: I.held, onda: I.wave.visible }; });
+// (sale en un stud al azar que quede cerca de alguien: puede tardar unos segundos en encontrarlo)
 const serie = await A.evaluate(() => { const I = window.__game.items; I.group.visible = false; I.cd = 0; return I.drop.serial; });
-await B.waitForFunction((n) => window.__game.items.group.visible && window.__game.items.drop.serial !== n, { timeout: 5000, polling: 50 }, serie).catch(() => {});
+await B.waitForFunction((n) => window.__game.items.group.visible && window.__game.items.drop.serial !== n, { timeout: 30000, polling: 50 }, serie).catch(() => {});
 let [oa, ob] = [await objeto(A), await objeto(B)];
 check('el objeto que saca el anfitrión lo ve el invitado en el mismo sitio', oa.hay && ob.hay && oa.cual === ob.cual && lejos(oa, ob) < 0.2, `${oa.cual} / ${ob.cual}`);
 // (por si ya había cogido alguno por el camino)
@@ -221,6 +222,33 @@ await B.evaluate(() => { const g = window.__game; g.items.held = 'bell'; g.items
 await A.waitForFunction(() => window.__game.items.wave.visible, { timeout: 2000, polling: 30 }).catch(() => {});
 check('el timbrazo de un invitado se ve en la pantalla del anfitrión', (await objeto(A)).onda);
 await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
+
+// Las gallinas son las del anfitrión, pero solo viajan cuando hay alguien cerca del corral
+const corral = (page) => page.evaluate(() => { const g = window.__game; const H = g.hens; return { parado: H.idle, donde: H.list.map((h) => [h.x, h.z]), estados: H.list.map((h) => h.state[0]).join(''), enfado: H.rage, mio: H.mine, con: H.owner ? H.owner.char.id : '', contador: !document.getElementById('henbox').classList.contains('hidden'), studs: g.save.studs, dicho: document.getElementById('toasts').textContent }; });
+const lejosDelCorral = await corral(A);
+const pesoSin = await A.evaluate(() => window.__game.party.session.sent);
+await B.evaluate(() => { const g = window.__game; const Y = g.hens.yard; g.save.studs = 1000; g.player.invuln = 0; g.player.place(Y.x - 30, Y.z, Math.PI / 2); });
+await B.waitForFunction(() => !window.__game.hens.idle, { timeout: 4000, polling: 50 }).catch(() => {});
+await wait(600);
+let [ga, gb] = [await corral(A), await corral(B)];
+check('las gallinas solo viajan cuando hay alguien cerca del corral', lejosDelCorral.parado && !ga.parado && !gb.parado && (await A.evaluate(() => window.__game.party.session.sent)) > pesoSin, `${pesoSin} → ${await A.evaluate(() => window.__game.party.session.sent)} bytes`);
+check('y el invitado las ve donde el anfitrión', peor(ga.donde, gb.donde) < 2, `hasta ${peor(ga.donde, gb.donde).toFixed(2)} unidades · ${ga.estados} / ${gb.estados}`);
+// Un invitado atropella a una: se enfadan con él, y solo a él le quitan studs
+const studsA = ga.studs;
+await B.evaluate(() => { const g = window.__game; const h = g.hens.list[0]; g.player.place(h.x - 1.6, h.z, Math.PI / 2); g.player.v = 20; });
+await A.waitForFunction(() => window.__game.hens.rage > 0, { timeout: 3000, polling: 30 }).catch(() => {});
+await B.evaluate(() => { window.__game.player.v = 0; });
+await B.waitForFunction(() => window.__game.hens.mine, { timeout: 3000, polling: 30 }).catch(() => {});
+await wait(200);
+[ga, gb] = [await corral(A), await corral(B)];
+check('un invitado atropella a una gallina y se enfadan con él', ga.enfado > 0 && ga.con === 'adrian' && !ga.mio && !ga.contador && gb.mio && gb.contador && gb.dicho.includes('Has atropellado a una gallina') && !ga.dicho.includes('Has atropellado'), `${ga.estados} · con ${ga.con} · ${JSON.stringify([ga.mio, ga.contador, gb.mio, gb.contador])}`);
+await B.waitForFunction(() => window.__game.save.studs < 1000, { timeout: 12000, polling: 100 }).catch(() => {});
+[ga, gb] = [await corral(A), await corral(B)];
+check('los picotazos le quitan studs a él y no al anfitrión', gb.studs < 1000 && ga.studs === studsA, `${gb.studs - 1000} studs`);
+await A.evaluate(() => window.__game.hens.calm(true));
+await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
+await wait(500);
+check('y al calmarse se le quita el contador', !(await corral(B)).contador && !(await corral(B)).mio);
 
 // El mobiliario es el mismo para todos: lo rompe uno y lo ven roto los demás
 const mueble = await A.evaluate(() => {
