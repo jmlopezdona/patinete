@@ -667,6 +667,39 @@ await log('foto', async () => {
   out.restaurado = c.cam.position.distanceTo(antes) < 0.01 && c.roll === 0 && U.uSat.value === 1.14 && !P.on && !P.preview;
   return out;
 });
+await log('mamas', () => {
+  const g = window.__game; const W = g.watch; const c = g.camera3.cam; const R = g.folks.joggers; const p = g.player;
+  const t = g.time; const antes = p.pos.clone(); const s0 = R.s;
+  W.open();
+  const out = { boton: !document.getElementById('p-watch').classList.contains('hidden'), sinHud: document.getElementById('hud').classList.contains('hidden') };
+  const vistas = [];
+  // Una vuelta larga por cada vista: ellas corren, la cámara las tiene siempre cerca y delante
+  let lejos = 0; let tapada = 0;
+  for (let v = 0; v < 4; v++) {
+    for (let i = 0; i < 600; i++) {
+      W.update(1 / 60);
+      const a = R.list[0];
+      lejos = Math.max(lejos, Math.hypot(c.position.x - a.x, c.position.z - a.z));
+      if (g.terrain.height(c.position.x, c.position.z) > c.position.y) tapada++;
+    }
+    vistas.push(document.getElementById('w-view').textContent.slice(3));
+    W.next();
+  }
+  out.vistas = vistas.join(', ');
+  out.musica = g.sfx.jog === true;
+  out.corren = +(((R.s - s0) % R.len + R.len) % R.len).toFixed(0);
+  out.camaraA = +lejos.toFixed(1);
+  out.bajoTierra = tapada;
+  out.visibles = R.list.every((j) => j.fig.group.visible);
+  out.juntas = +Math.max(...R.list.map((j) => Math.hypot(j.x - R.list[0].x, j.z - R.list[0].z))).toFixed(1);
+  W.close();
+  // La prueba lleva el juego en pausa: al salir se vuelve a ella y hay que quitar su panel
+  document.getElementById('pause').classList.add('hidden');
+  out.personajeQuieto = p.pos.distanceTo(antes) < 0.01 && g.time === t && g.paused && !W.on;
+  out.musicaFuera = g.sfx.jog === false;
+  out.hudDeVuelta = !document.getElementById('hud').classList.contains('hidden');
+  return out;
+});
 await log('estado', () => { const g = window.__game; return { studs: g.save.studs, stars: g.save.stars, calls: g.renderer.info.render.calls, tris: g.renderer.info.render.triangles, programs: g.renderer.info.programs.length, geos: g.renderer.info.memory.geometries, tex: g.renderer.info.memory.textures }; });
 if (errors.length) console.log('\nERRORES:\n' + [...new Set(errors)].slice(0, 20).join('\n'));
 else console.log('\nSin errores de consola.');
