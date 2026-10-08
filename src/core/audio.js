@@ -37,7 +37,7 @@ export class Sfx {
     this.musicBus.connect(this.outs.music);
     // Las locuciones (core/voice.js) van por su cuenta: ni el modo foto ni la música las tapan
     this.voiceBus = ctx.createGain();
-    this.voiceBus.gain.value = 0.4;
+    this.voiceBus.gain.value = 0.225;
     this.voiceBus.connect(this.outs.voice);
     // Ruido blanco reutilizable
     const len = ctx.sampleRate * 2;
