@@ -188,6 +188,22 @@ await A.waitForFunction((i) => window.__game.traffic.peds[i].fly > 0, { timeout:
 check('un peatón atropellado vuela también en la pantalla de los demás', await A.evaluate((i) => window.__game.traffic.peds[i].fly > 0, peaton));
 await wait(400);
 
+// El lío con el municipal es de toda la pandilla: los destrozos de un invitado sacan al del anfitrión
+const lio = (page) => page.evaluate(() => { const g = window.__game; const W = g.wanted; const c = W.cop; return { estrellas: W.stars, pintadas: document.querySelectorAll('#wanted b.on').length, municipal: c.state, visible: c.root.visible, x: c.x, y: c.y, z: c.z, presa: W.prey ? W.prey.char.id : '', studs: g.save.studs, dicho: document.getElementById('toasts').textContent }; });
+await B.evaluate(() => { const g = window.__game; g.save.studs = 3000; g.player.invuln = 0; for (let i = 0; i < 5; i++) g.onSmash(); });
+await B.waitForFunction(() => window.__game.wanted.cop.state === 'chase', { timeout: 6000, polling: 50 }).catch(() => {});
+let [la, lb] = [await lio(A), await lio(B)];
+check('los destrozos de un invitado suman en el anfitrión', la.estrellas === 1 && lb.estrellas === 1 && lb.pintadas === 1 && la.pintadas === 1, `${la.estrellas}★ y ${lb.estrellas}★`);
+check('el municipal del anfitrión va a por él, y él lo ve', la.presa === 'adrian' && la.municipal !== 'off' && lb.visible && lejos(la, lb) < 6, `${la.municipal} / ${lb.municipal}, a ${lejos(la, lb).toFixed(1)} unidades uno de otro`);
+// Y lo pilla en su pantalla: la multa es suya y el lío se acaba para todos
+await B.evaluate(() => { const g = window.__game; const c = g.wanted.cop; g.player.place(c.x + 1, c.z, 0); });
+await A.waitForFunction(() => window.__game.wanted.stars === 0, { timeout: 4000, polling: 50 }).catch(() => {});
+await wait(400);
+[la, lb] = [await lio(A), await lio(B)];
+check('al invitado lo multan en su pantalla', lb.studs === 2800 && lb.dicho.includes('Multa de 200'), `${3000 - lb.studs} studs`);
+check('y se acaba el lío para todos', la.estrellas === 0 && lb.estrellas === 0 && la.dicho.includes('Adrián se ha llevado una multa'), la.dicho);
+await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
+
 // El mobiliario es el mismo para todos: lo rompe uno y lo ven roto los demás
 const mueble = await A.evaluate(() => {
   const g = window.__game;
