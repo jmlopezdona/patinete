@@ -16,10 +16,14 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 
 ## Locuras sin alienígenas
 
-- [ ] **Gallinas.** Si atropellas una, te persiguen todas.
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `gallinas`)
+
+- [x] **Gallinas.** Hay un gallinero en el campo del Mega Salto. Si atropellas a una, te persiguen
+  todas a picotazos (cada uno, unos studs menos) hasta que les das esquinazo o se cansan.
 
 ## Ya hecho (rama `marcianos-disfrazados`)
 

@@ -139,6 +139,18 @@ cada vehículo se cambia con `V` y se guarda por separado.
 - **Cuestas**: cuesta abajo el patinete coge velocidad sin empujar (y pasa de su punta), cuesta
   arriba le cuesta más y corre menos; el turbo ayuda. Parado no se va solo: se aguanta con el pie.
 
+### Las gallinas
+
+En el campo del Mega Salto, al sur del camino de tierra, hay un **gallinero**. De día sus gallinas
+picotean por el corral y se apartan cacareando si pasas cerca; de noche duermen dentro.
+
+- Si **atropellas a una**, sale por los aires entre plumas (es de plástico: no le pasa nada)… y
+  **te persiguen todas** durante medio minuto (el contador 🐔 lleva la cuenta atrás y en el minimapa
+  son puntos blancos).
+- Cada **picotazo** te frena y te quita unos studs, que quedan por el suelo.
+- **Dales esquinazo** dejándolas atrás, mejor con el turbo, y hay premio; si no, acaban cansándose
+  ellas y se vuelven al gallinero. No cuentan para el policía municipal.
+
 ### Marcianos disfrazados
 
 De día no hay platillo, pero algunos marcianos se han quedado en Cobeña **disfrazados de vecino**:
@@ -327,7 +339,7 @@ se guarda en el navegador.
   entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo, rayo,
   rescates y el robo del platillo), `disguise.js`, los que se pasean de día disfrazados de vecino, `heist.js`, el ladrón de la estatua dorada, `boss.js`, la nave nodriza, `items.js`, los objetos que se recogen por la calle y se gastan
   con `Q` (el timbre sónico, el gorro de aluminio, el cohete y la gravedad lunar), `slime.js`, los charcos de baba
-  verde, `cows.js`, las vacas que pastan junto al Mega Salto,
+  verde, `cows.js`, las vacas que pastan junto al Mega Salto, `hens.js`, las gallinas del gallinero,
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
   `characters.js` define los personajes elegibles y sus estadísticas (sus casas y puntos de salida

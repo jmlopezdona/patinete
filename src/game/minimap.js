@@ -145,7 +145,7 @@ export class Minimap {
         g.globalAlpha = 1;
       });
     }
-    // Marcianos (puntos verdes) y los que llevan icono: el platillo, el municipal, la abuela
+    // Marcianos (puntos verdes), gallinas enfadadas (blancos) y los que llevan icono: el platillo, el municipal, la abuela
     for (const b of blips) {
       put(b.x, b.z, (x, y, out) => {
         if (b.icon) {
@@ -158,7 +158,7 @@ export class Minimap {
           g.fillText(b.icon, x, y + 1);
           g.globalAlpha = 1;
         } else if (!out) {
-          g.fillStyle = '#8dff6a';
+          g.fillStyle = b.color || '#8dff6a';
           g.strokeStyle = '#12202e';
           g.lineWidth = 1.5;
           g.beginPath();

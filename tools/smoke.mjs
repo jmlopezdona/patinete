@@ -208,6 +208,60 @@ await log('disfrazados', () => {
   window.sim(1);
   return { colados, cae, culetazo, fuga, noche, otroDia: `${D.list.length} nuevos, ${D.caught} echados` };
 });
+await log('gallinas', () => {
+  const g = window.__game; const H = g.hens; const p = g.player; const Y = H.yard;
+  const st = () => H.list.map((h) => h.state[0]).join('');
+  const box = () => (document.getElementById('henbox').classList.contains('hidden') ? 'oculto' : document.getElementById('hens').textContent);
+  const ram = (h) => {
+    const a = Math.atan2(h.x - p.pos.x, h.z - p.pos.z);
+    p.place(h.x - Math.sin(a) * 10, h.z - Math.cos(a) * 10, a); p.v = 22; p.invuln = 0;
+    let n = 0; while (h.state !== 'fly' && n++ < 60) window.sim(1 / 60, () => ({ throttle: 1 }));
+  };
+  g.save.studs = 1000;
+  p.place(Y.x - 40, Y.z, Math.PI / 2);
+  window.sim(1);
+  // Despacio se apartan y no pasa nada
+  const h1 = H.list[1];
+  p.place(h1.x - 9, h1.z, Math.PI / 2); p.v = 6;
+  window.sim(1.2, () => ({ throttle: 0.2 }));
+  const despacio = { estados: st(), enfado: H.rage };
+  window.sim(4);
+  // Atropellada una, se enfadan todas; parado, te cosen a picotazos
+  ram(H.list[0]);
+  const atropello = { estados: st(), contador: box(), estrellas: g.wanted.stars };
+  p.v = 0;
+  window.sim(5);
+  const picotazos = { studs: g.save.studs - 1000, puntosEnElMapa: H.blips.length };
+  // Huyendo con el turbo por el camino de tierra se les da esquinazo
+  p.place(Y.x, Y.z - 37, -Math.PI / 2); p.invuln = 0; p.boost = 1;
+  const s0 = g.save.studs;
+  let t = 0; while (H.rage > 0 && t < 40) { window.sim(0.25, () => ({ throttle: 1, boost: true })); t += 0.25; }
+  const esquinazo = { segundos: t, premio: g.save.studs - s0 >= 300, contador: box() };
+  window.sim(3);
+  // Dando vueltas a su lado se acaban cansando ellas, y recién calmadas no cuenta llevárselas por delante
+  p.place(Y.x - 40, Y.z, Math.PI / 2);
+  window.sim(1);
+  ram(H.list[2]);
+  t = 0; while (H.rage > 0 && t < 40) { window.sim(0.25, () => ({ throttle: 1, steer: 0.35 })); t += 0.25; }
+  const seCansan = { segundos: t, estados: st() };
+  window.sim(10);
+  const vuelven = st();
+  // De noche duermen dentro; por la mañana salen por la puerta
+  g.env.night = g.env.target = 1; g.env.apply();
+  window.sim(8);
+  const noche = { estados: st(), visibles: H.list.filter((h) => h.group.visible).length };
+  g.env.night = g.env.target = 0; g.env.apply();
+  window.sim(7);
+  // En los minijuegos hay tregua
+  ram(H.list[3]);
+  const m = g.missions;
+  m.begin(m.defs.find((d) => d.id === 'race'));
+  window.sim(1);
+  const tregua = { enfado: H.rage, estados: st() };
+  m.abort();
+  g.wanted.reset(true);
+  return { despacio, atropello, picotazos, esquinazo, seCansan, vuelven, noche, manana: st(), tregua };
+});
 await log('marcianos: culetazo', () => {
   const g = window.__game; const A = g.aliens; const p = g.player;
   const sp = g.world.places.spawn;

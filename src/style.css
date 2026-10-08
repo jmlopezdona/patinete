@@ -218,6 +218,9 @@ kbd {
 #spybox {
   border-left: 4px solid #8dff6a;
 }
+#henbox {
+  border-left: 4px solid #ffb347;
+}
 #wantedbox {
   display: flex;
   align-items: center;
