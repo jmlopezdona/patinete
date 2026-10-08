@@ -175,6 +175,10 @@ de la variación coincide con la de los studs: si van desfasadas se nota.
 
 ### T5 · Sprites más limpios
 
+**Estado.** Hecho: iconos de misión a 320 × 320 y nombres a 512 × 160, dibujados al doble con
+`g.scale(2, 2)`. En una partida recién empezada hay 8 iconos y 14 nombres: en memoria de
+gráfica pasan de unos 2 MB a unos 8 MB sin comprimir (algo más con sus mipmaps).
+
 **Qué.** Iconos de misión a 256 px (hoy 160) y nombres de los vecinos a 512 × 160 (hoy
 256 × 80). Son sprites que se ven grandes cuando el jugador se acerca.
 
@@ -206,7 +210,7 @@ Nada de esto se ha probado en móvil ni en tableta, igual que el resto de medida
 | 2 | T4 · Suelo (hecho) | Pequeño y aislado; sirve para ensayar cambios en el shader antes de T1 |
 | 3 | T1 · Plástico (hecho en parte) | El de más efecto. Con medida antes y después y el interruptor de calidad |
 | 4 | T2 · Reflejos (hecho) | Después de T1, porque los reflejos lucen sobre el plástico ya tratado y obligan a reajustar la luz una sola vez |
-| 5 | T5 · Sprites | Opcional |
+| 5 | T5 · Sprites (hecho) | Opcional |
 
 Cada paso cabe en una PR propia. T1 y T2 cambian el aspecto de todo el juego: conviene verlas
 en capturas comparadas (`npm run capturas`) antes de fusionar.
