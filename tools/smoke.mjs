@@ -674,12 +674,13 @@ await log('mamas', () => {
   const out = { boton: !document.getElementById('p-watch').classList.contains('hidden'), sinHud: document.getElementById('hud').classList.contains('hidden') };
   const vistas = [];
   // Una vuelta larga por cada vista: ellas corren, la cámara las tiene siempre cerca y delante
-  let lejos = 0; let tapada = 0;
+  let lejos = 0; let cerca = 1e9; let tapada = 0;
   for (let v = 0; v < 4; v++) {
-    for (let i = 0; i < 600; i++) {
+    for (let i = 0; i < 1400; i++) {
       W.update(1 / 60);
       const a = R.list[0];
-      lejos = Math.max(lejos, Math.hypot(c.position.x - a.x, c.position.z - a.z));
+      const d = Math.hypot(c.position.x - a.x, c.position.z - a.z);
+      lejos = Math.max(lejos, d); cerca = Math.min(cerca, d);
       if (g.terrain.height(c.position.x, c.position.z) > c.position.y) tapada++;
     }
     vistas.push(document.getElementById('w-view').textContent.slice(3));
@@ -688,7 +689,8 @@ await log('mamas', () => {
   out.vistas = vistas.join(', ');
   out.musica = g.sfx.jog === true;
   out.corren = +(((R.s - s0) % R.len + R.len) % R.len).toFixed(0);
-  out.camaraA = +lejos.toFixed(1);
+  // La cámara juega con el zoom: va de estar con ellas a verlas desde lejos
+  out.zoom = `${cerca.toFixed(0)}-${lejos.toFixed(0)}`;
   out.bajoTierra = tapada;
   out.visibles = R.list.every((j) => j.fig.group.visible);
   out.juntas = +Math.max(...R.list.map((j) => Math.hypot(j.x - R.list[0].x, j.z - R.list[0].z))).toFixed(1);
