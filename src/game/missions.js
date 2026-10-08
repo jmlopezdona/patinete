@@ -21,8 +21,10 @@ const fmt = (t) => {
 
 function iconTexture(emoji, color) {
   const cv = document.createElement('canvas');
-  cv.width = cv.height = 160;
+  cv.width = cv.height = 320;
   const g = cv.getContext('2d');
+  // Dibujado sobre 160 y al doble de tamaño: de cerca el icono ocupa media pantalla
+  g.scale(2, 2);
   g.fillStyle = '#ffffff';
   g.beginPath();
   g.arc(80, 80, 72, 0, Math.PI * 2);

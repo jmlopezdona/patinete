@@ -702,9 +702,10 @@ export function createMinifig(o = {}) {
 // Cartelito con el nombre que flota sobre la cabeza de los vecinos
 export function nameTag(name, color = '#ffd23a') {
   const cv = document.createElement('canvas');
-  cv.width = 256;
-  cv.height = 80;
+  cv.width = 512;
+  cv.height = 160;
   const g = cv.getContext('2d');
+  g.scale(2, 2); // dibujado sobre 256 × 80 y al doble, para que el nombre se lea limpio de cerca
   g.fillStyle = 'rgba(14, 26, 40, 0.84)';
   g.beginPath();
   g.roundRect(5, 8, 246, 64, 32);
