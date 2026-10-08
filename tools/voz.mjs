@@ -3,6 +3,7 @@
 //   node tools/voz.mjs encargo > encargo.json   lo que hay que sintetizar (para tools/voz/sintetizar.py)
 //   node tools/voz.mjs indice                   apunta en public/voz/index.json las locuciones que hay
 //   node tools/voz.mjs pagina                   escribe voces/escucha.html, para oírlo todo sin jugar
+//   node tools/voz.mjs comprobar oido.jsonl     compara lo que se oye (tools/voz/transcribir.py) con el guion
 //
 // El paso de en medio, la síntesis, se hace en el PC: ver voces/README.md.
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -53,7 +54,36 @@ ${guion.lineas.filter((l) => l.papel === papel).map((l) => fila(`<small>${l.tono
 `;
   writeFileSync(new URL('voces/escucha.html', root), html);
   console.log('voces/escucha.html');
+} else if (orden === 'comprobar') {
+  // Mismas palabras, sin contar tildes, puntuación ni b/v. En una frase larga se perdona una palabra: quien
+  // transcribe escribe «10» por «diez» o «stats» por «studs», y eso no es que la locución esté mal
+  const palabras = (t) => t.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/v/g, 'b').replace(/[^a-z0-9ñ]+/g, ' ').trim().split(' ');
+  const distancia = (a, b) => {
+    let fila = b.map((_, j) => j + 1);
+    for (let i = 0; i < a.length; i++) {
+      let diag = i;
+      fila = b.map((w, j) => {
+        const v = Math.min(fila[j] + 1, (j ? sig[j - 1] : i + 1) + 1, diag + (a[i] !== w));
+        diag = fila[j];
+        return (sig[j] = v);
+      }, (sig = []));
+    }
+    return fila[b.length - 1] ?? a.length;
+  };
+  let sig;
+  const oido = new Map(readFileSync(process.argv[3], 'utf8').trim().split('\n').map((l) => JSON.parse(l)).map((o) => [o.id, o.oido]));
+  let mal = 0;
+  for (const l of guion.lineas) {
+    const id = voiceKey(l.texto);
+    const pide = dicho(l.dicho || l.texto);
+    if (!oido.has(id)) continue;
+    const [p, o] = [palabras(pide), palabras(oido.get(id))];
+    if (distancia(p, o) <= (p.length >= 8 ? 1 : 0)) continue;
+    mal++;
+    console.log(`${id} ${l.papel}\n  pide: ${pide}\n  oye:  ${oido.get(id)}`);
+  }
+  console.log(`${mal} de ${oido.size} no coinciden`);
 } else {
-  console.error('uso: node tools/voz.mjs encargo|indice|pagina');
+  console.error('uso: node tools/voz.mjs encargo|indice|pagina|comprobar');
   process.exit(1);
 }
