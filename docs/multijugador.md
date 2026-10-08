@@ -5,9 +5,9 @@ Escrito el 8 de octubre de 2026 sobre el commit `169d849` y **puesto al día ese
 luego la arquitectura de red, después los cambios de código uno por uno y al final el plan de
 implementación, los riesgos y las decisiones que quedan abiertas.
 
-Las cifras de código (llamadas, líneas) están contadas sobre `730ec42`. De las de red, **las del
-estado de un jugador ya son reales** (salen de `src/net/protocol.js`); las del mundo compartido
-(marcianos, tráfico…) siguen siendo **estimaciones sin medir**, porque ese mundo todavía no viaja.
+Las cifras de código (llamadas, líneas) están contadas sobre `730ec42`, antes de las fases 2 y 3.
+Las de red **ya son todas reales**: salen de `src/net/protocol.js` y de lo que escribe cada
+sistema en la `foto`, y las de la partida de dos jugadores están medidas en `test:red`.
 
 ## Resumen
 
@@ -28,8 +28,11 @@ estado de un jugador ya son reales** (salen de `src/net/protocol.js`); las del m
   ventanas del mismo equipo**: el reloj, el día y la noche, el mobiliario roto, el tráfico, el
   lío con el municipal, el objeto de la calle, las gallinas y la lluvia de meteoritos son los
   mismos para todos, y está hecho el mecanismo para que lo que decide el anfitrión se vea, se
-  oiga y le pase a quien toca (la base de C9 y C10). Lo siguiente es probarla entre dos redes y
-  la fase 3, la invasión; está en el [plan](#4-plan-de-implementación).
+  oiga y le pase a quien toca (la base de C9 y C10). **De la fase 3 está hecha la invasión, también
+  probada solo entre ventanas**: la oleada, los marcianos, el platillo (con su rayo, sus rescates
+  y su robo), la nave nodriza, el ladrón de la estatua, los disfrazados y la baba son los mismos
+  para todos y se juegan en cooperativo. Queda de esa fase que la bolera y el fútbol se vean entre
+  pantallas, y probarlo todo entre dos redes; está en el [plan](#4-plan-de-implementación).
 
 ## 1. La función
 
@@ -57,12 +60,12 @@ sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 | --- | --- | --- |
 | Los demás jugadores | Compartido | Se les ve patinar, saltar, hacer trucos y darse castañazos, con su nombre encima y su icono en el minimapa. **Ya funciona** |
 | Día y noche | Compartido | Cualquiera puede hacer de noche con `N`; sale un aviso de quién ha sido. **Ya funciona** |
-| Invasión marciana | Compartido | Una sola oleada, cooperativa: los culetazos de todos cuentan para el mismo marcador |
-| Platillo, rayo y robo del platillo | Compartido | Abduce a un jugador cada vez; lo roba y lo pilota uno |
-| Nave nodriza (jefe final) | Compartido | Una sola sobre el half-pipe; los coscorrones de todos suman y sus bombas de baba caen para todos |
-| Robo de la estatua | Compartido | La recupera el que le dé el tercer culetazo; el premio es para todos |
-| Marcianos disfrazados | Compartido | Los mismos vecinos con antena en todas las pantallas; el que eches le falta a la oleada de todos |
-| Baba verde | Compartido | Resbala y rebota cualquiera |
+| Invasión marciana | Compartido | Una sola oleada, cooperativa: los culetazos de todos cuentan para el mismo marcador, y con más gente en la calle es más grande. El combo y los studs de cada culetazo son de quien lo da. **Ya funciona** |
+| Platillo, rayo y robo del platillo | Compartido | Ronda a un jugador cada vez y de una pasada a otra cambia; lo roba quien le da el tercer coscorrón, que lo pilota desde su pantalla, y los demás ven a su doble a los mandos. Lo que el platillo se lleva (vecinos, coches, vacas) lo rescata cualquiera. **Ya funciona** |
+| Nave nodriza (jefe final) | Compartido | Una sola sobre el half-pipe; los coscorrones de todos suman y sus bombas de baba caen para todos. Con más gente aguanta alguno más. **Ya funciona** |
+| Robo de la estatua | Compartido | La recupera el que le dé el tercer culetazo; el premio es para todos. **Ya funciona** |
+| Marcianos disfrazados | Compartido | Los mismos vecinos con antena en todas las pantallas; el que eches le falta a la oleada de todos. **Ya funciona** |
+| Baba verde | Compartido | Resbala y rebota cualquiera, y el charco que uno gasta a botes se gasta para todos. **Ya funciona** |
 | Lluvia de meteoritos | Compartido | Las mismas dianas y los mismos cráteres; el meteorito del fondo, para el primero que baje, y el premio por recogerlos todos, para todos. **Ya funciona** |
 | Tráfico y peatones | Compartido | Los coches frenan y atropellan a cualquiera. **Ya funciona** |
 | Municipal y abuela | Compartido | Un solo nivel de búsqueda para la pandilla: los destrozos de todos suman y van a por el que tengan más cerca. **Ya funciona** |
@@ -71,7 +74,7 @@ sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 | Objetos (timbre, gorro, cohete, gravedad lunar) | Compartido | El que sale por la calle es uno para todos; se lo queda quien llega antes. **Ya funciona.** El gorro, el cohete y la escafandra que lleva otro jugador todavía no se le ven |
 | Vecinos con nombre | Compartido a medias | Faltan del pueblo los que lleva algún jugador; sus animaciones van por libre en cada pantalla |
 | Studs y ladrillos dorados | Personal | Cada uno recoge los suyos y los guarda en su progreso |
-| Minijuegos | Personal | Cada uno juega el suyo; mientras tanto ni marcianos ni municipal le hacen caso |
+| Minijuegos | Personal | Cada uno juega el suyo; mientras tanto ni marcianos ni municipal le hacen caso. **Ya funciona así**; lo que falta es que los bolos y el balón de uno se vean en la pantalla de otro |
 | Selfie con Emma, seguir a las mamás | Personal | Emma y las corredoras se animan por libre en cada pantalla, así que no hay nada que repartir |
 | Estrellas, récords, colores | Personal | Siguen en el `localStorage` de cada uno |
 | Calidad gráfica, sonido, cámara | Personal | |
@@ -80,6 +83,8 @@ sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 
 - **No hay pausa de verdad.** El menú de pausa se abre, pero el mundo sigue. Tu personaje se
   queda quieto y, mientras tengas el menú abierto, nadie te persigue.
+- **Los minijuegos no paran la invasión.** Jugando solo, empezar uno manda a los marcianos a
+  esconderse; en red la invasión sigue para los demás y solo dejan en paz a quien juega.
 - **No hay modo foto ni seguir a las mamás.** Los dos paran el tiempo, y en red no se puede:
   sus botones y la tecla `T` desaparecen mientras dura la partida (decisión D3).
 - **Cambiar de personaje a mitad de partida** solo deja elegir entre los libres.
@@ -167,7 +172,7 @@ otra cosa, o por un transporte local para las pruebas, no toca el resto.
 | Un peatón atropellado | El jugador que lo atropella, que lo avisa | Por dónde anda cada peatón no depende de nadie: sale del reloj |
 | Todo lo que se mueve solo (marcianos, platillo, nave nodriza y sus bombas, ladrón, meteoritos, coches, peatones, municipal, abuela, zapatilla, gallinas) | El anfitrión | Hace falta una sola verdad |
 | Reloj, día y noche, oleada, nivel de búsqueda, objeto en la calle | El anfitrión | Ídem |
-| Un jugador **mientras lo tiene el platillo** (`held`) o va montado en él | El anfitrión | Hoy ya es el platillo quien mueve su posición |
+| Un jugador **mientras lo tiene el platillo** (`held`) o va montado en él | Su dueño, siguiendo al platillo que ve; a los mandos, es el platillo el que va donde vaya él | Subir por el rayo, soltarse y pilotar responden al instante. El anfitrión solo decide qué hace el platillo con él (lo sube, se lo lleva, lo suelta) |
 
 **Los choques los detecta cada jugador en su pantalla**, contra lo que ve. Es un cambio sobre la
 primera versión de este plan, que los dejaba en manos del anfitrión con la posición que le llega
@@ -177,6 +182,13 @@ vieja y como un chorro de órdenes. El anfitrión sigue decidiendo lo que el mun
 cuenta mirando a los jugadores (frenar, pitar, perseguir); lo que cambia es que **el contacto lo
 dice quien lo sufre o lo da**, y si cambia algo que ven todos, lo avisa. El desfase que queda
 (R1) es que cada uno ve el mundo con unos 100 ms de retraso respecto al anfitrión.
+
+La invasión ha llevado la misma idea un paso más allá: **lo que un jugador provoca en algo que se
+mueve lo ve al momento en su pantalla, sin esperar al anfitrión**. El marciano al que le da un
+culetazo sale volando ya (lo lleva su pantalla hasta que el anfitrión lo da por echado), el rayo
+lo coge cuando lo ve encima y el platillo robado se pilota sin retardo. El anfitrión se entera
+por un `aviso` y puede no darlo por bueno (el marciano ya no estaba, el platillo tenía a otro):
+entonces a ese jugador se le deshace lo que vio, que es raro y dura menos de un segundo.
 
 Como solo el anfitrión ejecuta la lógica del mundo, **el juego no tiene que ser determinista**:
 los 164 `Math.random()` del juego se quedan como están.
@@ -190,22 +202,24 @@ Dos canales por conexión: uno **sin garantías** para el estado, que caduca ens
 | --- | --- | --- | --- | --- | :---: |
 | `hola` | invitado → anfitrión | fiable | al entrar y al cambiar de personaje o color | versión del juego, personaje, color | Hecho |
 | `sala` | anfitrión → todos | fiable | al cambiar | qué sitio te toca, si la partida ha empezado, y quién está con qué personaje y color | Hecho |
-| `mundo` | anfitrión → invitado | fiable | al entrar | estado completo: oleada, estatua, charcos, cráteres, mobiliario roto, abducidos, objeto en la calle. La hora no hace falta: va en cada `foto` | Hecho para el mobiliario roto y los meteoritos |
-| `yo` | invitado → anfitrión | sin garantías | 20/s | estado de su personaje (38 bytes) | Hecho, sin los contadores de controles |
-| `foto` | anfitrión → invitado | sin garantías | 15/s | reloj del mundo, si es de noche y los demás jugadores; más adelante, todo lo que se mueve | Hecho para el reloj, la noche y los jugadores |
-| `orden` | anfitrión → un invitado | fiable | cuando pasa | algo que el mundo le hace a su personaje: empujón, castañazo, rayo, lanzamiento, congelar. Va como método de `Player` y argumentos: `{ m, a }` | Hecho el mecanismo, con los cinco métodos que ya había; aún no lo usa ningún sistema |
-| `aviso` | jugador → anfitrión → los demás | fiable | cuando pasa | «he roto el banco 12», «he cogido el timbre», «hago de noche». Va como `{ k, v }`: qué y un número; el anfitrión le pone de quién es (`from`) al repartirlo | Hecho. Hoy hay quince: `noche`, `alba`, `rompe`, `arregla`, `atropella`, `lio`, `multa`, `zapatillazo`, `salto`, `coge`, `timbre`, `gallina`, `lluvia` (el único que lleva una ristra de números en vez de uno), `meteorito` y `cogido` |
-| `efecto` | anfitrión → uno o todos | fiable | cuando pasa | cartel, sonido, partículas, sacudida de cámara, studs de premio. Va como sistema, método y argumentos: `{ s, m, a }` | Hecho el mecanismo; aún no lo usa ningún sistema |
+| `mundo` | anfitrión → invitado | fiable | al entrar | lo que no viaja en la `foto`: mobiliario roto, cráteres y meteoritos por caer, charcos de baba y el retraso de los peatones que ha tenido cogidos el platillo. La hora, la oleada, la estatua y los abducidos no hacen falta: van en cada `foto` | Hecho |
+| `yo` | invitado → anfitrión | sin garantías | 20/s | estado de su personaje (38 bytes) | Hecho |
+| `foto` | anfitrión → invitado | sin garantías | 15/s | reloj del mundo, si es de noche, todo lo que se mueve solo (coches, municipal, objeto, gallinas, marcianos y platillo, nodriza, ladrón, disfrazados) y los demás jugadores | Hecho |
+| `orden` | anfitrión → un invitado | fiable | cuando pasa | algo que el mundo le hace a su personaje: empujón, castañazo, rayo, lanzamiento, congelar. Va como método de `Player` y argumentos: `{ m, a }` | Hecho el mecanismo, con los cinco métodos que ya había; **sigue sin usarlo ningún sistema**, tampoco la invasión |
+| `aviso` | jugador → anfitrión → los demás | fiable | cuando pasa | «he roto el banco 12», «he cogido el timbre», «hago de noche». Va como `{ k, v }`: qué y un número; el anfitrión le pone de quién es (`from`) al repartirlo | Hecho. A los quince de la fase 2 (`noche`, `alba`, `rompe`, `arregla`, `atropella`, `lio`, `multa`, `zapatillazo`, `salto`, `coge`, `timbre`, `gallina`, `lluvia`, `meteorito` y `cogido`) la invasión suma dieciséis: lo que un jugador le pide al anfitrión (`culetazo`, `pisoton`, `pillado`, `visto`, `rayo`, `suelto`, `dentro`, `fuera`, `coscorron`, `rescate`, `panza`, `ladron`, `disfraz`), lo que el anfitrión cuenta una vez (`baba`, `bomba`) y `boing`. Llevan una ristra de números en vez de uno `lluvia`, `culetazo`, `baba`, `bomba` y `ladron` |
+| `efecto` | anfitrión → uno o todos | fiable | cuando pasa | cartel, sonido, partículas, sacudida de cámara, studs de premio. Va como sistema, método y argumentos: `{ s, m, a }` | Hecho, y es por donde va casi todo lo que la invasión enseña y premia |
 | `adios` | cualquiera | fiable | al salir o al no dejar entrar | motivo: `host`, `bye`, `version`, `full` | Hecho |
 
 `yo` y `foto` llevan una cabecera de 7 bytes: tipo, número de orden (para tirar el paquete que
 llega más viejo que el último visto) y el reloj de quien lo manda en milisegundos. La `foto` lleva
 detrás 5 bytes del mundo: su hora en milisegundos (`game.time`) y si es de noche.
 
-Las pulsaciones (saltar, truco, acción) viajarán en `yo` como **contadores**, no como «pulsado
-ahora»: si se pierde un paquete, el siguiente trae la cuenta al día y no se pierde ninguna. El
-anfitrión las necesita porque soltarse del rayo y pilotar el platillo robado se hacen con los
-controles (`aliens.update(dt, p, time, inp)`). Todavía no van: hasta la fase 3 nadie las lee.
+Las pulsaciones no viajan. La primera idea era mandarlas en `yo` como contadores para que el
+anfitrión soltase del rayo y pilotase el platillo de un invitado, pero eso metía el retardo de
+ida y vuelta justo en los controles. Al final soltarse y pilotar lo hace la pantalla de cada uno
+(ver [Quién tiene la autoridad](#quién-tiene-la-autoridad)), y lo único que el anfitrión necesita
+saber es si quien pilota **mantiene pulsado el salto**, que enciende el rayo: un bit del estado
+(`F.KEY`).
 
 ### El estado de un jugador
 
@@ -221,37 +235,39 @@ Lo que lee `Player.updateVisual` para pintar a alguien, que es justo lo que se m
 | `flip + visFlip`, `pitch` | 2 × ángulo de 16 bits | 4 | Volteretas y cuesta |
 | `whipT` | 8 bits | 1 | Truco en curso |
 | `steer`, `throttle` | 2 × 8 bits con signo | 2 | Inclinarse, girar la cabeza, empujar con el pie |
-| `grounded`, `grind`, `boosting`, `crashT > 0`, `sunk`, `hidden`, `invuln > 0`, `held`, ocupado | 16 bits sueltos, 9 en uso | 2 | Postura, turbo, castañazo o chapuzón, oculto (o aún en el menú), parpadeo, en el rayo, a otra cosa |
+| `grounded`, `grind`, `boosting`, `crashT > 0`, `sunk`, `hidden`, `invuln > 0`, `held`, ocupado, `foil`, salto pulsado | 16 bits sueltos, 11 en uso | 2 | Postura, turbo, castañazo o chapuzón, oculto (en el menú o dentro del platillo), parpadeo, en el rayo, a otra cosa, con el gorro de aluminio (el platillo no lo ve), el rayo del platillo robado |
 | | | **31** | |
 | `char`, `colorIdx` | en `hola` y `sala` | | No van en cada paquete |
 
-Los giros viajan **como se ven**, no como los lleva la física. Para pintar es lo exacto; cuando
-el anfitrión necesite el rumbo real de un invitado (fase 2) habrá que ver si le basta.
+Los giros viajan **como se ven**, no como los lleva la física. Para pintar es lo exacto, y al
+anfitrión le ha bastado: lo usa para saber hacia dónde sale un marciano o el ladrón al echarlos y
+hacia dónde mira el platillo de quien lo pilota.
 
 ### Cuánto pesa
 
-| Qué | Unidades | Bytes aprox. | |
+| Qué | Unidades | Bytes | |
 | --- | ---: | ---: | --- |
-| Cabecera, reloj del mundo, noche y cuánto ocupa lo que se mueve solo | | 15 | real |
-| Jugadores (los otros 6) | 6 | 192 | real: 32 cada uno |
-| Marcianos | 9 (`POOL`) | 150 | estimado |
-| Platillo, ladrón y estatua | 3 | 60 | estimado |
-| Nave nodriza y sus bombas | 1 + 4 | 70 | estimado; solo durante el jefe final |
-| Meteoritos | 5 por lluvia | 0 | real: no viajan en la `foto`; la lluvia entera se cuenta una vez, en un `aviso` |
-| Coches | 16 (8 circuitos × 2) | 114 | real: 7 cada uno (sitio en décimas, rumbo y velocidad) y 2 para los que tiene el platillo |
-| Municipal, abuela y zapatilla | 3 | 35 | real: 13 cada perseguidor, 7 la zapatilla y 2 las estrellas |
-| Objeto de la calle | 1 | 8 | real: cuál, su número de serie y dónde |
-| Gallinas | 7 | 59 | real: 8 cada una y 3 del enfado; 1 solo byte si no hay nadie cerca del corral ni están enfadadas |
-| Peatones | hasta 64 | 0 | real: no viajan, salen del reloj |
-| **Una `foto`, con todo a la vez** | | **≈ 700** | |
+| Cabecera, reloj del mundo, noche, cuánto ocupa lo que se mueve solo y cuánto cada sistema | | 23 | 15 fijos y 1 por sistema que viaja (8) |
+| Jugadores (los otros 6) | 6 | 192 | 32 cada uno |
+| Marcianos y oleada | 9 (`POOL`) | 77 | 8 cada uno (qué hace, sitio, altura y rumbo) y 5 de la oleada |
+| Platillo y lo que lleva | 1 | 30 | 14 del platillo, 8 de a quién sube, 7 de quién cae y 1 por cada uno que lleve dentro. Con los marcianos, 1 solo byte si no hay invasión ni marcianos sueltos |
+| Ladrón y estatua | 1 | 12 | 1 si no hay robo y la estatua está en su fuente |
+| Nave nodriza | 1 | 5 | 1 si no está. Sus bombas no viajan en la `foto`: cada una se cuenta una vez, en un `aviso` |
+| Disfrazados | 3 | 8 | 2 cada uno y 2 de la cuenta; de noche, 2 |
+| Charcos de baba | 8 | 0 | no viajan en la `foto`: cada uno se cuenta una vez, en un `aviso` |
+| Meteoritos | 5 por lluvia | 0 | no viajan en la `foto`; la lluvia entera se cuenta una vez, en un `aviso` |
+| Coches | 16 (8 circuitos × 2) | 114 | 7 cada uno (sitio en décimas, rumbo y velocidad) y 2 para los que tiene el platillo |
+| Municipal, abuela y zapatilla | 3 | 35 | 13 cada perseguidor, 7 la zapatilla y 2 las estrellas |
+| Objeto de la calle | 1 | 8 | cuál, su número de serie y dónde |
+| Gallinas | 7 | 59 | 8 cada una y 3 del enfado; 1 solo byte si no hay nadie cerca del corral ni están enfadadas |
+| Peatones | hasta 64 | 0 | no viajan, salen del reloj |
+| **Una `foto`, con todo a la vez** | | **≈ 560** | |
 
-Hoy, con jugadores, coches, municipal, objeto y gallinas, una `foto` son 205 bytes con dos
-jugadores (medido en `test:red`) y 365 con la sala llena: unos 44 kbps por invitado y 260 de
-subida en el anfitrión. Con alguien cerca del corral son 58 bytes más. Con el mundo
-entero, a 15 por segundo, serían unos 85 kbps por invitado y **unos 500 kbps de subida en el
-anfitrión** con la sala llena, aunque jefe final, meteoritos y gallinas
-no coinciden casi nunca. Una fibra doméstica lo lleva de sobra; unos datos móviles flojos, no. Lo
-sensato es que haga de anfitrión quien juegue con ordenador.
+Con dos jugadores una `foto` son 224 bytes de día y 324 en plena invasión (medido en
+`test:red`); con la sala llena, 384 y 484: unos 58 kbps por invitado y **unos 350 kbps de subida en
+el anfitrión** de noche. Con alguien cerca del corral son 58 bytes más, pero invasión, nodriza,
+meteoritos y gallinas no coinciden casi nunca. Una fibra doméstica lo lleva de sobra; unos datos
+móviles flojos, no. Lo sensato es que haga de anfitrión quien juegue con ordenador.
 
 ### Suavizado
 
@@ -287,13 +303,13 @@ para comparar entre sí, no plazos.
 | C6 | Partida sin pausa | `main.js`, `party.js`, `photo.js`, `watch.js` | P | 1 | **Hecho** |
 | C7 | Pruebas con varios navegadores | `tools/red.mjs`, `package.json` | M | 1 | **Hecho** |
 | C8 | Reloj, día y noche compartidos | `env.js`, `party.js`, `main.js`, `aliens.js`, `src/net/*` | P | 2 | **Hecho** |
-| C9 | Órdenes al jugador en vez de tocarle los campos | `player.js`, `remote-player.js` y los sistemas de cada fase | M | 2 y 3 | Hecha la base |
-| C10 | HUD, sonido y partículas con destinatario | `fx.js`, los sistemas de cada fase, `src/net/*` | G | 2 y 3 | Hecha la base |
+| C9 | Órdenes al jugador en vez de tocarle los campos | `player.js`, `remote-player.js` y los sistemas de cada fase | M | 2 y 3 | Hecha la base, que **no ha hecho falta**: lo que le pasa a cada jugador lo hace su pantalla |
+| C10 | HUD, sonido y partículas con destinatario | `fx.js`, los sistemas de cada fase, `src/net/*` | G | 2 y 3 | **Hecho** |
 | C11 | Sistemas para varios jugadores | `traffic.js`, `wanted.js`, `props.js`, `items.js`, `hens.js`, `meteors.js`, `cows.js` | G | 2 | **Hecho** (`cows.js` no ha hecho falta: las vacas se animan por libre en cada pantalla) |
-| C12 | Simular en el anfitrión, pintar en todos | los mismos, más `src/net/*`; en la fase 3, los de C13 | G | 2 y 3 | Hecho lo de la fase 2 |
-| C13 | Invasión cooperativa | `aliens.js`, `boss.js`, `heist.js`, `disguise.js`, `slime.js` | G | 3 | |
-| C14 | Minijuegos con más gente en el pueblo | `missions.js`, `minigames.js` | M | 3 | |
-| C15 | Premios y progreso | `main.js`, `aliens.js`, `boss.js`, `heist.js`, `wanted.js`, `hens.js` | P | 3 | Hecho lo de `wanted.js` y `hens.js` |
+| C12 | Simular en el anfitrión, pintar en todos | los mismos, más `src/net/*`; en la fase 3, los de C13 | G | 2 y 3 | **Hecho** |
+| C13 | Invasión cooperativa | `aliens.js`, `boss.js`, `heist.js`, `disguise.js`, `slime.js` | G | 3 | **Hecho** |
+| C14 | Minijuegos con más gente en el pueblo | `missions.js`, `minigames.js` | M | 3 | Hecho que al que juega no le hagan caso; **falta** que la bolera y el fútbol se vean entre pantallas |
+| C15 | Premios y progreso | `main.js`, `aliens.js`, `boss.js`, `heist.js`, `wanted.js`, `hens.js` | P | 3 | **Hecho** |
 | C16 | Caídas, reconexión y versión | `src/net/*`, `main.js`, `core/update.js` | M | 4 | La versión ya se comprueba al entrar |
 
 ### C1 · Transporte y protocolo — hecho
@@ -431,6 +447,19 @@ tercero con `?red=local` y comprueba:
   HTML ajeno, y que un empujón del anfitrión mueve al invitado en su pantalla;
 - que el invitado lleva el reloj del anfitrión, que si uno hace de noche lo es para todos y a los
   demás les dicen quién ha sido, y que quien llega tarde se encuentra la noche y el reloj;
+- la invasión: que los disfrazados son los mismos vecinos y a quien le quita el disfraz a uno y lo
+  echa le cuentan los studs a él y la cuenta a todos; que la oleada, los marcianos, el platillo y
+  la baba del invitado son los del anfitrión, y con dos jugadores la oleada es más grande; que el
+  culetazo de un invitado sale volando en su pantalla sin esperar y cuenta para todos; que el
+  ladrón es el mismo y al tercer culetazo de un invitado la estatua vuelve para todos, con el
+  premio repartido; que el rayo coge al invitado que lo dice y el platillo del anfitrión se para
+  con él, que se suelta machacando el salto y, si no, se lo lleva dentro a otra punta del pueblo
+  y le birla sus studs, que con tres coscorrones el platillo es suyo, lo
+  pilota desde su pantalla y los demás ven a su doble a los mandos; que lo que el platillo se
+  lleva sube igual en todas las pantallas y lo rescata un invitado; que la nodriza baja para
+  todos, los coscorrones de un invitado cuentan, las bombas caen en el mismo sitio y, al
+  reventar, el premio, el nivel y el amanecer son de todos; y que quien entra tarde se encuentra
+  la invasión empezada;
 - que el castañazo de otro se ve, pero no te saca el cartel;
 - que el que se va desaparece, que un código que no existe se explica y que, si se va el
   anfitrión, se acaba la partida;
@@ -455,8 +484,8 @@ temporizador, que por defecto van con fotogramas y no acaban nunca.
   «cámbiala»: si dos lo pulsan a la vez no se anulan.
 - **Quién ha sido.** A los demás les sale «Adrián ha hecho de noche»; al que lo ha hecho, no.
 - **El amanecer tras rechazar la invasión** (`aliens.js`, `env.toggle(true)`) va como `alba`: hace
-  de día para todos sin decir de quién ha sido. Hasta la fase 3 cada pantalla lleva su invasión,
-  así que **el primero que la rechaza hace amanecer a los demás** y sus marcianos se esconden.
+  de día para todos sin decir de quién ha sido. Desde la fase 3 la invasión es una sola y solo la
+  rechaza el anfitrión, así que es él quien hace amanecer.
 - **El reloj.** En los invitados `game.time` sigue al del anfitrión (ver
   [Suavizado](#suavizado)). Al saltar se mueven con él las dos horas que el juego guarda para
   los combos (`lastTrick` y `aliens.lastKick`): `Game.shiftTime(d)`.
@@ -483,12 +512,16 @@ el `RemotePlayer` del anfitrión se convierten en un mensaje `orden`.
 
 **Hecha la base.** `RemotePlayer` ya no hereda `bump`, `place`, `crash`, `launch` y `skid` de
 `Player`: en el anfitrión se convierten en un `orden` (`Party.order`) y el invitado los ejecuta
-sobre su jugador; en un invitado no hacen nada. Los métodos nuevos (`slow`, `hold`…) se añaden a
-esa lista (`ORDERS`) con el sistema que los necesite. Todavía no lo usa ninguno: está probado
-desde `test:red`.
+sobre su jugador; en un invitado no hacen nada. Está probado desde `test:red`.
 
-Mientras `held` es cierto, la posición la manda el anfitrión en la `foto` y el dueño la acata: es
-lo que hacen hoy las 17 escrituras a `p.pos` de `aliens.js`.
+**Y no ha hecho falta.** La invasión era el sistema que más tocaba al jugador (31 asignaciones y
+17 escrituras a `p.pos` en `aliens.js`), y se ha resuelto al revés de lo previsto: en vez de que
+el anfitrión le mande órdenes, **todo lo que le pasa a un jugador lo hace su propia pantalla**
+(`Aliens.mine`, `Boss.touch`, `Heist.touch`). Las escrituras siguen ahí, pero siempre son sobre el
+jugador local. Mientras `held` es cierto, es su pantalla la que lo sube por el rayo, lo esconde
+dentro del platillo y lo suelta, siguiendo al platillo que ve; el anfitrión solo dice qué hace el
+platillo con él. Así `orden` sigue sin que lo use ningún sistema: se puede quitar, o dejarlo para
+lo que venga (decisión D10).
 
 Lo de `missions.js` (17 de las 124) no hay que tocarlo: las misiones son personales y actúan
 siempre sobre el jugador local. Tampoco las 6 de `dropoff.js`, que solo corre en el menú.
@@ -538,8 +571,16 @@ el nombre del método y sus argumentos, que ya son números y textos.
   que no sea `b`, `i`, `kbd`, `small` o `span` (riesgo R6).
 - Solo el anfitrión decide por los demás: en un invitado, `g.to(otro)` no hace nada y `g.all` y
   `g.at` se quedan en su pantalla.
-- Todavía no lo usa ningún sistema para mandar nada: está probado desde `test:red`. El primero
-  será el claxon de `traffic.js`.
+- En la fase 3 se le ha añadido un quinto sistema, `studs` (`g.to(p).studs.burst(…)`: los studs
+  que saltan por el suelo, para quien se los ha ganado), y a lo que es del juego (`OWN`),
+  `kicked` (el marciano que el anfitrión le apunta a un jugador) y `beat` (invasión rechazada:
+  premio y nivel).
+- **Marcadores que salen del estado, no de un `efecto`.** Los contadores que son iguales para
+  todos (marcianos echados, coscorrones al platillo, vida de la nodriza, culetazos al ladrón,
+  disfrazados) ya no los pone quien cambia la cuenta: cada pantalla los pinta al ver que ha
+  cambiado. Lo mismo lo que se ve y se oye al pasar de un estado a otro (un marciano que
+  aterriza, el escudo de la nodriza que sube, la nodriza que revienta): así quien entra tarde lo
+  ve bien sin que nadie le cuente nada, y sobran muchos `efecto`.
 
 Esto es la propuesta **R2** de `docs/refactorizacion-y-optimizacion.md` (un bus de eventos entre
 sistemas) con un requisito más: que el evento lleve destinatario. Conviene hacer las dos cosas de
@@ -555,7 +596,7 @@ lista y decide a quién mira:
 | `traffic.js` | **Hecho.** Los coches frenan si tienen delante a cualquier jugador (`Game.crowd`) y le pitan a ese (`g.to(p).sfx.honk()`, el primer `efecto` de verdad). El empujón de un coche y el atropello de un peatón los detecta cada jugador en su pantalla; el atropello se avisa (`atropella`) y los studs son para quien lo da |
 | `wanted.js` | **Hecho.** Un solo nivel de búsqueda (D1), que lleva el anfitrión. Los destrozos de todos suman (`lio`). Municipal y abuela salen a por el último que ha roto algo y luego van a por el más cercano que no esté ocupado (`prey`, revisado cada segundo); el rastro de migas es el suyo y se borra al cambiar de presa. Cada jugador detecta en su pantalla si lo pillan, le dan o los salta, y lo avisa (`multa`, `zapatillazo`, `salto`): la multa y el premio del salto son suyos, y **con la multa o el zapatillazo de uno se acaba el lío para todos**. El esquinazo lo decide el anfitrión y el premio es para todos (`g.all.addStuds`). Silbato, sirena y aviso de proximidad suenan en cada pantalla según lo cerca que le quede |
 | `props.js` | **Hecho.** Cada jugador detecta sus propios choques y manda `aviso` (`rompe`, con el número del mueble); el anfitrión lo reparte, lleva la cuenta atrás y avisa al reconstruirlo (`arregla`), cuando no hay ningún jugador a menos de 30 unidades (`Game.nearest2`). Los trozos salen con la velocidad que llevaba quien lo rompió; los studs y el lío con el municipal son solo para él. Al que entra se le dice cuáles están rotos (`mundo`) |
-| `items.js` | **Hecho.** El objeto de la calle es uno y lo pone el anfitrión, cerca de un jugador cualquiera que no esté ocupado; va en cada `foto` y se quita si queda lejos de todos. Cada jugador detecta que lo toca y lo pide (`coge`, con el número de serie del objeto); lo gana el primer aviso que llegue al anfitrión, que se lo da con `g.to(p).giveItem(…)`. Lo que se lleva y lo que hace efecto (`p.foil`, `p.rocket`, `p.moon`) son del que lo usa, y quien ya lleva uno no coge otro. En red el siguiente empieza a contar al cogerlo, no al gastarlo. El timbrazo de otro se ve y se oye (`timbre`), pero solo aturde a los marcianos de la pantalla de quien lo toca, hasta la fase 3 |
+| `items.js` | **Hecho.** El objeto de la calle es uno y lo pone el anfitrión, cerca de un jugador cualquiera que no esté ocupado; va en cada `foto` y se quita si queda lejos de todos. Cada jugador detecta que lo toca y lo pide (`coge`, con el número de serie del objeto); lo gana el primer aviso que llegue al anfitrión, que se lo da con `g.to(p).giveItem(…)`. Lo que se lleva y lo que hace efecto (`p.foil`, `p.rocket`, `p.moon`) son del que lo usa, y quien ya lleva uno no coge otro. En red el siguiente empieza a contar al cogerlo, no al gastarlo. El timbrazo de otro se ve y se oye (`timbre`), y a los marcianos, que son de todos, los aturde el anfitrión al enterarse |
 | `hens.js` | **Hecho.** Las mueve el anfitrión. Las que picotean se apartan del jugador que tengan más cerca; las enfadadas persiguen a quien ha atropellado a una (`owner`: `rage` ya tiene dueño), y si se va o se pone a otra cosa, se calman. Cada jugador detecta en su pantalla que atropella a una (y lo avisa: `gallina`) y que le dan un picotazo, que le quita studs solo a él. La cuenta atrás del enfado solo le sale a él; el premio del esquinazo y la hazaña (`g.to(p).tally('hens')`) también son suyos. Si otro atropella a una mientras dura el enfado, se renueva pero no cambia de dueño |
 | `meteors.js` | **Hecho.** La lluvia la decide el anfitrión; las dianas caen alrededor de un jugador cualquiera que no esté ocupado (`aim(p)`). No viaja en la `foto`: una vez decidido dónde y cuándo cae cada meteorito, lo demás es cuestión de tiempo, así que se cuenta entera una vez (`lluvia`: qué cráteres viejos se tapan y, de cada meteorito, sitio, tamaño, espera y de dónde viene) y cada pantalla la lleva por su cuenta, levanta sus cráteres y manda por los aires a su jugador. El meteorito del fondo lo pide quien lo toca (`meteorito`) y lo da el anfitrión, que lo dice (`cogido`); el premio es suyo, la cuenta es de todos y el premio final, para todos. Los cráteres cambian el terreno: al que entra tarde se le cuentan en el `mundo` (`dump` y `load`), con los meteoritos que queden por caer |
 | `cows.js`, `folks.js` | Animación local en cada pantalla; solo los empujones (`p.bump`) son contra el jugador local |
@@ -564,9 +605,9 @@ lista y decide a quién mira:
 Los que «se reconstruyen cuando no miras» (`props.js` espera a que el jugador esté a más de 30
 unidades; los studs, a 25) comprueban la distancia al jugador **más cercano**.
 
-Diez sitios dan una tregua mientras hay misión (`g.missions.active` en `aliens.js`,
-`disguise.js`, `hens.js`, `items.js`, `meteors.js` y `wanted.js`): en red pasa a ser «ignora al
-jugador ocupado» (C14), no «para el sistema».
+Diez sitios daban una tregua mientras hay misión (`g.missions.active` en `aliens.js`,
+`disguise.js`, `hens.js`, `items.js`, `meteors.js` y `wanted.js`): en red es «ignora al jugador
+ocupado» (C14), no «para el sistema». Hecho en todos.
 
 ### C12 · Simular en el anfitrión, pintar en todos
 
@@ -606,88 +647,124 @@ métodos que hay que partir son los más largos del juego.
   juego, que ya es común: 64 peatones a cero bytes, y quien entra tarde los ve en su sitio sin
   que nadie le cuente nada. Para eso un peatón por los aires ya no se queda clavado: sigue
   avanzando mientras vuela (cae un par de unidades más allá).
-- **Lo que no corre con el anfitrión en el menú.** `props.js`, `wanted.js`, `items.js`, `hens.js` y `meteors.js` solo se actualizan con
+- **Lo que no corre con el anfitrión en el menú.** `props.js`, `wanted.js`, `items.js`, `hens.js`, `meteors.js` y toda la invasión solo se actualizan con
   la partida en marcha: si el anfitrión vuelve al menú mientras los demás juegan, el mobiliario
-  no se reconstruye y municipal y abuela se quedan parados hasta que salga otra vez. El tráfico
-  sí sigue. Además, cuando el anfitrión vuelve a casa o al menú se acaba el lío para todos
+  no se reconstruye y municipal, abuela, marcianos y platillo se quedan parados hasta que salga
+  otra vez. El tráfico sí sigue. Además, cuando el anfitrión vuelve a casa o al menú se acaba el lío para todos
   (`wanted.reset(true)`, como jugando solo).
-- **Lo que solo viaja cuando hay algo que contar.** Las gallinas son el primer sistema cuyo trozo
-  de la `foto` cambia de tamaño: un byte a cero mientras no hay nadie cerca del corral ni están
-  enfadadas, y 59 cuando sí. Por eso `bytes` se pregunta en cada foto, y dos fotos que no ocupan
-  lo mismo no se mezclan (vale la más antigua). Cuando haya dos sistemas así, dos fotos podrían
-  ocupar lo mismo llevando cosas distintas: habrá que comparar algo más que el tamaño. Los
-  meteoritos no han sido el segundo, porque no viajan en la `foto`.
-- **Lo que la invasión de cada pantalla se lleva** (hasta la fase 3 cada una tiene la suya) no
-  cuadra entre pantallas: el coche que tiene el platillo del anfitrión desaparece de la calle en
-  los invitados, y el que tiene el de un invitado solo falta en su pantalla. El peatón cogido se
-  queda atrasado respecto al de los demás en esa pantalla hasta que se recarga.
+- **Lo que solo viaja cuando hay algo que contar.** Las gallinas fueron el primer sistema cuyo
+  trozo de la `foto` cambia de tamaño: un byte a cero mientras no hay nadie cerca del corral ni
+  están enfadadas, y 59 cuando sí. Con la invasión son cinco los que cambian (gallinas,
+  marcianos, nodriza, ladrón y disfrazados), y dos fotos podrían ocupar lo mismo llevando cosas
+  distintas. Por eso **delante de lo que se mueve solo va lo que ocupa cada sistema**, un byte
+  cada uno, y dos fotos solo se mezclan si coinciden en todos; si no, vale la más antigua.
+- **Lo que el platillo se lleva** ya cuadra entre pantallas: a quién sube, quién cae y a quiénes
+  lleva dentro viaja en la `foto` con un número por cabeza (qué es y cuál), y cada pantalla lo
+  cuelga de su rayo y lo devuelve a su sitio. El peatón cogido se retrasa lo mismo en todas (cada
+  una le cuenta el rato que lo ve cogido), y a quien entra tarde se le dice el retraso que lleva
+  cada uno (`mundo`).
+- **La forma que ha fijado la invasión**, encima de la del tráfico: además de lo que decide el
+  anfitrión (`direct`, `updateUfo`, `updateAliens`…) y lo que se pinta (`present`), cada sistema
+  tiene **lo que le pasa al jugador de esta pantalla** (`mine` en `aliens.js`, `touch` en los
+  demás), que corre en todas y es donde se detectan los contactos. Lo que se ve al cambiar algo
+  de estado sale de comparar con el estado anterior (`changed`), no de quien lo cambió.
 
-### C13 · Invasión cooperativa
+### C13 · Invasión cooperativa — hecho
 
-- **Objetivo de cada marciano.** Hoy todos van a por `p`. Cada uno elige jugador (el más cercano
-  que no esté ocupado ni en el rayo) y lo revisa de vez en cuando.
-- **Combo de culetazos.** `combo` y `lastKick` son de `Aliens`; pasan a ser de cada jugador. El
-  marcador de la oleada (`wave.count`) sigue siendo uno.
-- **El rayo.** Se lleva a un jugador cada vez, como ahora: `startAbduct(p)`, `take(p)` y
-  `updateCarry(dt, p)` ya reciben a quién. Lo que cambia es que `take()` mira `g.home` y
-  `g.save.studs`, que son la casa y los studs del jugador local: pasan a ser los del abducido, y
-  los studs que le roba le llegan como `efecto`.
-- **A quién apunta el platillo.** Hoy persigue a `p`; elige jugador con el mismo criterio que los
-  marcianos. `pickVictim(p)`, que escoge vecino, coche o vaca cerca del jugador, mira cerca de
-  cualquiera.
-- **Rescates.** Además de a los vecinos, se puede rescatar a un amigo abducido: mismo mecanismo
-  de `updateRescue`.
-- **Robar el platillo.** Los coscorrones (`u.hits`) suman entre todos; lo pilota quien da el
-  tercero. `ride` y `mate` guardan a qué jugador corresponde, y sus controles le llegan al
-  anfitrión en `yo`.
-- **Tamaño de la oleada.** `goal` (ahora descontando los disfrazados que se hayan echado de día,
-  `disguise.discount()`) y `POOL` (9 marcianos) están pensados para uno (D2).
-- **Tregua por misión.** `aliens.update` para la invasión entera con `g.missions.active`. En red
-  la invasión sigue y solo se ignora al jugador ocupado.
-- **`boss.js`, la nave nodriza:** una sola para todos. Los coscorrones (`m.hits`) suman entre
-  todos; el escudo, las bombas y los refuerzos los decide el anfitrión, y las bombas apuntan a
-  cualquiera que esté a tiro (`NEAR`). Las bombas dejan charcos, que van como los de `slime.js`.
-- **`disguise.js`, los disfrazados:** qué vecinos llevan antena lo elige el anfitrión (`pick(p)`)
-  y va en `mundo`. Se le cae el disfraz a quien lo embista; el marciano que sale corriendo ya es
-  un marciano más de `aliens.js`.
-- **`heist.js`:** el ladrón huye del jugador más cercano que lo vea (`SEES`), y `hit(p, label)`
-  ya recibe quién le da.
-- **`slime.js`:** los charcos los crea el anfitrión; resbalar y rebotar lo detecta cada jugador,
-  que los charcos están quietos.
+Lo que se había previsto y cómo ha quedado:
+
+- **Objetivo de cada marciano.** Cada uno va a por el jugador que tenga más cerca que no esté a
+  otra cosa, ni en el rayo, ni dentro del platillo (`target`), y lo revisa cada segundo más o
+  menos. Los refuerzos bajan cerca de un jugador cualquiera, y huyen del que les dé miedo (el que
+  va con turbo, o el que lleva su platillo), no del que perseguían.
+- **Culetazo, pisotón y que te pillen** los detecta cada jugador en su pantalla, contra los
+  marcianos que ve (`touch`). El culetazo se nota al momento: el marciano sale volando en esa
+  pantalla sin esperar al anfitrión, que se entera por un `aviso` (`culetazo`, con hacia dónde lo
+  ha mandado) y lo echa a volar para los demás. Si el anfitrión no lo da por bueno (ya no
+  estaba), a los 0,8 segundos vuelve a salir donde lo tenga.
+- **Combo de culetazos.** `combo` y `lastKick` siguen siendo de `Aliens`, pero ahora cada
+  pantalla lleva los del jugador local (`reward`), que es quien se da el premio. El marcador de
+  la oleada (`wave.count`) es uno y lo lleva el anfitrión (`count`).
+- **El rayo.** A quién ronda el platillo lo elige el anfitrión (`mark`) y va en la `foto`. Si es
+  el jugador de esta pantalla, es ella la que mira si lo tiene debajo y cuánto le falta
+  (`mine`); cuando lo coge, lo dice (`rayo`) y el platillo se para a subirlo. Sube, se suelta
+  machacando el salto (`suelto`) o llega arriba (`dentro`) en su pantalla; el anfitrión elige
+  adónde se lo lleva (entre los sitios de siempre y **su** casa, no la del anfitrión) y vuela
+  hasta allí. Los studs que le birla salen de los suyos, porque lo calcula su pantalla.
+- **Por si el anfitrión no se entera.** Entre que un jugador se da por cogido y que el anfitrión
+  lo confirma pasa un momento. Si a los 1,5 segundos no lo ha confirmado (el platillo tenía a
+  otro), se suelta solo. Y al revés: si el anfitrión deja de darlo por cogido, se suelta al
+  verlo. Si un invitado se vuelve al menú con el rayo encima, el platillo lo deja a los 9 segundos.
+- **A quién apunta el platillo.** Al más cercano que no esté a otra cosa, y de una pasada a otra
+  cambia de víctima si hay varias a mano. Con el gorro de aluminio no lo ve: por eso `foil` viaja
+  ahora en el estado de cada jugador. `pickVictim` escoge vecino, coche o vaca cerca del jugador
+  al que ronda.
+- **Rescates.** Cortar el rayo lo detecta quien lo cruza (`rescate`) y el premio es suyo. Lo que
+  **no** se ha hecho es rescatar a un amigo abducido cruzando su rayo: el amigo se suelta él solo.
+- **Robar el platillo.** Los coscorrones (`u.hits`) suman entre todos (`coscorron`) y lo pilota
+  quien da el tercero. **Lo pilota desde su pantalla**, sin retardo: mientras dura, el platillo
+  está donde esté él (el anfitrión lo lee de su estado), y lo único que viaja de sus controles es
+  si mantiene el salto, que enciende el rayo. Lo que el rayo se lleva y el reloj del paseo son
+  del anfitrión. Todos ven a su doble a los mandos.
+- **Tamaño de la oleada** (D2). Con cada jugador de más, la mitad más de marcianos que echar, uno
+  más a la vez por la calle (hasta los 9 de `POOL`) y un coscorrón más a la nodriza (hasta tres
+  más). Se cuenta con los que hay en la calle al empezar la oleada. Está sin ajustar jugando.
+- **Tregua por misión.** En red la invasión sigue y solo se ignora al jugador ocupado.
+- **`boss.js`, la nave nodriza:** una sola. La lleva el anfitrión (`direct`); cada jugador detecta
+  su coscorrón en la panza (`touch`, `panza`) y el anfitrión lo cuenta si no tenía el escudo
+  levantado. Las bombas apuntan a cualquiera que esté a tiro y **no viajan en la `foto`**: cada
+  una se cuenta una vez (`bomba`: dónde cae y de dónde sale) y cada pantalla la deja caer y mira
+  si pringa a su jugador. El charco lo deja el anfitrión.
+- **`disguise.js`, los disfrazados:** los elige el anfitrión y van en la `foto` (qué vecino es
+  cada uno y qué ha sido de él), así que quien entra tarde los ve sin más. Quien embiste a uno se
+  lo dice al anfitrión (`disfraz`); el marciano que sale corriendo ya es un marciano más de
+  `aliens.js`, y los studs por echarlo son para quien le dé el culetazo.
+- **`heist.js`:** el ladrón huye del jugador más cercano que lo vea; cada uno detecta su culetazo
+  (`ladron`) y la estatua se la apunta quien le da el tercero. El vuelo de vuelta de la estatua
+  lo anima cada pantalla. El reloj del robo solo se para si el rayo tiene cogidos a todos.
+- **`slime.js`:** los charcos los pone el anfitrión y cuenta cada uno una vez (`baba`); resbalar
+  y rebotar lo detecta cada jugador, y el bote que lo gasta se avisa (`boing`).
+
+Lo que viaja está en [Cuánto pesa](#cuánto-pesa): 107 bytes de marcianos y platillo, 12 del
+ladrón y 5 de la nodriza, y un byte cada uno cuando no hay nada que contar.
 
 ### C14 · Minijuegos
 
 - Cada jugador lleva una marca **ocupado** (en un minijuego, en la pausa, con la pestaña
-  oculta) que viaja en `yo`. Los que persiguen no eligen a
-  un ocupado.
-- `wanted.update` hace `reset(true)` si hay misión activa: en red, solo deja de contar al ocupado.
+  oculta) que viaja en `yo`. Los que persiguen no eligen a un ocupado. **Hecho**: ni marcianos,
+  ni platillo, ni nodriza, ni ladrón, ni municipal, ni gallinas le hacen caso, y sus choques con
+  ellos tampoco cuentan.
+- `wanted.update` hace `reset(true)` si hay misión activa: en red, solo deja de contar al
+  ocupado. **Hecho** (fase 2).
 - Carrera, trucos, pizza y **Selfie con Emma** son personales y no tocan nada compartido: siguen
   igual.
-- **Bolera y fútbol**, con sus versiones marcianas de noche (Bolos Marcianos y Chut Marciano),
-  usan objetos que están en el pueblo (bolos, balón, portero). Mientras alguien juega, el sitio
-  queda ocupado para los demás («Adrián está jugando») y es su juego el que simula bolos y balón;
-  los demás lo ven por `foto`. Que los bolos y el portero sean marcianos depende de que sea de
-  noche, que ya es compartido (C8).
+- **Falta: bolera y fútbol**, con sus versiones marcianas de noche (Bolos Marcianos y Chut
+  Marciano). Usan objetos que están en el pueblo (bolos, balón, portero) y hoy cada pantalla
+  tiene los suyos: si un amigo juega a los bolos, tú ves los tuyos de pie. La idea es que mientras
+  alguien juega el sitio quede ocupado para los demás («Adrián está jugando») y sea su juego el
+  que simule bolos y balón. Tiene una dificultad que no ha salido hasta ahora: sería el primer
+  trozo del mundo que simula **un invitado**, y la `foto` solo sale del anfitrión; habrá que
+  llevarlo en `yo` o darle su propio mensaje. Que los bolos y el portero sean marcianos depende
+  de que sea de noche, que ya es compartido (C8).
 
-### C15 · Premios y progreso
+### C15 · Premios y progreso — hecho
 
 - `addStuds()` y `save` siguen siendo locales. Los premios de cosas compartidas llegan como
-  `efecto` a quien toque: el culetazo, a quien lo da; rechazar la invasión, reventar la nave
-  nodriza y recuperar la estatua, a todos.
+  `efecto` a quien toque: el coscorrón, el rescate y los marcianos que sube el rayo, a quien los
+  hace; rechazar la invasión, reventar la nave nodriza y recuperar la estatua, a todos. El
+  culetazo no viaja: se lo da su propia pantalla al que lo pega.
 - **Nivel de invasión** (`save.invasions`): la oleada usa el del anfitrión. Al ganar, cada jugador
-  se queda con el mayor entre el suyo y el recién superado.
+  se queda con el mayor entre el suyo y el recién superado (`Game.beat`).
 - **Contadores** (`save.aliens`, `ufos`, `rescues`, `motherships`, `statues`, `spies`, `hens`):
-  los sube el sistema que corre en el anfitrión sobre **su** progreso. Pasan a ser un `efecto`
-  para quien se lo haya ganado.
-- **Hecho en `wanted.js`:** el premio del esquinazo va a todos con `g.all.addStuds(…)`. Para eso
-  los destinatarios de `fx.js` llevan, además de los cuatro sistemas, lo que es del juego y no de
-  un sistema (`OWN`: `addStuds`, `giveItem` desde `items.js`, `tally` desde `hens.js` y `confetti`
-  desde `meteors.js`). La multa y lo que requisa la abuela ya salen de los
-  studs de quien los sufre, porque es su pantalla la que lo detecta.
-- **Studs que te quitan.** Cinco sitios restan de `g.save.studs`, el progreso de quien ejecuta el
-  código: la multa del municipal (`wanted.take`), el rayo y los marcianos (`aliens.js`, dos
-  sitios), las bombas de la nodriza (`boss.splash`) y los picotazos (`hens.peck`). Todos pasan a
-  ser un `efecto` para el jugador al que le toca, que descuenta de los suyos.
+  cada uno sube en el progreso de quien se lo ha ganado, por su pantalla o con `g.to(p).tally(…)`.
+  Las nodrizas derribadas se les apuntan a todos; la estatua, a quien le dio el último culetazo.
+- **Para todos o para uno:** `g.all.addStuds(…)` para el esquinazo al municipal, la invasión
+  rechazada, la nodriza y la estatua. Los destinatarios de `fx.js` llevan, además de los
+  sistemas, lo que es del juego y no de un sistema (`OWN`: `addStuds`, `giveItem`, `tally`,
+  `confetti`, `kicked` y `beat`).
+- **Studs que te quitan.** Cinco sitios restan de `g.save.studs`: la multa del municipal, el rayo
+  y los marcianos (`aliens.js`, dos sitios), las bombas de la nodriza y los picotazos. Los cinco
+  los detecta la pantalla de quien los sufre, así que salen de sus studs sin `efecto` de por medio.
 
 ### C16 · Caídas, reconexión y versión
 
@@ -712,7 +789,7 @@ métodos que hay que partir son los más largos del juego.
 | --- | --- | --- |
 | 1 · Verse | Crear sala, unirse, elegir personaje sin repetir y patinar juntos de día. El mundo todavía va por libre en cada pantalla | C1–C7 |
 | 2 · Mismo pueblo | Tráfico, municipal, mobiliario, objetos, gallinas, meteoritos y día y noche son los mismos para todos | C8–C12, en `props.js`, `traffic.js`, `wanted.js`, `items.js`, `hens.js` y `meteors.js` |
-| 3 · Invasión | La noche de los marcianos en cooperativo, con minijuegos conviviendo | C13–C15, y C9, C10 y C12 en `aliens.js`, `boss.js`, `heist.js`, `disguise.js` y `slime.js` |
+| 3 · Invasión | La noche de los marcianos en cooperativo, con minijuegos conviviendo. **Hecha la invasión**; falta la bolera y el fútbol | C13–C15, y C9, C10 y C12 en `aliens.js`, `boss.js`, `heist.js`, `disguise.js` y `slime.js` |
 | 4 · Aguante | Reconexión, mensajes de error, TURN propio si hace falta | C16 |
 
 La fase 1 es pequeña y casi no toca código existente, pero tiene una limitación a la vista:
@@ -768,10 +845,35 @@ Con el paso 4 la fase 2 queda hecha. Lo que deja pendiente:
   equipo (`test:red`). Falta una partida de verdad, sobre todo para ver cómo se ven coches,
   municipal y gallinas por 4G.
 - **`orden` sigue sin uso.** Los choques han acabado detectándose en la pantalla de cada jugador,
-  así que ningún sistema de esta fase le hace nada al personaje de otro desde el anfitrión. Se
-  queda para la fase 3 (el rayo del platillo), o se quita si allí tampoco hace falta.
+  así que ningún sistema de esta fase le hace nada al personaje de otro desde el anfitrión. En la
+  fase 3 tampoco ha hecho falta, ni para el rayo del platillo (ver C9).
 - **Lo que lleva puesto otro jugador no se le ve**: gorro de aluminio, cohete y escafandra.
 - **El anfitrión en el menú** para mobiliario, municipal, objetos, gallinas y meteoritos (ver C12).
+
+### La fase 3
+
+Los cinco sistemas de la invasión se han hecho de una vez y no uno por PR como los de la fase 2:
+`aliens.js` llama a los otros cuatro y ellos a él (la nodriza recoge el platillo y manda
+refuerzos, el ladrón mira si el platillo es robado, los disfrazados salen de `aliens.js`, todos
+dejan baba), y con uno solo en red los demás se habrían quedado a medias en los invitados.
+
+| Paso | Qué | Cambios | Estado |
+| :---: | --- | --- | --- |
+| 1 | **La invasión**: `slime.js`, `aliens.js`, `boss.js`, `heist.js` y `disguise.js`, con los premios y el progreso | C13, C15, y lo que quedaba de C10 y C12 | **Hecho**, probado entre ventanas del mismo equipo |
+| 2 | **Bolera y fútbol** vistos entre pantallas | lo que queda de C14 | |
+
+Lo que el paso 1 deja pendiente:
+
+- **Probarlo entre dos redes.** Como la fase 2, solo está probado con `test:red`. Es donde más
+  se va a notar el retardo: hay que ver cómo se siente el culetazo a un marciano que se mueve, y
+  el rayo, por 4G.
+- **Ajustar el tamaño de la oleada** con dos, tres y siete jugadores (D2).
+- **Rescatar a un amigo del rayo.** Hoy solo se suelta él.
+- **Lo que lleva puesto otro jugador sigue sin vérsele**: gorro de aluminio, cohete y escafandra.
+  El gorro ya viaja (`F.FOIL`), porque el platillo lo necesita; falta pintarlo.
+- **No se oye a los demás** (C3), y los marcianos que echa otro suenan igual estén cerca o lejos
+  dentro de las 140 unidades.
+- **`orden` sigue sin uso** (D10).
 
 **Cada función nueva del juego agranda lo que queda.** Entre la primera versión de este documento
 y la segunda, el juego ganó nave nodriza, meteoritos, gallinas y disfrazados: las escrituras al
@@ -804,14 +906,14 @@ informe de deuda técnica) queda para más adelante y no bloquea ninguna fase.
 
 | # | Riesgo | Qué se nota | Cómo se trata |
 | --- | --- | --- | --- |
-| R1 | Desfase en los choques con cosas que se mueven | A 30 unidades/s, 150 ms de retardo son 4–5 unidades: un culetazo que tú ves claro puede no contar, o te atropella un coche que ya habías pasado | Los contactos los detecta cada jugador en su pantalla, contra lo que ve: así no hay culetazo claro que no cuente. Queda que el mundo se ve con unos 100 ms de retraso, y que el anfitrión frena o persigue según una posición igual de vieja |
+| R1 | Desfase en los choques con cosas que se mueven | A 30 unidades/s, 150 ms de retardo son 4–5 unidades: un culetazo que tú ves claro puede no contar, o te atropella un coche que ya habías pasado | Los contactos los detecta cada jugador en su pantalla, contra lo que ve, y lo que provoca lo ve al momento: así no hay culetazo claro que no cuente. Queda que el mundo se ve con unos 100 ms de retraso, que el anfitrión frena o persigue según una posición igual de vieja, y que alguna vez no da por bueno lo que un jugador ha visto (dos le dan al mismo marciano a la vez). Sin probar entre dos redes |
 | R2 | El anfitrión va lento | `loop()` limita `dt` a 0,05 s: por debajo de 20 fotogramas por segundo el mundo va a cámara lenta para todos | Avisar al crear partida en un equipo justo; la calidad automática ya baja sola |
 | R3 | Anfitrión con el juego tapado | En ordenador, cambiar de pestaña o minimizar ya no para la partida (metrónomo con worker, C6). En un móvil, bloquear la pantalla o cambiar de aplicación la congela para todos. Sin probar: Safari y el ahorro de energía de Chrome | `wakeLock`, aviso a los invitados y recomendar que haga de anfitrión quien juegue con ordenador |
 | R4 | Redes que no dejan conexión directa | Alguien no consigue entrar. **Ha pasado a la primera con datos móviles** | Mensaje claro y el TURN de ExpressTURN. Con `?ice=relay` se comprueba que sigue vivo. Si se acaba el cupo o alguien abusa de las credenciales, que están a la vista, se cambian o se pasa a Cloudflare con un Worker |
 | R5 | Depender del broker público de PeerJS | Si está caído no se pueden crear salas (las ya empezadas siguen) | El transporte es intercambiable (C1); se puede pasar a otro servicio sin tocar el juego |
 | R6 | Textos con HTML por la red | Los carteles del HUD son HTML y los invitados pintarían lo que mande el anfitrión | Hecho: al recibir un `efecto` solo se dejan las etiquetas que ya se usan (`b`, `i`, `kbd`, `small`, `span`) |
 | R7 | Las refactorizaciones rompen el juego de un jugador | Fallos en algo que hoy funciona | Sistema a sistema, un PR cada uno, con las pruebas pasando en cada paso |
-| R8 | Las estimaciones de peso del mundo están sin medir | El anfitrión sube más de lo previsto | Medidos jugadores y coches, que salen algo por debajo de lo estimado; el resto sigue estimado. Si hiciera falta: bajar la cadencia de `foto` o mandar solo lo cercano a cada invitado |
+| R8 | Las estimaciones de peso del mundo están sin medir | El anfitrión sube más de lo previsto | Medido todo: 484 bytes por `foto` con la sala llena en plena invasión, unos 350 kbps de subida, por debajo de los 500 estimados. Si hiciera falta: bajar la cadencia de `foto` o mandar solo lo cercano a cada invitado |
 | R9 | El juego crece más deprisa que el multijugador | Las fases 2 y 3 son cada vez más grandes | Lo dicho en «La fase 2 y la refactorización»: que lo nuevo nazca ya con la forma de C9 y C10 |
 
 ## 6. Decisiones abiertas
@@ -819,11 +921,12 @@ informe de deuda técnica) queda para más adelante y no bloquea ninguna fase.
 | # | Decisión | Recomendación |
 | --- | --- | --- |
 | D1 | ¿Nivel de búsqueda de la pandilla o de cada uno? | **Decidido: de la pandilla.** Solo hay un municipal y una abuela, y es más divertido que te persigan por lo que ha roto tu amigo. Ya funciona así |
-| D2 | ¿La invasión crece con los jugadores? | **Sí:** más marcianos a la vez, más culetazos para ganar y más coscorrones a la nodriza, a ajustar jugando |
+| D2 | ¿La invasión crece con los jugadores? | **Decidido: sí.** Por cada jugador de más, la mitad más de culetazos para ganar, un marciano más a la vez y un coscorrón más a la nodriza. Ya funciona así; las cifras están puestas a ojo y hay que ajustarlas jugando |
 | D3 | ¿Modo foto (y seguir a las mamás) en red? | **Decidido: desactivados en red.** Paran el tiempo y dejarían al jugador clavado a la vista de los demás |
 | D4 | ¿Cambiar de personaje a mitad de partida? | **Sí**, entre los libres, como ahora en la pausa. Ya funciona así |
 | D5 | ¿Quién puede hacer de noche? | **Cualquiera**, con aviso de quién ha sido. Ya funciona así |
 | D6 | ¿Entrar con la partida empezada? | **Sí**; es lo que hace falta cuando a alguien se le cae la conexión. Ya funciona así |
 | D7 | ¿Minijuegos unos contra otros (carrera, trucos)? | **Más adelante**, como función aparte encima de esta |
 | D9 | ¿Qué TURN se pone? | **Decidido: ExpressTURN**, cuenta gratuita con credenciales fijas, que no pide backend. Van en el código, a la vista de cualquiera: lo peor que puede pasar es que alguien gaste el cupo. La alternativa si eso ocurre es Cloudflare, con credenciales de vida corta y un Worker que las pida |
+| D10 | ¿Se quita `orden`? | Abierta. Ningún sistema lo usa después de las fases 2 y 3: lo que le pasa a cada jugador lo hace su pantalla. **Quitarlo** (`ORDERS`, `Party.order` y su prueba) si la bolera y el fútbol tampoco lo necesitan |
 | D8 | ¿A quién persiguen las gallinas? | **Decidido: al que atropelló a una**, no a la pandilla: es un castigo personal y son pocas para repartirlas. Ya funciona así |

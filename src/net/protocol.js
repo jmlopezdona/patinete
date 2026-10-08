@@ -21,7 +21,9 @@ export const RATE_FOTO = 15;
 
 // Bits de `flags` en el estado de un jugador
 // BUSY: está a otra cosa (pausa, minijuego, modo foto, pestaña tapada) y el mundo no debe ir a por él
-export const F = { GROUND: 1, GRIND: 2, BOOST: 4, CRASH: 8, SUNK: 16, HIDDEN: 32, INVULN: 64, HELD: 128, BUSY: 256 };
+// FOIL: lleva el gorro de aluminio y el platillo no lo ve. KEY: mantiene pulsado saltar, que a los
+// mandos del platillo robado enciende el rayo
+export const F = { GROUND: 1, GRIND: 2, BOOST: 4, CRASH: 8, SUNK: 16, HIDDEN: 32, INVULN: 64, HELD: 128, BUSY: 256, FOIL: 512, KEY: 1024 };
 
 const HEAD = 7; // tipo (1) + número de orden (2) + reloj del que envía en ms (4)
 const STATE = 31;

@@ -222,7 +222,7 @@ export class Traffic {
   }
 
   // En red, lo que viaja de los coches en cada `foto`: sitio, rumbo y velocidad de cada uno, y
-  // cuáles tiene la invasión del anfitrión
+  // cuáles tiene cogidos el platillo
   get bytes() {
     return this.cars.length * CAR + 2;
   }
@@ -245,8 +245,8 @@ export class Traffic {
   read(a, b, o, k) {
     const taken = a.getUint16(o + this.cars.length * CAR, true);
     this.cars.forEach((c, i) => {
-      // El que tiene la invasión de esta pantalla no se mueve de donde está; el que tiene la del
-      // anfitrión no está en la calle
+      // El que tiene cogido el platillo no se mueve de donde está: lo lleva la invasión (aliens.js),
+      // que aquí se entera un momento después que el tráfico
       c.away = !c.taken && !!(taken & (1 << i));
       if (!c.taken) {
         const xa = a.getInt16(o, true) / POS;
@@ -286,6 +286,20 @@ export class Traffic {
   }
 
   // ---------- Peatones ----------
+  // En red: lo que lleva de retraso cada peatón al que el platillo ha tenido cogido, para quien entra tarde
+  lags() {
+    const out = [];
+    this.peds.forEach((p, i) => p.lag && out.push(i, Math.round(p.lag * 100) / 100));
+    return out;
+  }
+
+  late(list) {
+    for (let i = 0; i + 1 < list.length; i += 2) {
+      const p = this.peds[list[i] | 0];
+      if (p && typeof list[i + 1] === 'number' && !p.taken) p.lag = list[i + 1];
+    }
+  }
+
   // Sale por los aires (sin daños: son de plástico). mine: lo ha atropellado el jugador de esta pantalla
   knock(i, mine) {
     const p = this.peds[i];
@@ -308,7 +322,7 @@ export class Traffic {
       const p = this.peds[i];
       const L = p.loop;
       if (p.taken) {
-        p.lag += dt; // cogido por la invasión de esta pantalla: se queda donde estaba
+        p.lag += dt; // cogido por el platillo o disfrazado: se queda donde estaba
         continue;
       }
       // Va y viene por su recorrido al paso del reloj del juego, que en red es el mismo para todos

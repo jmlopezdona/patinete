@@ -31,6 +31,8 @@ const CORE_WARM = new THREE.Color(0xfff27a);
 const CORE_SHUT = new THREE.Color(0xff5ad1);
 const CORE_DEAD = new THREE.Color(0xff7a1a);
 const DOCKS = new Set(['arrive', 'hunt', 'rest', 'snatch', 'stun']); // estados en los que el platillo puede recogerse
+const STATES = ['gone', 'arrive', 'fight', 'die', 'leave']; // en red, cómo viaja lo que hace
+const ALT = 20;
 
 const _v = new THREE.Vector3();
 
@@ -43,6 +45,8 @@ function glowMaterial(color, opacity) {
 // carrerilla en la rampa y salir disparado hacia arriba para darle un coscorrón. Después de cada
 // uno levanta el escudo un rato y suelta bombas de baba y refuerzos. Al último, revienta y se
 // acaba la invasión.
+// En red hay una sola para todos: la lleva el anfitrión (`direct`), los coscorrones de todos suman
+// y cada jugador detecta en su pantalla el suyo (`touch`) y si le cae encima una bomba (`splash`).
 export class Boss {
   constructor(game) {
     this.game = game;
@@ -53,7 +57,10 @@ export class Boss {
     this.minions = 0; // marcianos de refuerzo que quiere tener por el suelo
     this.blips = [];
     this.ceil = { x: P.x, z: P.z, r: R, y: 0 };
-    this.m = { state: 'gone', x: P.x, y: 0, z: P.z, t: 0, hits: 0, need: HITS, shield: 0, veil: 0, cd: 0, bombT: 0, jolt: 0, fx: 0, seen: false, blip: { x: P.x, z: P.z, icon: '🛸' } };
+    this.m = { state: 'gone', was: 'gone', x: P.x, y: 0, z: P.z, t: 0, hits: 0, shown: 0, need: HITS, shield: 0, shut: false, veil: 0, bombT: 0, jolt: 0, fx: 0, blip: { x: P.x, z: P.z, icon: '🛸' } };
+    this.led = false; // invitado de una partida en red: la nodriza es la del anfitrión
+    this.tipped = false;
+    this.hitCd = 0;
     this.build();
     this.buildBombs();
   }
@@ -152,24 +159,21 @@ export class Boss {
   }
 
   // ---------- Llegar y marcharse ----------
-  arrive() {
+  // who: los jugadores que hay por la calle. Con más gente aguanta algún coscorrón más
+  arrive(who) {
     const g = this.game;
     const m = this.m;
     m.state = 'arrive';
     m.t = 0;
     m.hits = 0;
-    m.need = Math.min(5, HITS + g.aliens.wave.level);
-    m.shield = m.veil = m.cd = m.jolt = m.fx = 0;
+    m.need = Math.min(5, HITS + g.aliens.wave.level) + Math.min(3, who.length - 1);
+    m.shield = 0;
     m.bombT = 3;
-    m.seen = false;
     m.y = this.home.y + 150;
     this.minions = 0;
-    this.group.rotation.set(0, 0, 0);
-    this.group.visible = true;
-    g.hud.big('¡La nave nodriza!', PINK, 2.4);
-    g.hud.setBoss(0, m.need, false);
-    g.sfx.mothership();
-    g.hud.toast('🛸 Ya no quedan marcianos de a pie… ¡y por eso baja la <b>nave nodriza</b>! Se planta sobre el <b>skatepark</b>: búscala en el minimapa.');
+    g.all.hud.big('¡La nave nodriza!', PINK, 2.4);
+    g.all.sfx.mothership();
+    g.all.hud.toast('🛸 Ya no quedan marcianos de a pie… ¡y por eso baja la <b>nave nodriza</b>! Se planta sobre el <b>skatepark</b>: búscala en el minimapa.');
   }
 
   // Se va sin pelear (amanece, empieza un minijuego...)
@@ -179,38 +183,52 @@ export class Boss {
     m.t = 0;
     m.shield = 0;
     this.minions = 0;
-    this.game.hud.setBoss(null);
   }
 
   hide() {
-    const g = this.game;
     this.m.state = 'gone';
     this.minions = 0;
-    this.group.visible = false;
-    this.light.intensity = 0;
-    for (const b of this.bombs) {
-      b.t = -1;
-      b.mesh.visible = b.ring.visible = false;
-    }
-    g.camera3.ceil = null;
-    g.hud.setBoss(null);
-    if (g.aliens.u.state === 'gone') g.sfx.ufo(0, false);
   }
 
   // ---------- Bucle ----------
   update(dt, p, time) {
     const g = this.game;
-    const A = g.aliens;
     const m = this.m;
+    const party = g.party;
+    const led = !!party && !party.hosting && party.fed;
+    // Al entrar en la partida de otro, o al acabarse, la nodriza de esta pantalla desaparece sin más
+    if (led !== this.led) {
+      this.led = led;
+      this.hide();
+      m.was = 'gone';
+      this.clear();
+    }
     this.blips.length = 0;
+    if (led) m.t += dt;
+    else this.direct(dt, g.crowd(p));
+    const d = Math.hypot(p.pos.x - m.x, p.pos.z - m.z);
+    if (m.state !== m.was) this.changed(p, d);
+    if (m.state !== 'gone') {
+      if (m.state === 'fight') this.touch(dt, p, d);
+      this.updateBombs(dt, p, time);
+      this.show(dt, p, time, d);
+      this.blips.push(m.blip);
+    }
+    // El marcador es de todos: sale de cómo va la pelea
+    g.hud.setBoss(this.on ? m.hits : null, m.need, m.shield > 0);
+  }
+
+  // Cuándo baja, qué hace y cuándo revienta. Solo jugando solo o en el anfitrión
+  direct(dt, who) {
+    const A = this.game.aliens;
+    const m = this.m;
     // Le toca cuando la oleada ya está echada y todavía no se ha dado por rechazada
     const due = A.active && !!A.wave && !A.cleared && A.wave.count >= A.wave.goal;
     if (m.state === 'gone') {
       if (!due) return;
-      this.arrive();
+      this.arrive(who);
     } else if (!due && m.state !== 'leave') this.leave();
     m.t += dt;
-    const d = Math.hypot(p.pos.x - m.x, p.pos.z - m.z);
     // Con la nodriza encima el platillo no pinta nada: se recoge en cuanto puede
     if (m.state !== 'leave' && DOCKS.has(A.u.state)) A.dock();
     switch (m.state) {
@@ -220,69 +238,116 @@ export class Boss {
         if (k >= 1) {
           m.state = 'fight';
           m.t = 0;
-          m.jolt = 1;
-          if (d < 160) g.camera3.addShake(0.7);
         }
         break;
       }
       case 'fight':
-        this.fight(dt, p, d);
+        this.fight(dt, who);
         break;
       case 'die':
         m.y += dt * 2.2;
-        m.fx -= dt;
-        if (m.fx <= 0) {
-          // Petardazos por todo el casco
-          m.fx = 0.14;
-          const a = Math.random() * TAU;
-          const r = Math.random() * R;
-          g.bits.burst(m.x + Math.sin(a) * r, m.y - 3, m.z + Math.cos(a) * r, FIRE, 9, 13, this.T.height(m.x + Math.sin(a) * r, m.z + Math.cos(a) * r), 0.6);
-        }
-        if (m.t >= DIE) {
-          this.boom(p, d);
-          return;
-        }
+        if (m.t >= DIE) this.boom();
         break;
       default:
         m.y += (12 + m.t * 60) * dt;
-        if (m.t > 3.2) {
-          this.hide();
-          return;
-        }
+        if (m.t > 3.2) this.hide();
         break;
     }
-    this.updateBombs(dt, p, time);
-    this.show(dt, p, time, d);
-    this.blips.push(m.blip);
   }
 
-  fight(dt, p, d) {
+  // La nodriza ha cambiado de estado: lo que se ve y se oye en esta pantalla al pasar de uno a otro
+  changed(p, d) {
     const g = this.game;
     const m = this.m;
-    const free = p.crashT <= 0 && !p.held;
-    m.cd -= dt;
+    const was = m.was;
+    m.was = m.state;
+    if (this.led) m.t = 0;
+    if (m.state === 'arrive') {
+      m.veil = m.jolt = m.fx = 0;
+      this.tipped = false;
+      this.hitCd = 0;
+      this.group.rotation.set(0, 0, 0);
+    } else if (m.state === 'fight' && was === 'arrive') {
+      m.jolt = 1;
+      if (d < 160) g.camera3.addShake(0.7);
+    } else if (m.state === 'gone') {
+      if (was === 'die') {
+        // Revienta: los studs que saltan son para todos, cada uno los suyos
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 6) * TAU;
+          const r = i < 6 ? R * 0.6 : 0;
+          const x = m.x + Math.sin(a) * r;
+          const z = m.z + Math.cos(a) * r;
+          const fl = this.T.height(x, z);
+          g.bits.burst(x, m.y, z, i % 2 ? FIRE : [C.dgray, C.lgray, C.stone, C.purple, 0xfff27a], 26, 22, fl, 1.1);
+          g.studs.burst(x, m.y - 4, z, 5, i % 3 === 0 ? 2 : 1, fl, 16);
+        }
+        if (d < 260) g.camera3.addShake(1.1);
+        g.sfx.bossBoom();
+      }
+      this.clear();
+    }
+    this.group.visible = m.state !== 'gone';
+  }
+
+  // Lo que deja de verse y de oírse cuando ya no está
+  clear() {
+    const g = this.game;
+    this.group.visible = false;
+    this.light.intensity = 0;
+    for (const b of this.bombs) {
+      b.t = -1;
+      b.mesh.visible = b.ring.visible = false;
+    }
+    g.camera3.ceil = null;
+    if (g.aliens.u.state === 'gone') g.sfx.ufo(0, false);
+  }
+
+  fight(dt, who) {
+    const g = this.game;
+    const m = this.m;
     if (m.shield > 0) {
       m.shield -= dt;
-      if (m.shield <= 0) this.lower(d < NEAR);
+      if (m.shield <= 0) m.shield = 0;
     }
-    if (!m.seen && d < NEAR) {
-      m.seen = true;
+    // Bombas de baba: llueven con el escudo levantado; sin él cae alguna suelta. Apunta a cualquiera
+    // que tenga a tiro
+    m.bombT -= dt;
+    if (m.bombT > 0) return;
+    const near = who.filter((p) => p.crashT <= 0 && !p.held && !g.busy(p) && Math.hypot(p.pos.x - m.x, p.pos.z - m.z) < NEAR);
+    if (!near.length) return;
+    this.bomb(near[Math.floor(Math.random() * near.length)]);
+    m.bombT = m.shield > 0 ? 1.2 : Math.max(2.6, 4.6 - m.hits * 0.5);
+  }
+
+  // La panza hace de techo: quien llega hasta ella saltando le da con la cabeza. Lo detecta cada
+  // jugador en su pantalla, y el coscorrón, que es de todos, se lo cuenta al anfitrión
+  touch(dt, p, d) {
+    const g = this.game;
+    const m = this.m;
+    this.hitCd -= dt;
+    if (!this.tipped && d < NEAR) {
+      this.tipped = true;
       g.hud.toast(`🛹 Coge carrerilla en el <b>half-pipe</b> con el <b>turbo</b> y sal disparado hacia arriba: <b>${m.need} coscorrones</b> en la panza y la nodriza cae. Con <b>gravedad lunar</b> se llega de un salto desde lo alto de la rampa.`, 'Coge carrerilla en el half-pipe con el turbo y sal disparado hacia arriba: unos cuantos coscorrones en la panza y la nodriza cae. Con gravedad lunar se llega de un salto desde lo alto de la rampa.');
     }
-    // Bombas de baba: llueven con el escudo levantado; sin él cae alguna suelta
-    m.bombT -= dt;
-    if (m.bombT <= 0 && d < NEAR && free) {
-      this.bomb(p, d);
-      m.bombT = m.shield > 0 ? 1.2 : Math.max(2.6, 4.6 - m.hits * 0.5);
-    }
-    // La panza hace de techo: quien llega hasta ella saltando le da con la cabeza
-    if (p.grounded || !free || d > BELLY_R || p.pos.y < this.hitY || p.pos.y > this.hitY + 3) return;
+    if (p.grounded || p.crashT > 0 || p.held || g.busy(p) || d > BELLY_R || p.pos.y < this.hitY || p.pos.y > this.hitY + 3) return;
     p.pos.y = this.hitY;
     if (p.vel.y > -6) p.vel.y = -6;
-    if (m.cd > 0) return;
-    m.cd = 0.9;
-    if (m.shield > 0) this.clang(p);
+    if (this.hitCd > 0) return;
+    this.hitCd = 0.9;
+    if (m.shield > 0) {
+      this.clang(p);
+      return;
+    }
+    g.camera3.addShake(0.7);
+    p.boost = 1;
+    if (this.led) g.party.tell('panza', 0);
     else this.hit(p);
+  }
+
+  // En el anfitrión: un invitado dice que le ha dado en la panza
+  asked(k, v, r) {
+    if (this.m.state === 'fight' && this.m.shield <= 0) this.hit(r);
   }
 
   hit(p) {
@@ -290,26 +355,23 @@ export class Boss {
     const m = this.m;
     const fl = this.T.height(p.pos.x, p.pos.z);
     m.hits++;
-    m.jolt = 1;
-    g.bits.burst(p.pos.x, p.pos.y + HEAD, p.pos.z, SPARKS, 22, 14, fl, 0.5);
-    g.studs.burst(p.pos.x, p.pos.y + HEAD - 1.5, p.pos.z, 6, 1, fl, 10);
-    g.camera3.addShake(0.7);
-    g.sfx.bossHit();
-    g.hud.trick('¡Coscorrón a la nodriza!', 2000 * m.hits, 1);
-    g.addStuds(200 * m.hits);
-    p.boost = 1;
+    const near = g.at(p.pos.x, p.pos.z);
+    near.bits.burst(p.pos.x, p.pos.y + HEAD, p.pos.z, SPARKS, 22, 14, fl, 0.5);
+    near.sfx.bossHit();
+    const to = g.to(p);
+    to.studs.burst(p.pos.x, p.pos.y + HEAD - 1.5, p.pos.z, 6, 1, fl, 10);
+    to.hud.trick('¡Coscorrón a la nodriza!', 2000 * m.hits, 1);
+    to.addStuds(200 * m.hits);
     if (m.hits >= m.need) {
       this.down();
       return;
     }
-    g.hud.big(m.hits === m.need - 1 ? '¡Uno más y cae!' : '¡En toda la panza!', GOLD, 1.2, true);
+    g.all.hud.big(m.hits === m.need - 1 ? '¡Uno más y cae!' : '¡En toda la panza!', GOLD, 1.2, true);
     // Del susto levanta el escudo, y mientras dura llueven bombas y bajan refuerzos
     m.shield = Math.min(8, SHIELD + g.aliens.wave.level * 0.5);
     m.bombT = 1.2;
     this.minions = Math.min(4, 1 + m.hits);
-    g.sfx.shield(true);
-    g.hud.setBoss(m.hits, m.need, true);
-    if (m.hits === 1) g.hud.toast('🛡️ La nodriza levanta el <b>escudo</b> y suelta <b>bombas de baba</b> y refuerzos. Esquiva los círculos rojos y espera a que se apague… o rómpeselo de un <b>timbrazo</b>.');
+    if (m.hits === 1) g.all.hud.toast('🛡️ La nodriza levanta el <b>escudo</b> y suelta <b>bombas de baba</b> y refuerzos. Esquiva los círculos rojos y espera a que se apague… o rómpeselo de un <b>timbrazo</b>.');
   }
 
   // Con el escudo levantado no hay nada que hacer: se rebota y ya
@@ -321,21 +383,12 @@ export class Boss {
     g.hud.big('¡Escudo!', PINK, 0.8, true);
   }
 
-  lower(tell) {
-    const g = this.game;
-    const m = this.m;
-    m.shield = 0;
-    g.hud.setBoss(m.hits, m.need, false);
-    if (!tell) return;
-    g.sfx.shield(false);
-    g.hud.big('¡Sin escudo!', GOLD, 1, true);
-  }
-
-  // Timbre sónico: si suena cerca, el escudo se viene abajo
-  sonic(x, z, r) {
+  // Timbre sónico: si suena cerca, el escudo se viene abajo. dry: solo se pregunta si lo cogería
+  // (un invitado, que quien se lo rompe es el anfitrión al enterarse del timbrazo)
+  sonic(x, z, r, dry) {
     const m = this.m;
     if (m.state !== 'fight' || m.shield <= 0 || Math.hypot(m.x - x, m.z - z) > r + BELLY_R) return false;
-    this.lower(true);
+    if (!dry) m.shield = 0;
     return true;
   }
 
@@ -344,65 +397,70 @@ export class Boss {
     const g = this.game;
     const m = this.m;
     m.state = 'die';
-    m.t = m.fx = m.shield = 0;
+    m.t = m.shield = 0;
     this.minions = 0;
     g.aliens.rout();
-    g.hud.setBoss(m.need, m.need, false);
-    g.hud.big('¡Nodriza derribada!', GOLD, 2.4);
-    g.sfx.bossDown();
+    g.all.hud.big('¡Nodriza derribada!', GOLD, 2.4);
+    g.all.sfx.bossDown();
   }
 
-  boom(p, d) {
+  // Revienta, y con ella se acaba la invasión: el premio es para todos
+  boom() {
     const g = this.game;
     const A = g.aliens;
     const m = this.m;
     const reward = 4000 + A.wave.level * 1500;
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 6) * TAU;
-      const r = i < 6 ? R * 0.6 : 0;
-      const x = m.x + Math.sin(a) * r;
-      const z = m.z + Math.cos(a) * r;
-      const fl = this.T.height(x, z);
-      g.bits.burst(x, m.y, z, i % 2 ? FIRE : [C.dgray, C.lgray, C.stone, C.purple, 0xfff27a], 26, 22, fl, 1.1);
-      g.studs.burst(x, m.y - 4, z, 5, i % 3 === 0 ? 2 : 1, fl, 16);
-    }
     // El comandante sale por los aires, como cualquier otro
     A.eject(m.x, m.y + 6, m.z);
-    if (d < 260) g.camera3.addShake(1.1);
-    g.sfx.bossBoom();
     this.hide();
-    g.save.motherships = (g.save.motherships || 0) + 1;
-    g.addStuds(reward);
-    g.hud.toast(`🛸 ¡Has derribado la <b>nave nodriza</b>! Premio extra: <b>${reward.toLocaleString('es-ES')}</b> studs.`, '¡Has derribado la nave nodriza! Y con premio extra.');
+    g.all.tally('motherships');
+    g.all.addStuds(reward);
+    g.all.hud.toast(`🛸 ¡Has derribado la <b>nave nodriza</b>! Premio extra: <b>${reward.toLocaleString('es-ES')}</b> studs.`, '¡Has derribado la nave nodriza! Y con premio extra.');
     A.victory();
   }
 
   // ---------- Bombas de baba ----------
-  bomb(p, d) {
-    const b = this.bombs.find((o) => o.t < 0);
-    if (!b) return;
+  // Anfitrión: suelta una hacia ese jugador, y la cuenta una vez: lo que tarda en caer es cosa de cada pantalla
+  bomb(p) {
+    const i = this.bombs.findIndex((o) => o.t < 0);
+    if (i < 0) return;
     const m = this.m;
-    // Apunta un poco por delante de ti, con algo de mala puntería
+    // Apunta un poco por delante, con algo de mala puntería
     p.velocity(_v);
     const lead = Math.min(0.35, 9 / (Math.hypot(_v.x, _v.z) || 1));
     const a = Math.random() * TAU;
     const r = Math.random() * 4.5;
     const x = p.pos.x + _v.x * lead + Math.sin(a) * r;
     const z = p.pos.z + _v.z * lead + Math.cos(a) * r;
-    const gy = this.T.height(x, z);
-    if (gy > this.hitY - 3) return; // un tejado: ahí no llega
+    if (this.T.height(x, z) > this.hitY - 3) return; // un tejado: ahí no llega
     const ox = x - m.x;
     const oz = z - m.z;
     const k = Math.min(1, 20 / (Math.hypot(ox, oz) || 1));
-    b.x = x;
-    b.z = z;
-    b.gy = gy;
-    b.x0 = m.x + ox * k;
-    b.z0 = m.z + oz * k;
-    b.y0 = m.y - BELLY;
+    const v = [i, x, z, m.x + ox * k, m.z + oz * k, m.y - BELLY];
+    this.drop(v);
+    this.game.party?.tell('bomba', v);
+  }
+
+  // Una bomba que empieza a caer: cuál, dónde va a dar y de dónde sale
+  drop(v) {
+    const b = this.bombs[v[0] | 0];
+    if (!b) return;
+    const p = this.game.player.pos;
+    b.x = v[1];
+    b.z = v[2];
+    b.gy = this.T.height(b.x, b.z);
+    b.x0 = v[3];
+    b.z0 = v[4];
+    b.y0 = v[5];
     b.t = 0;
     b.mesh.visible = b.ring.visible = true;
-    this.game.sfx.bomb(d < 40 ? 1 : 0.5);
+    const d = Math.hypot(p.x - b.x, p.z - b.z);
+    if (d < NEAR * 2) this.game.sfx.bomb(d < 40 ? 1 : 0.5);
+  }
+
+  // Invitado: la bomba que suelta la nodriza del anfitrión
+  heard(k, v) {
+    if (this.led && this.m.state !== 'gone' && v.length >= 6) this.drop(v);
   }
 
   updateBombs(dt, p, time) {
@@ -423,16 +481,17 @@ export class Boss {
     }
   }
 
+  // Cae: el charco lo deja el anfitrión, y a quién pringa lo ve cada uno en su pantalla
   splash(b, p) {
     const g = this.game;
     b.t = -1;
     b.mesh.visible = b.ring.visible = false;
-    g.bits.burst(b.x, b.gy + 0.6, b.z, GOO, 16, 10, b.gy, 0.45);
-    const goo = g.slime.splat(b.x, b.z, 2.4);
-    if (goo) goo.t = Math.min(goo.t, GOO_LIFE);
+    g.here(b.x, b.z).bits.burst(b.x, b.gy + 0.6, b.z, GOO, 16, 10, b.gy, 0.45);
+    // Sus charcos se secan enseguida: si no, el half-pipe acaba impracticable
+    g.slime.splat(b.x, b.z, 2.4, GOO_LIFE);
     const d = Math.hypot(p.pos.x - b.x, p.pos.z - b.z);
     if (d < 90) g.sfx.squelch(d < 30 ? 1 : 0.5);
-    if (d > BOMB_R || p.crashT > 0 || p.held || p.invuln > 0 || Math.abs(p.pos.y - b.gy) > 3.5) return;
+    if (d > BOMB_R || p.crashT > 0 || p.held || p.invuln > 0 || g.busy(p) || Math.abs(p.pos.y - b.gy) > 3.5) return;
     // Bombazo: pringado de arriba abajo, frenazo y unos cuantos studs por los suelos
     const lost = Math.min(100, Math.floor(g.save.studs / 10) * 10);
     if (lost > 0) {
@@ -452,6 +511,43 @@ export class Boss {
     g.hud.big('¡Bombazo de baba!', '#ff6b5a', 1, true);
   }
 
+  // ---------- En red ----------
+  // Lo que viaja en cada `foto`: nada si no está; si no, qué hace, a qué altura y los coscorrones que lleva
+  get bytes() {
+    return this.m.state === 'gone' ? 1 : 5;
+  }
+
+  write(dv, o) {
+    const m = this.m;
+    if (m.state === 'gone') {
+      dv.setUint8(o, 0);
+      return o + 1;
+    }
+    dv.setUint8(o, STATES.indexOf(m.state) | (m.shield > 0 ? 128 : 0));
+    dv.setInt16(o + 1, Math.max(-32767, Math.min(32767, Math.round(m.y * ALT))), true);
+    dv.setUint8(o + 3, m.hits);
+    dv.setUint8(o + 4, m.need);
+    return o + 5;
+  }
+
+  // Invitado: la nodriza del anfitrión, entre dos fotos suyas (k de 0 a 1)
+  read(a, b, o, k) {
+    const m = this.m;
+    const st = a.getUint8(o);
+    if (!st) {
+      m.state = 'gone';
+      m.shield = 0;
+      return o + 1;
+    }
+    m.state = STATES[st & 7] || 'gone';
+    m.shield = st & 128 ? 1 : 0;
+    const j = (b.getUint8(o) & 7) === (st & 7) ? k : 0;
+    m.y = (a.getInt16(o + 1, true) + (b.getInt16(o + 1, true) - a.getInt16(o + 1, true)) * j) / ALT;
+    m.hits = a.getUint8(o + 3);
+    m.need = a.getUint8(o + 4);
+    return o + 5;
+  }
+
   // ---------- Aspecto ----------
   show(dt, p, time, d) {
     const g = this.game;
@@ -459,6 +555,29 @@ export class Boss {
     const grp = this.group;
     const dying = m.state === 'die';
     const shut = m.shield > 0;
+    // Cada coscorrón la sacude, y el escudo se oye subir y bajar
+    if (m.hits !== m.shown) {
+      if (m.hits > m.shown) m.jolt = 1;
+      m.shown = m.hits;
+    }
+    if (shut !== m.shut) {
+      m.shut = shut;
+      if (shut) g.here(m.x, m.z).sfx.shield(true);
+      else if (m.state === 'fight' && d < NEAR) {
+        g.sfx.shield(false);
+        g.hud.big('¡Sin escudo!', GOLD, 1, true);
+      }
+    }
+    if (dying) {
+      m.fx -= dt;
+      if (m.fx <= 0) {
+        // Petardazos por todo el casco
+        m.fx = 0.14;
+        const a = Math.random() * TAU;
+        const r = Math.random() * R;
+        g.bits.burst(m.x + Math.sin(a) * r, m.y - 3, m.z + Math.cos(a) * r, FIRE, 9, 13, this.T.height(m.x + Math.sin(a) * r, m.z + Math.cos(a) * r), 0.6);
+      }
+    }
     m.jolt = damp(m.jolt, 0, 3, dt);
     const wob = dying ? 0.1 + m.t * 0.05 : m.jolt * 0.07;
     grp.position.set(m.x, m.y + Math.sin(time * 1.1) * 0.5, m.z);

@@ -52,7 +52,7 @@ import { Party, WHY } from './game/party.js';
 import { NOBODY, NEAR } from './game/fx.js';
 
 // Las hazañas que se cuentan en la partida guardada y que el anfitrión puede apuntarle a otro
-const TALLIES = ['hens'];
+const TALLIES = ['hens', 'aliens', 'ufos', 'rescues', 'motherships', 'statues', 'spies'];
 import { Lobby } from './game/lobby.js';
 
 const SAVE_KEY = 'cobena-patinete-v1';
@@ -401,6 +401,8 @@ class Game {
       this.wanted.reset(true);
       this.hens.calm(true);
       this.state = 'menu';
+      // En red la invasión sigue sin él: si el platillo lo tenía, lo pierde y él vuelve a su casa
+      if (this.party && this.player.held) this.goHome();
       this.hud.show(false);
       $('menu').classList.remove('out');
       this.checkUpdate();
@@ -512,6 +514,18 @@ class Game {
     if (!TALLIES.includes(key)) return;
     this.save[key] = (this.save[key] || 0) + 1;
     this.dirty = true;
+  }
+
+  // Un marciano que el anfitrión le apunta al jugador de esta pantalla (ver game/aliens.js)
+  kicked(label, base) {
+    this.aliens.reward(this.player, this.time, typeof label === 'string' ? label : null, +base || 0);
+  }
+
+  // Invasión rechazada: el premio y el nivel de la siguiente, que es el mayor que haya superado cada uno
+  beat(level, reward) {
+    this.save.invasions = Math.max(this.save.invasions || 0, (level | 0) + 1);
+    this.addStuds(+reward || 0);
+    this.saveGame();
   }
 
   // Le da un objeto al jugador de esta pantalla (ver game/items.js)

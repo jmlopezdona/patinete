@@ -331,8 +331,11 @@ export class Items {
   // En red: otro jugador (`r`) ha hecho sonar el timbre
   rang(r) {
     if (!r) return;
+    const g = this.game;
     this.ring(r.pos.x, r.pos.y, r.pos.z);
-    this.game.here(r.pos.x, r.pos.z).sfx.sonic();
+    g.here(r.pos.x, r.pos.z).sfx.sonic();
+    // A los marcianos, que son de todos, los aturde el anfitrión
+    if (g.party.hosting && g.aliens.active) g.aliens.sonic(r.pos.x, r.pos.z, SONIC_R);
   }
 
   update(dt, p, time) {
