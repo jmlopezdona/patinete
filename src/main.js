@@ -438,6 +438,36 @@ class Game {
     if (this.state === 'menu' && this.home.drop) this.dropoff.arrive();
   }
 
+  // En red, la pausa lleva un botón por cada amigo. Sale apagado el que no está en la calle, y
+  // con una misión a medias no sale ninguno
+  listFriends() {
+    const box = document.getElementById('p-friends');
+    box.textContent = '';
+    if (!this.party || this.missions.active) return;
+    for (const r of this.party.remotes.values()) {
+      const b = document.createElement('button');
+      b.className = 'brick-btn';
+      b.innerHTML = `${r.char.icon} Ir con ${r.char.name}`;
+      b.disabled = !this.party.reachable(r);
+      b.addEventListener('click', () => {
+        // El mundo no se para en la pausa: puede que ya no se pueda ir con él
+        if (!this.party?.reachable(r)) return void (b.disabled = true);
+        this.goTo(r);
+        this.setPaused(false);
+      });
+      box.appendChild(b);
+    }
+  }
+
+  // Deja al jugador donde está un amigo, mirando hacia donde él, y sin perseguidores
+  goTo(r) {
+    this.aliens.release(this.player);
+    this.wanted.reset(true);
+    this.hens.calm(true);
+    this.player.place(r.pos.x, r.pos.z, r.heading);
+    this.camera3.snap = true;
+  }
+
   // Elige quién sale a la calle: cambia piloto y vehículo, y su doble desaparece del pueblo
   setCharacter(id, silent = false) {
     if (!silent && this.party?.taken(id)) return;
@@ -598,6 +628,7 @@ class Game {
     document.getElementById('pause').classList.toggle('hidden', !p);
     document.getElementById('p-abort').classList.toggle('hidden', !this.missions.active);
     document.getElementById('p-watch').classList.toggle('hidden', !this.watch.can);
+    if (p) this.listFriends();
     if (this.sfx.ctx) {
       if (p) this.sfx.ctx.suspend();
       else this.sfx.ctx.resume();

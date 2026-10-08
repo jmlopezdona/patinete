@@ -208,6 +208,11 @@ export class Party {
     return this.crew;
   }
 
+  // ¿Se puede ir a donde está ese amigo? Tiene que andar por la calle, entero y sobre tierra firme
+  reachable(r) {
+    return this.remotes.get(r.slot) === r && r.seen && !r.hidden && !r.down && !r.held && this.game.terrain.height(r.pos.x, r.pos.z) > -1;
+  }
+
   // El sitio en la sala de un jugador, sea el de esta pantalla o un amigo, y al revés
   slotOf(p) {
     return p === this.game.player ? this.session.slot : p.slot;

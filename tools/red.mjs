@@ -135,6 +135,25 @@ const sinFoto = await B.evaluate(() => {
 });
 check('en red no hay modo foto ni seguir a las mamás', sinFoto);
 
+// La pausa lleva un botón por amigo que deja al jugador donde está él. Se le devuelve a su sitio
+// en el acto, antes de que le pase nada de lo que hay por allí
+const viaje = await B.evaluate(() => {
+  const g = window.__game;
+  const p = g.player;
+  const r = g.party.remotes.get(0);
+  const antes = { x: p.pos.x, z: p.pos.z, heading: p.heading };
+  g.setPaused(true);
+  const b = document.querySelector('#p-friends button');
+  const out = { botones: document.querySelectorAll('#p-friends button').length, texto: b?.textContent, apagado: b?.disabled, estaba: Math.hypot(p.pos.x - r.pos.x, p.pos.z - r.pos.z) };
+  b?.click();
+  out.queda = Math.hypot(p.pos.x - r.pos.x, p.pos.z - r.pos.z);
+  out.pausa = g.paused;
+  p.place(antes.x, antes.z, antes.heading);
+  return out;
+});
+check('la pausa ofrece ir con cada amigo', viaje.botones === 1 && viaje.texto.includes('Ir con') && !viaje.apagado, viaje.texto);
+check('y lo deja a su lado', viaje.estaba > 8 && viaje.queda < 0.01 && !viaje.pausa, `estaba a ${viaje.estaba.toFixed(1)}, queda a ${viaje.queda.toFixed(2)}`);
+
 // El reloj y el día y la noche son los del anfitrión
 const hora = (page) => page.evaluate(() => window.__game.time);
 const [ha, hb] = await Promise.all([hora(A), hora(B)]);
