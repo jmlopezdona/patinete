@@ -19,6 +19,7 @@ import { createScooter } from './lego/scooter.js';
 import { Terrain } from './world/terrain.js';
 import { buildTown, zoneAt, BOUNDS } from './world/cobena.js';
 import { buildLandmarks } from './world/landmarks.js';
+import { CURB, curbAt } from './world/curbs.js';
 import { lift } from './world/relief.js';
 import { roamSpot } from './world/streets.js';
 import { Player } from './game/player.js';
@@ -243,6 +244,8 @@ class Game {
     W.batch.lift = W.geo.lift = lift;
     buildTown(W);
     buildLandmarks(W);
+    // Las aceras suben su escalón con el pueblo ya puesto: quien lo coloca lo hace sobre suelo llano
+    W.terrain.curb = { y: CURB, at: curbAt };
     // El pueblo ya se construye sobre el relieve: no hay que subirlo al pintar
     const town = new THREE.Group();
     town.userData.fixed = true;

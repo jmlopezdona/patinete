@@ -161,7 +161,7 @@ export function normal(x, z, out) {
 }
 
 // Parte de un polígono convexo (x, z seguidos) que cumple a·x + b·z + c >= 0
-function clip(p, a, b, c) {
+export function clip(p, a, b, c) {
   const out = [];
   for (let i = 0; i < p.length; i += 2) {
     const k = (i + 2) % p.length;
@@ -213,4 +213,24 @@ export function drape(t, emit, k = 1) {
       fan(clip(cell, 1, 1, -(x + z + cs)), emit);
     }
   }
+}
+
+// Puntos en los que un segmento cambia de triángulo de celda, extremos incluidos y en orden: entre
+// dos seguidos lift() es una recta. emit(x, z) los recibe de uno en uno.
+export function crease(ax, az, bx, bz, emit) {
+  const u0 = (ax - X0) / CS;
+  const v0 = (az - Z0) / CS;
+  const du = (bx - ax) / CS;
+  const dv = (bz - az) / CS;
+  const ts = [0, 1];
+  // Las tres familias de rectas de la rejilla: x, z y la diagonal de cada celda
+  for (const [o, d] of [[u0, du], [v0, dv], [u0 + v0, du + dv]]) {
+    if (Math.abs(d) < 1e-9) continue;
+    for (let n = Math.ceil(Math.min(o, o + d)); n <= Math.max(o, o + d); n++) {
+      const t = (n - o) / d;
+      if (t > 1e-6 && t < 1 - 1e-6) ts.push(t);
+    }
+  }
+  ts.sort((a, b) => a - b);
+  for (const t of ts) emit(ax + (bx - ax) * t, az + (bz - az) * t);
 }

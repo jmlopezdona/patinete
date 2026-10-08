@@ -666,6 +666,8 @@ export class Player {
       const dz = abz / r.len;
       const along = this.vel.x * dx + this.vel.z * dz;
       if (Math.abs(along) < 4) continue;
+      // Un bordillo solo engancha yendo a lo largo: cruzarlo en diagonal es subirse a la acera
+      if (r.curb && Math.abs(along) < 0.85 * Math.hypot(this.vel.x, this.vel.z)) continue;
       const dir = Math.sign(along);
       this.grind = { r, t, dir, speed: Math.max(Math.abs(along), 13), dx: dx * dir, dz: dz * dir, spark: 0 };
       const vis = this.heading + this.visYaw + this.spin;
@@ -700,8 +702,18 @@ export class Player {
       this.game.sfx.jump();
       this.launch(g.dx * g.speed, this.stats.jump * 0.92, g.dz * g.speed, null, 0, 0, true);
     } else if (g.t <= 0 || g.t >= 1) {
-      this.grind = null;
-      this.launch(g.dx * g.speed, 3.5, g.dz * g.speed, null, 0, 0, true);
+      const n = g.dir > 0 ? r.next : r.prev;
+      if (n) {
+        // El bordillo sigue por el tramo siguiente de la calle
+        g.r = n;
+        g.t = g.dir > 0 ? 0 : 1;
+        g.dx = ((n.bx - n.ax) / n.len) * g.dir;
+        g.dz = ((n.bz - n.az) / n.len) * g.dir;
+        this.heading = Math.atan2(g.dx, g.dz);
+      } else {
+        this.grind = null;
+        this.launch(g.dx * g.speed, 3.5, g.dz * g.speed, null, 0, 0, true);
+      }
     }
     if (!this.grind) this.game.sfx.grindStop();
   }
