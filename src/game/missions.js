@@ -59,7 +59,7 @@ export class Missions {
       { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Márcale a Teo todos los goles que puedas en 60 segundos.', night: false, unit: (v) => `${v} goles` },
       // De noche Teo se toma la noche libre: para un marciano con cuatro brazos
       // Solo cuando Emma está de vecina en el parque; dónde, lo dice ella (ver place)
-      { id: 'selfie', name: 'Selfie con Emma', icon: '🤳', color: 0xff5fa2, x: 0, z: 0, desc: `Cuélate en las ${SHOTS} fotos de Emma: sal bien de fondo y que el flash te pille haciendo un truco distinto cada vez.`, when: () => !!game.folks?.emma && game.folks.away !== 'emma', linger: 40, unit: (v) => `${Math.round(v)} pts` },
+      { id: 'selfie', name: 'Selfie con Emma', icon: '🤳', color: 0xff5fa2, x: 0, z: 0, desc: `Cuélate en las ${SHOTS} fotos de Emma: sal bien de fondo y que el flash te pille haciendo un truco distinto cada vez.`, when: () => !!game.folks?.emma && game.folks.away !== 'emma', linger: 180, unit: (v) => `${Math.round(v)} pts` },
       { id: 'aliensoccer', name: 'Chut Marciano', icon: '👾', color: 0x7ddc1f, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'El portero es un marciano con cuatro brazos que no le quita ojo al balón: márcale en 60 segundos.', night: true, unit: (v) => `${v} goles` },
     ];
     this.state = 'idle';
@@ -179,7 +179,8 @@ export class Missions {
     g.hud.results(null);
   }
 
-  finish(stars, value, lines) {
+  // photos: las fotos de la sesión con Emma, para el álbum del resultado
+  finish(stars, value, lines, photos = null) {
     const g = this.game;
     const def = this.def;
     const sv = g.save;
@@ -206,7 +207,7 @@ export class Missions {
       g.sfx.fanfare();
       g.confetti();
     } else g.sfx.fail();
-    g.hud.results({ title: `${def.icon} ${def.name}`, stars, lines, record, reward, best: sv.best[def.id] != null ? def.unit(sv.best[def.id]) : null });
+    g.hud.results({ title: `${def.icon} ${def.name}`, stars, lines, record, reward, best: sv.best[def.id] != null ? def.unit(sv.best[def.id]) : null, photos });
   }
 
   setGoal(x, z) {
@@ -514,7 +515,7 @@ export class Missions {
     let seen = 0;
     let streak = 0;
     let last = null;
-    let best = null;
+    const photos = [];
     let started = false;
     let end = 0;
     E.session = true;
@@ -527,7 +528,7 @@ export class Missions {
       this.score += r.pts;
       if (r.hearts) seen++;
       const cv = this.snap();
-      if (r.pts && (!best || r.pts > best.pts)) best = { cv, pts: r.pts };
+      photos.push({ cv, hearts: r.hearts, pts: r.pts });
       g.hud.selfie(cv, r.hearts);
       F.heart(E, [0, 3, 6, 11][r.hearts]);
       E.joy = [0, 0.4, 0.8, 1.3][r.hearts];
@@ -558,13 +559,9 @@ export class Missions {
           const stars = s >= SELFIE[2] ? 3 : s >= SELFIE[1] ? 2 : s >= SELFIE[0] ? 1 : 0;
           const tip = stars === 3 ? '¡Menuda sesión! Emma las sube todas.' : stars === 0 ? `Necesitas ${SELFIE[0]} puntos. Colócate en el abanico rosa, a la espalda de Emma, y salta (Espacio) cuando levante el móvil.` : `Que el flash te pille en el aire girando (A/D), con un ${p.char.trick.toLowerCase()} (F) o una voltereta (S), y cambia de truco en cada foto para subir el multiplicador.`;
           const lines = [`Puntuación: <b>${s}</b> · Sales en <b>${seen}/${SHOTS}</b> fotos`, tip];
-          if (best) {
-            const c = best.cv.getContext('2d');
-            g.photo.stamp(c, best.cv.width, best.cv.height);
-            const url = best.cv.toDataURL('image/jpeg', 0.9);
-            lines.push(`<a class="pola best" href="${url}" download="selfie-con-emma.jpg"><img src="${url}" alt="La mejor foto de la sesión"><span>⬇ Guardar la mejor foto</span></a>`);
-          }
-          this.finish(stars, s, lines);
+          // Todas llevan el sello del modo foto: en el álbum del resultado se guarda la que se quiera
+          for (const f of photos) g.photo.stamp(f.cv.getContext('2d'), f.cv.width, f.cv.height);
+          this.finish(stars, s, lines, photos);
         }
       },
       cleanup: () => {

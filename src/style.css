@@ -535,18 +535,55 @@ kbd {
 .pola.out span {
   color: #7a8794;
 }
-a.pola.best {
-  display: inline-block;
-  width: 210px;
-  margin-top: 8px;
-  padding: 7px 7px 0;
-  text-decoration: none;
-  transform: rotate(-2deg);
+.album {
+  margin-top: 10px;
 }
-a.pola.best span {
-  font-size: 15px;
-  line-height: 32px;
+.album .big {
+  display: inline-block;
+  width: 200px;
+  padding: 7px 7px 0;
+  transform: rotate(-2deg);
+  animation: none;
+}
+.album .big span {
+  font-size: 14px;
+  line-height: 28px;
   color: #12202e;
+}
+.album .strip {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  max-width: 660px;
+  margin: 12px auto 4px;
+}
+.album .strip .pola {
+  flex: 0 1 48px;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  transform: none;
+  animation: none;
+  transition: transform 0.12s;
+}
+.album .strip .pola:hover,
+.album .strip .pola.sel {
+  transform: translateY(-5px) scale(1.08);
+}
+.album .strip .pola.sel {
+  outline: 3px solid var(--yellow);
+}
+.album .row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.album .row .brick-btn {
+  width: auto;
+  padding: 8px 20px 11px;
+  font-size: 16px;
+  text-decoration: none;
 }
 
 #prompt {
@@ -1518,8 +1555,20 @@ body.touch #speedo .num {
     font-size: 8px;
     line-height: 10px;
   }
-  a.pola.best {
-    width: 130px;
+  .album .big {
+    width: 110px;
+    padding: 4px 4px 0;
+  }
+  .album .big span {
+    font-size: 10px;
+    line-height: 18px;
+  }
+  .album .strip {
+    gap: 3px;
+    margin-top: 6px;
+  }
+  .album .row {
+    margin-top: 6px;
   }
   .menu-cards .card:nth-child(n + 2) {
     display: none;
