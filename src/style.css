@@ -221,6 +221,9 @@ kbd {
 #henbox {
   border-left: 4px solid #ffb347;
 }
+#meteorbox {
+  border-left: 4px solid #ff7a1a;
+}
 #wantedbox {
   display: flex;
   align-items: center;

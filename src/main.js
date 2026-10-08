@@ -36,6 +36,7 @@ import { Minimap } from './game/minimap.js';
 import { Aliens } from './game/aliens.js';
 import { Cows } from './game/cows.js';
 import { Hens } from './game/hens.js';
+import { Meteors } from './game/meteors.js';
 import { Folks } from './game/folks.js';
 import { Disguise } from './game/disguise.js';
 import { Dropoff } from './game/dropoff.js';
@@ -58,6 +59,7 @@ const TIPS = [
   '🛹 El <b>skatepark</b> está al final de la calle Río Júcar, junto a la rotonda.',
   '🚀 Detrás del skatepark, en el campo, te espera el <b>Mega Salto</b> sobre la charca.',
   '🐔 En el campo del Mega Salto hay un <b>gallinero</b>. Mira por dónde pisas: si atropellas a una gallina, te persiguen <b>todas</b>.',
+  '☄️ De día, de tarde en tarde, cae una <b>lluvia de meteoritos</b> en los descampados: apártate de las dianas y luego baja a patinar los <b>cráteres</b>, que hay premio en el fondo.',
   '⛲ Sube hasta la <b>Plaza de la Villa</b>: allí están la fuente, la iglesia y el ayuntamiento.',
   '🤹 Busca a los vecinos en el minimapa: <b>Yago</b> en el skatepark, <b>Jose</b> y su <b>padre</b> en la canasta, las corredoras del parque, <b>Emma</b> y sus selfies en El Palmeral, <b>Adrián</b>, el batería de la puerta de la Escuela de Música, <b>Iker</b>, que no para de dar vueltas con su patinete eléctrico, y <b>Leo</b>, que pelotea en la pista de tenis.',
   '🌙 Pulsa <b>N</b> para cambiar entre día y noche, y <b>V</b> para pintar tu vehículo.',
@@ -179,6 +181,7 @@ class Game {
     this.env = new Environment(this, this.world.lamps);
     this.cows = new Cows(this);
     this.hens = new Hens(this);
+    this.meteors = new Meteors(this);
     this.slime = new Slime(this);
     this.aliens = new Aliens(this);
     this.disguise = new Disguise(this);
@@ -716,6 +719,7 @@ class Game {
     this.traffic.update(dt, p, this.time);
     this.cows.update(dt, p, this.time);
     this.hens.update(dt, p, this.time);
+    this.meteors.update(dt, p, this.time);
     this.aliens.update(dt, p, this.time, inp);
     this.disguise.update(dt, p, this.time);
     this.boss.update(dt, p, this.time);
@@ -771,6 +775,7 @@ class Game {
       for (const b of this.boss.blips) blips.push(b);
       for (const b of this.wanted.blips) blips.push(b);
       for (const b of this.hens.blips) blips.push(b);
+      for (const b of this.meteors.blips) blips.push(b);
       for (const b of this.items.blips) blips.push(b);
       this.minimap.draw(p.pos.x, p.pos.z, this.camera3.yaw, p.heading, m.active ? [] : this.markers, m.goalPos, blips);
     }

@@ -417,6 +417,21 @@ export class Sfx {
     this.tone(2637, 0.22, 'triangle', 0.06, 0.8, 0.03);
     this.noise(0.1, 0.12, 6000, 3);
   }
+  // Lluvia de meteoritos: el aviso, el silbido del que viene cayendo y el porrazo contra el suelo
+  meteorAlarm() {
+    for (let i = 0; i < 3; i++) this.tone(660, 0.22, 'square', 0.07, 1.5, i * 0.3);
+    this.noise(2.4, 0.16, 140, 0.7, 'lowpass', 0, 2.2);
+  }
+  meteor(vol = 1) {
+    this.tone(1900, 2.9, 'sine', 0.07 * vol, 0.16);
+    this.noise(2.9, 0.12 * vol, 900, 1.2, 'bandpass', 0, 3);
+  }
+  meteorBoom(vol = 1) {
+    this.noise(1.5, 0.6 * vol, 300, 0.6, 'lowpass', 0, 0.25);
+    this.tone(58, 1.2, 'sine', 0.5 * vol, 0.45);
+    this.tone(36, 1.5, 'sawtooth', 0.16 * vol, 0.6, 0.04);
+    if (vol > 0.4) this.bricks(8);
+  }
   // Bomba de baba que cae silbando
   bomb(vol = 1) {
     this.tone(1250, 1.1, 'sine', 0.06 * vol, 0.3);

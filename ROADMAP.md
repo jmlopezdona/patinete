@@ -17,8 +17,13 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 ## Locuras sin alienígenas
 
 - [ ] **Patinete gigante.** Aplastas coches.
-- [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `meteoritos`)
+
+- [x] **Lluvia de meteoritos.** De día, de tarde en tarde, caen cinco en los descampados de
+  alrededor: avisan con una diana, mandan por los aires a quien pillen debajo y dejan cráteres que
+  se patinan como bowls, con un meteorito en el fondo para quien baje a por él.
 
 ## Ya hecho (rama `gallinas`)
 
