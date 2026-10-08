@@ -269,6 +269,177 @@ await wait(300);
 check('el meteorito del fondo se lo lleva el invitado que baja', mb.studs - studsMb === 150 && ma.studs === studsMa && ma.cuenta === mb.cuenta && mb.cuenta.startsWith('1/') && ma.crateres[0][3] === 0 && mb.crateres[0][3] === 0, `+${mb.studs - studsMb} studs · ${ma.cuenta} / ${mb.cuenta}`);
 await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
 
+// ---------- La invasión es una sola, y cooperativa ----------
+const espera = (page, fn, ms = 4000, ...args) => page.waitForFunction(fn, { timeout: ms, polling: 50 }, ...args).then(() => true, () => false);
+// Todo lo que se le ha dicho a cada uno desde aquí (los carteles se borran solos al rato)
+for (const page of [A, B]) await page.evaluate(() => { const h = window.__game.hud; window.__dicho = ''; for (const m of ['toast', 'big']) { const f = h[m]; h[m] = function (t, ...r) { window.__dicho += `${t.replace(/<[^>]+>/g, '')}\n`; return f.call(this, t, ...r); }; } });
+const dichos = (page) => page.evaluate(() => window.__dicho);
+// Los studs que hay por el suelo también suman: lo ganado se mira con un poco de margen
+const gana = (n, min) => n >= min && n <= min + 80;
+// De día: los disfrazados los elige el anfitrión y son los mismos vecinos en todas las pantallas
+const disfraces = (page) => page.evaluate(() => { const g = window.__game; const D = g.disguise; return { quienes: D.list.map((s) => s.i).join(' '), estados: D.list.map((s) => s.state).join(' '), escondidos: D.list.map((s) => (s.ped.taken ? 1 : 0)).join(''), contador: document.getElementById('spybox').classList.contains('hidden') ? 'oculto' : document.getElementById('spies').textContent, studs: g.save.studs, echados: g.save.spies || 0, marciano: g.aliens.aliens.filter((a) => a.spy && a.state !== 'off').map((a) => [a.x, a.z, a.state])[0] || null }; });
+let [da2, db2] = [await disfraces(A), await disfraces(B)];
+check('los disfrazados son los mismos vecinos para todos', da2.quienes.split(' ').length === 3 && db2.quienes === da2.quienes && db2.contador === '0/3' && da2.contador === '0/3', `${da2.quienes} / ${db2.quienes}`);
+// Un invitado embiste a uno: el disfraz se le cae en todas las pantallas y el marciano sale del anfitrión
+await B.evaluate(() => { const g = window.__game; g.player.invuln = 9999; const s = g.disguise.list[0]; g.disguise.unmask(s.ped, s.ped.x, g.terrain.height(s.ped.x, s.ped.z), s.ped.z); });
+await espera(B, () => window.__game.disguise.list[0].state === 'run' && window.__game.aliens.aliens.some((a) => a.spy && a.state === 'bolt'));
+await wait(200);
+[da2, db2] = [await disfraces(A), await disfraces(B)];
+check('un invitado le quita el disfraz a uno y el marciano sale corriendo para todos', da2.estados.startsWith('run') && db2.estados.startsWith('run') && da2.escondidos[0] === '1' && db2.escondidos[0] === '1' && !!da2.marciano && !!db2.marciano && lejos({ x: da2.marciano[0], y: 0, z: da2.marciano[1] }, { x: db2.marciano[0], y: 0, z: db2.marciano[1] }) < 14 && (await dichos(B)).includes('¡Era un marciano!') && !(await dichos(A)).includes('¡Era un marciano!'), `${da2.estados} / ${db2.estados} · ${da2.escondidos} / ${db2.escondidos} · ${JSON.stringify(da2.marciano)} / ${JSON.stringify(db2.marciano)}`);
+// Y lo echa de un culetazo: los studs son suyos y la cuenta, de todos
+const studsEspia = db2.studs;
+await B.evaluate(() => { const g = window.__game; const a = g.aliens.aliens.find((o) => o.spy && o.state === 'bolt'); g.aliens.lastKick = -99; g.aliens.kick(a, g.player, g.time, null, 500); });
+await espera(A, () => window.__game.disguise.caught === 1);
+await wait(400);
+[da2, db2] = [await disfraces(A), await disfraces(B)];
+check('lo echa de un culetazo: los studs son suyos y la cuenta es de todos', gana(db2.studs - studsEspia, 200) && db2.echados === 1 && da2.echados === 0 && da2.contador === '1/3' && db2.contador === '1/3', `+${db2.studs - studsEspia} studs · ${da2.contador} / ${db2.contador}`);
+
+// De noche: la oleada, los marcianos y el platillo son los del anfitrión
+const invasion = (page) => page.evaluate(() => { const g = window.__game; const A = g.aliens; const u = A.u; return { activa: A.active, guiada: A.led, oleada: A.wave ? `${A.wave.level + 1}ª ${A.wave.count}/${A.wave.goal}` : '', cuenta: A.wave ? A.wave.count : -1, contador: document.getElementById('alienbox').classList.contains('hidden') ? 'oculto' : document.getElementById('aliens').textContent, marcianos: A.aliens.map((a) => [a.x, a.z, a.state]), platillo: { x: u.x, y: u.y, z: u.z, estado: u.state, visible: A.ufo.visible, golpes: u.hits, rayo: u.beam }, modo: A.mode, cogido: g.player.held, oculto: g.player.hidden, studs: g.save.studs, nivel: g.save.invasions || 0, charcos: g.slime.list.map((s, i) => (s.t > 1 ? [s.x, s.z, i] : null)).filter(Boolean) }; });
+const distintos = (a, b) => a.marcianos.filter((m, i) => m[2] !== b.marcianos[i][2] || (m[2] !== 'off' && Math.hypot(m[0] - b.marcianos[i][0], m[1] - b.marcianos[i][1]) > 8)).length;
+await A.evaluate(() => { const g = window.__game; g.player.invuln = 9999; g.env.toggle(); });
+await espera(B, () => window.__game.aliens.active && window.__game.aliens.u.state === 'hunt' && window.__game.aliens.aliens.filter((a) => a.state !== 'off' && a.state !== 'drop').length >= 3, 20000);
+await A.evaluate(() => { window.__game.heist.cd = 999; });
+let [ia, ib] = [await invasion(A), await invasion(B)];
+check('la oleada que empieza el anfitrión es la de todos', ia.activa && ib.activa && ib.guiada && !ia.guiada && ib.oleada === ia.oleada && ib.contador === ia.contador && ia.contador.startsWith('0/') && (await dichos(B)).includes('¡Los marcianos invaden Cobeña!'), `${ia.oleada} · ${ib.contador}`);
+check('con dos jugadores la oleada es más grande', +ia.oleada.split('/')[1] > 8, ia.oleada);
+check('el invitado ve los marcianos y el platillo donde el anfitrión', distintos(ia, ib) <= 1 && ib.platillo.visible && ib.platillo.estado === ia.platillo.estado && lejos(ia.platillo, ib.platillo) < 8, `${ia.marcianos.filter((m) => m[2] !== 'off').length} marcianos, ${distintos(ia, ib)} distintos · platillo a ${lejos(ia.platillo, ib.platillo).toFixed(1)}`);
+check('lo que pesa una foto en plena invasión', true, `${await A.evaluate(() => window.__game.party.session.sent)} bytes con dos jugadores`);
+// Los charcos de baba los pone el anfitrión
+await A.evaluate(() => { const g = window.__game; const p = g.player.pos; for (let r = 6; r < 40; r += 4) if (g.slime.splat(p.x + r, p.z)) break; });
+await wait(400);
+[ia, ib] = [await invasion(A), await invasion(B)];
+check('la baba es la misma para todos', ia.charcos.length > 0 && ib.charcos.length === ia.charcos.length && peor(ia.charcos, ib.charcos) < 0.01 && ia.charcos.map((c) => c[2]).join() === ib.charcos.map((c) => c[2]).join(), `${ia.charcos.length} charcos`);
+// Un invitado le da un culetazo a uno: lo ve salir volando al momento, cuenta para todos y los studs son suyos
+// (uno que el anfitrión tenga a pie y no vaya a recoger el platillo por quedarse atrás)
+const aPie = await A.evaluate(() => { const a = window.__game.aliens.aliens.find((o) => ['wander', 'alert', 'chase', 'tired'].includes(o.state)); a.state = 'tired'; a.t = 30; a.far = -30; return a.i; });
+await espera(B, (i) => window.__game.aliens.aliens[i].state === 'tired', 3000, aPie);
+const patada = await B.evaluate((i) => { const g = window.__game; const A = g.aliens; const a = A.aliens[i]; A.lastKick = -99; A.kick(a, g.player, g.time, null, 500); return { i: a.i, estado: a.state, suyo: a.own }; }, aPie);
+await espera(A, () => window.__game.aliens.wave.count === 1);
+const enElAnfitrion = await A.evaluate((i) => window.__game.aliens.aliens[i].state, patada.i);
+await espera(B, () => window.__game.aliens.wave.count === 1);
+await wait(200);
+const [ja, jb] = [await invasion(A), await invasion(B)];
+check('el culetazo de un invitado sale volando en su pantalla sin esperar', !!patada && patada.estado === 'fly' && patada.suyo === 'fly', patada);
+check('y cuenta para la oleada de todos, con los studs para él', ['fly', 'off', 'drop'].includes(enElAnfitrion) && ja.cuenta === 1 && jb.cuenta === 1 && jb.contador.startsWith('1/') && ja.contador.startsWith('1/') && gana(jb.studs - ib.studs, 50) && ja.studs === ia.studs, `${jb.contador} · +${jb.studs - ib.studs} studs el invitado, +${ja.studs - ia.studs} el anfitrión`);
+
+// El robo de la estatua: el ladrón es el del anfitrión, y los culetazos de un invitado cuentan
+const robo = (page) => page.evaluate(() => { const g = window.__game; const H = g.heist; const k = H.k; return { ladron: k.state, x: k.x, y: k.y, z: k.z, estatua: H.where, golpes: H.hits, marcador: document.getElementById('heistbox').classList.contains('hidden') ? 'oculto' : document.getElementById('heist').textContent, enSuSitio: g.statue.position.distanceTo(H.base) < 0.1, recuperadas: g.save.statues || 0, studs: g.save.studs }; });
+await A.evaluate(() => { const H = window.__game.heist; H.done = false; H.cd = 0; });
+await espera(B, () => window.__game.heist.k.state === 'run', 12000);
+let [ra, rb] = [await robo(A), await robo(B)];
+check('el ladrón de la estatua es el mismo para todos', ra.ladron === 'run' && rb.ladron === 'run' && lejos(ra, rb) < 6 && rb.estatua === 'carried' && rb.marcador.startsWith('0/3') && (await dichos(B)).includes('se lleva la estatua dorada'), `a ${lejos(ra, rb).toFixed(1)} unidades · ${rb.marcador}`);
+for (let n = 1; n <= 3; n++) {
+  await espera(A, () => ['run', 'dazed'].includes(window.__game.heist.k.state), 4000);
+  await B.evaluate(() => window.__game.heist.strike(window.__game.player, 0));
+  await espera(A, (n) => window.__game.heist.hits >= n, 3000, n);
+}
+await espera(B, () => window.__game.heist.where === 'home', 6000);
+await wait(300);
+[ra, rb] = [await robo(A), await robo(B)];
+check('al tercer culetazo de un invitado la estatua vuelve a su fuente para todos', ra.golpes === 3 && ra.estatua === 'home' && rb.estatua === 'home' && ra.enSuSitio && rb.enSuSitio && rb.marcador === 'oculto' && ra.marcador === 'oculto', `${ra.estatua} / ${rb.estatua}`);
+check('se la apunta él, y el premio es para todos', rb.recuperadas === 1 && ra.recuperadas === 0 && ra.studs - ja.studs >= 2000 && rb.studs - jb.studs >= 2000 + 80 + 160, `+${ra.studs - ja.studs} el anfitrión, +${rb.studs - jb.studs} el invitado`);
+
+// El rayo: a quién coge lo dice su pantalla, y el platillo del anfitrión se para a subirlo
+await A.evaluate(() => { const g = window.__game; const A = g.aliens; A.setUfo('hunt'); A.u.prey = g.party.remotes.get(1); A.u.preyT = 99; });
+await espera(B, () => window.__game.aliens.u.state === 'hunt' && window.__game.party.isMe(window.__game.aliens.whoSlot));
+await B.evaluate(() => { const g = window.__game; g.aliens.startAbduct(g.player); });
+await espera(A, () => window.__game.aliens.u.state === 'abduct');
+await wait(300);
+[ia, ib] = [await invasion(A), await invasion(B)];
+check('el rayo coge a un invitado y el platillo del anfitrión se para con él', ia.platillo.estado === 'abduct' && (await A.evaluate(() => window.__game.aliens.cargo?.char.id)) === 'adrian' && ib.cogido && ib.modo === 'abduct' && !ia.cogido && (await A.evaluate(() => window.__game.party.remotes.get(1).held)) && !(await B.evaluate(() => document.getElementById('abduct').classList.contains('hidden'))), `${ia.platillo.estado} · ${ib.modo}`);
+await B.evaluate(() => { window.__game.aliens.esc = 1.2; });
+await espera(A, () => window.__game.aliens.u.state === 'stun');
+[ia, ib] = [await invasion(A), await invasion(B)];
+check('se suelta machacando el salto y el platillo se queda atontado', ia.platillo.estado === 'stun' && !ib.cogido && ib.modo === null, `${ia.platillo.estado} · ${ib.modo}`);
+// Y si no se suelta, se lo lleva dentro a otra punta del pueblo, le birla unos studs y lo deja allí
+await A.evaluate(() => { const g = window.__game; const A = g.aliens; A.setUfo('hunt'); A.u.prey = g.party.remotes.get(1); A.u.preyT = 99; });
+await espera(B, () => window.__game.aliens.u.state === 'hunt' && window.__game.party.isMe(window.__game.aliens.whoSlot));
+const antesDelViaje = await yo(B);
+await B.evaluate(() => { const g = window.__game; g.save.studs = 1000; g.aliens.startAbduct(g.player); });
+await espera(A, () => window.__game.aliens.u.state === 'abduct');
+await B.evaluate(() => { const g = window.__game; g.player.pos.y = g.aliens.u.y - 4; });
+await espera(A, () => window.__game.aliens.u.state === 'carry');
+await wait(300);
+const deViaje = await invasion(B);
+await espera(B, () => window.__game.aliens.mode === null && !window.__game.player.held, 9000);
+await wait(300);
+[ia, ib] = [await invasion(A), await invasion(B)];
+check('si no se suelta, el platillo se lo lleva dentro y lo deja en otra punta del pueblo', deViaje.modo === 'carry' && deViaje.oculto && (await A.evaluate(() => window.__game.party.remotes.get(1).hidden === false)) && !ib.cogido && !ib.oculto && ia.platillo.estado === 'rest' && lejos(antesDelViaje, await yo(B)) > 60 && (await dichos(B)).includes('Te han soltado en'), `a ${lejos(antesDelViaje, await yo(B)).toFixed(0)} unidades de donde estaba`);
+check('y los studs que le birla son los suyos', gana(ib.studs - 900, 0) && (await dichos(B)).includes('te han birlado 100 studs'), `${ib.studs - 1000} studs`);
+// Tres coscorrones de un invitado y el platillo es suyo: lo pilota desde su pantalla
+for (let n = 1; n <= 3; n++) {
+  await A.evaluate(() => { const A = window.__game.aliens; A.setUfo('stun'); A.u.t = 1; });
+  await B.evaluate(() => window.__game.party.tell('coscorron', 0));
+  await espera(A, (n) => window.__game.aliens.u.hits >= n || !!window.__game.aliens.ride, 3000, n);
+}
+await espera(B, () => window.__game.aliens.mode === 'ride', 6000);
+await wait(400);
+[ia, ib] = [await invasion(A), await invasion(B)];
+const mandos = await A.evaluate(() => { const A = window.__game.aliens; return { doble: A.mateOf ? A.mateOf.char.id : '', piloto: A.pilot.group.visible, quien: A.cargo ? A.cargo.char.id : '' }; });
+check('con tres coscorrones de un invitado el platillo es suyo', ia.platillo.estado === 'ride' && ib.modo === 'ride' && ib.cogido && ib.oculto && mandos.quien === 'adrian' && (await B.evaluate(() => !!window.__game.camera3.rig && !document.getElementById('ride').classList.contains('hidden'))), `${ia.platillo.estado} · ${ib.modo}`);
+check('y todos ven a su doble a los mandos', mandos.doble === 'adrian' && !mandos.piloto && (await B.evaluate(() => window.__game.aliens.mateOf === window.__game.player)) && (await dichos(A)).includes('Adrián ha robado el platillo') && (await dichos(B)).includes('¡Has robado el platillo!'), mandos);
+await teclas(B, ['KeyW'], true);
+await wait(1500);
+await teclas(B, ['KeyW', 'Space'], true);
+await wait(700);
+const [va, vb] = [await invasion(A), await invasion(B)];
+await teclas(B, ['KeyW', 'Space'], false);
+check('lo pilota desde su pantalla y el anfitrión lo ve ir donde él', lejos(ib.platillo, vb.platillo) > 25 && lejos({ ...va.platillo, y: 0 }, { ...vb.platillo, y: 0 }) < 12, `${lejos(ib.platillo, vb.platillo).toFixed(1)} unidades, a ${lejos({ ...va.platillo, y: 0 }, { ...vb.platillo, y: 0 }).toFixed(1)} uno de otro`);
+check('y enciende el rayo con el salto', va.platillo.rayo > 0.5 && vb.platillo.rayo > 0.5, `${va.platillo.rayo.toFixed(2)} / ${vb.platillo.rayo.toFixed(2)}`);
+await A.evaluate(() => { window.__game.aliens.ride.t = 0.05; });
+await espera(B, () => window.__game.aliens.mode === null && !window.__game.player.held, 4000);
+await wait(300);
+[ia, ib] = [await invasion(A), await invasion(B)];
+check('al acabarse el paseo lo suelta y vuelve el piloto', ia.platillo.estado === 'rest' && ib.modo === null && !ib.cogido && !ib.oculto && (await B.evaluate(() => !window.__game.camera3.rig && window.__game.aliens.pilot.group.visible && !window.__game.aliens.mate)) && (await dichos(B)).includes('Se acabó el paseo'), `${ia.platillo.estado} · ${ib.modo}`);
+
+// Lo que el platillo se lleva es lo mismo en todas las pantallas, y lo rescata cualquiera
+// (el invitado, lejos y en el suelo: si no, lo rescata él solo al caer del platillo por el rayo)
+await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
+await wait(500);
+const presa = (page) => page.evaluate(() => { const A = window.__game.aliens; const v = A.vic || A.falling; return v ? { id: v.id, sube: v.lifting, cogido: v.ref.taken, alto: v.h } : null; });
+const hayPresa = await A.evaluate(() => { const g = window.__game; const A = g.aliens; A.snatchCd = 0; A.falling = null; A.setUfo('rest'); if (!A.pickVictim(g.player)) return false; A.setUfo('snatch'); A.lift(A.vic); return true; });
+await espera(B, () => !!window.__game.aliens.vic && window.__game.aliens.vic.lifting);
+const [pa, pb] = [await presa(A), await presa(B)];
+const studsRescate = (await invasion(B)).studs;
+check('el invitado ve subir por el rayo a quien se lleva el platillo', hayPresa && !!pa && !!pb && pa.id === pb.id && pb.sube && pb.cogido, `${JSON.stringify(pa)} / ${JSON.stringify(pb)}`);
+await B.evaluate(() => window.__game.party.tell('rescate', 1));
+await espera(A, () => !window.__game.aliens.vic && !window.__game.aliens.falling, 6000);
+await wait(500);
+check('lo rescata un invitado: el premio es suyo y vuelve a su sitio para todos', gana((await invasion(B)).studs - studsRescate, 250) && (await B.evaluate(() => window.__game.save.rescues)) === 1 && (await presa(B)) === null && (await B.evaluate(() => window.__game.aliens.kept.size === 0 && !window.__game.traffic.peds.some((q) => q.taken && !window.__game.disguise.list.some((s) => s.ped === q)) && !window.__game.cows.list.some((c) => c.taken) && !window.__game.traffic.cars.some((c) => c.taken))), `+${(await invasion(B)).studs - studsRescate} studs`);
+
+// La nave nodriza: una para todos, y los coscorrones de todos suman
+const nodriza = (page) => page.evaluate(() => { const g = window.__game; const m = g.boss.m; return { estado: m.state, y: m.y, golpes: m.hits, aguanta: m.need, escudo: m.shield > 0, visible: g.boss.group.visible, vida: document.getElementById('boss').classList.contains('hidden') ? 'oculta' : `${document.querySelectorAll('#bosspips i:not(.off)').length}/${m.need}`, bombas: g.boss.bombs.filter((b) => b.t >= 0).map((b) => [b.x, b.z]), studs: g.save.studs, nivel: g.save.invasions || 0, derribadas: g.save.motherships || 0 }; });
+await A.evaluate(() => { const A = window.__game.aliens; A.wave.count = A.wave.goal; });
+await espera(B, () => window.__game.boss.m.state === 'fight', 12000);
+let [na2, nb2] = [await nodriza(A), await nodriza(B)];
+check('echada la oleada baja la nodriza para todos', na2.estado === 'fight' && nb2.estado === 'fight' && nb2.visible && Math.abs(na2.y - nb2.y) < 1 && nb2.vida === `${na2.aguanta}/${na2.aguanta}` && na2.aguanta === 4 && (await dichos(B)).includes('nave nodriza'), `${nb2.vida} · platillo ${(await invasion(A)).platillo.estado}`);
+await B.evaluate(() => window.__game.party.tell('panza', 0));
+await espera(B, () => window.__game.boss.m.hits === 1 && window.__game.boss.m.shield > 0);
+await wait(200);
+const [nc, nd] = [await nodriza(A), await nodriza(B)];
+check('el coscorrón de un invitado cuenta y le levanta el escudo', nc.golpes === 1 && nd.golpes === 1 && nc.escudo && nd.escudo && nd.vida === '3/4' && gana(nd.studs - nb2.studs, 200) && gana(nc.studs - na2.studs, 0), `${nd.vida} · +${nd.studs - nb2.studs} studs el invitado`);
+await A.evaluate(() => { const g = window.__game; g.boss.m.bombT = 99; g.boss.bombs.forEach((b) => { b.t = -1; }); g.boss.bomb(g.party.remotes.get(1)); });
+await espera(B, () => window.__game.boss.bombs.some((b) => b.t >= 0), 2000);
+const [ne, nf] = [await nodriza(A), await nodriza(B)];
+check('las bombas de baba caen en el mismo sitio para todos', ne.bombas.length === 1 && nf.bombas.length === 1 && peor(ne.bombas, nf.bombas) < 0.01, `${ne.bombas.length} / ${nf.bombas.length}`);
+// El último coscorrón: revienta, se acaba la invasión y amanece para todos
+await A.evaluate(() => { const m = window.__game.boss.m; m.shield = 0; m.hits = m.need - 1; });
+await espera(B, () => window.__game.boss.m.shield === 0 && window.__game.boss.m.hits === 3);
+await B.evaluate(() => window.__game.party.tell('panza', 0));
+await espera(B, () => window.__game.aliens.cleared && window.__game.boss.m.state === 'gone', 9000);
+await wait(400);
+const [ng, nh] = [await nodriza(A), await nodriza(B)];
+check('la nodriza revienta para todos', ng.estado === 'gone' && nh.estado === 'gone' && !nh.visible && nh.vida === 'oculta' && nh.derribadas === 1 && ng.derribadas === 1, `${ng.estado} / ${nh.estado}`);
+check('invasión rechazada: el premio y el nivel son de todos', ng.nivel === 1 && nh.nivel === 1 && ng.studs - nc.studs >= 7000 && nh.studs - nd.studs >= 7000 && (await dichos(B)).includes('¡Invasión rechazada!'), `nivel ${ng.nivel} y ${nh.nivel} · +${ng.studs - nc.studs} y +${nh.studs - nd.studs} studs`);
+igual = (await espera(A, () => window.__game.env.target === 0, 8000)) && (await esNoche(B, 0));
+check('y amanece para todos', igual);
+await wait(600);
+[ia, ib] = [await invasion(A), await invasion(B)];
+check('de día no queda ni rastro en ninguna pantalla', !ia.activa && !ib.activa && ib.contador === 'oculto' && !ib.platillo.visible, `${ib.contador} · platillo ${ib.platillo.estado}`);
+await B.evaluate((b) => { const g = window.__game; g.player.invuln = 0; g.player.place(b.x, b.z, 0); }, b0c);
+await A.evaluate(() => { window.__game.player.invuln = 0; });
+
 // El mobiliario es el mismo para todos: lo rompe uno y lo ven roto los demás
 const mueble = await A.evaluate(() => {
   const g = window.__game;
@@ -298,6 +469,9 @@ check('entra un tercero', (await sala(A, 2)) && (await sala(B, 2)) && (await sal
 await wait(700);
 const [hc, hd] = await Promise.all([hora(A), hora(C)]);
 check('quien llega tarde se encuentra la noche y el reloj de los demás', (await noche(C)).noche === 1 && Math.abs(hc - hd) < 0.2, `${hc.toFixed(2)} y ${hd.toFixed(2)} s`);
+await espera(C, () => window.__game.aliens.active && window.__game.aliens.u.state !== 'gone', 6000);
+const [ic0, ic1] = [await invasion(A), await invasion(C)];
+check('y la invasión que ya había empezado', ic1.activa && ic1.guiada && ic1.oleada === ic0.oleada && ic1.oleada.startsWith('2ª') && ic1.platillo.visible, `${ic0.oleada} / ${ic1.oleada}`);
 await A.evaluate(() => window.__game.env.toggle());
 await wait(300);
 check('y el mobiliario que ya estaba roto', !(await sano(C)));
