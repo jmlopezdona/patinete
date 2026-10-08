@@ -59,7 +59,11 @@ export class Party {
       if (go && game.state === 'menu') game.start();
     };
     S.onEnd = (why) => game.closeParty(why);
-    this.onHide = () => this.keepGoing(document.hidden);
+    this.onHide = () => {
+      this.keepGoing(document.hidden);
+      if (!document.hidden) this.awake(); // el navegador lo suelta al tapar la pestaña
+    };
+    this.awake();
     this.onLeave = () => S.close();
     window.addEventListener('pagehide', this.onLeave);
     document.addEventListener('visibilitychange', this.onHide);
@@ -75,9 +79,25 @@ export class Party {
     this.game.hud.toast(`${ch.icon} <b>${ch.name}</b> ${what}`);
   }
 
+  // La pastilla de arriba: la sala y quién está, cada uno con el icono de su personaje. Sale
+  // apagado quien aún no ha salido a la calle o está a otra cosa
   label(text) {
+    const g = this.game;
+    const icon = (ch, off) => `<i${off ? ' class="off"' : ''}>${ch.icon}</i>`;
+    const crew = () => icon(g.player.char, g.state !== 'play') + [...this.remotes.values()].map((r) => icon(r.char, !r.seen || r.hidden || r.busy)).join('');
     this.el.classList.remove('hidden');
-    this.el.textContent = `👥 Sala ${this.code} · ${text ?? (this.remotes.size ? `${this.remotes.size + 1} jugadores` : this.hosting ? 'esperando a los demás' : 'entrando…')}`;
+    this.el.classList.toggle('wait', !!this.stalled);
+    this.el.innerHTML = `👥 Sala ${this.code} · ${text ?? (this.stalled ? 'el anfitrión está en pausa…' : this.remotes.size ? crew() : this.hosting ? 'esperando a los demás' : 'entrando…')}`;
+  }
+
+  // Que no se apague la pantalla con la partida en marcha: un anfitrión dormido para a todos
+  async awake() {
+    try {
+      this.lock = await navigator.wakeLock?.request('screen');
+    } catch {
+      /* el navegador no lo permite (batería baja, pestaña tapada): se sigue sin ello */
+    }
+    if (this.session.closed) this.lock?.release();
   }
 
   // ¿Lleva ya otro jugador ese personaje?
@@ -94,6 +114,7 @@ export class Party {
   close() {
     this.session.close();
     this.keepGoing(false);
+    this.lock?.release();
     for (const r of this.remotes.values()) r.dispose();
     this.remotes.clear();
     window.removeEventListener('pagehide', this.onLeave);
@@ -121,6 +142,7 @@ export class Party {
     const live = playing && !g.paused && !p.frozen && !p.held && p.crashT <= 0;
     readState(p, live ? g.input.state : g.input.neutral, this.state);
     if (!playing) this.state.flags |= F.HIDDEN;
+    else if (g.paused || g.missions.active || document.hidden) this.state.flags |= F.BUSY;
     S.update(now, this.state);
     this.blips.length = 0;
     for (const [slot, r] of this.remotes) {
@@ -134,6 +156,15 @@ export class Party {
       r.blip.z = s.z;
       r.blip.icon = r.char.icon;
       this.blips.push(r.blip);
+    }
+    // Dos segundos sin saber del anfitrión: se le ha dormido el móvil o se ha cortado la red
+    this.stalled = !this.hosting && S.heard > 0 && now - S.heard > 2000;
+    // La pastilla solo se repinta cuando cambia algo de lo que enseña
+    let sig = `${this.stalled}${playing}${p.char.id}`;
+    for (const r of this.remotes.values()) sig += `${r.char.id}${r.seen && !r.hidden && !r.busy}`;
+    if (sig !== this.sig && this.connected) {
+      this.sig = sig;
+      this.label();
     }
   }
 }

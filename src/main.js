@@ -470,6 +470,7 @@ class Game {
   openParty(code, hosting) {
     this.closeParty();
     this.party = new Party(this, code, hosting, params.get('red'), params.get('ice') === 'relay');
+    document.body.classList.add('net'); // esconde lo que en red no se puede usar: modo foto y seguir a las mamás
     this.lobby.refresh();
     return this.party;
   }
@@ -479,6 +480,7 @@ class Game {
     if (this.party) {
       this.party.close();
       this.party = null;
+      document.body.classList.remove('net');
       this.refreshAway();
     }
     // Si se ha acabado sin querer, el panel se queda a la vista para decir por qué
@@ -721,7 +723,7 @@ class Game {
   loop(t, blind = false) {
     // Tope de fotogramas para no calentar el equipo: 60 por segundo aunque la pantalla sea de 120 Hz,
     // y en la pausa, que es una imagen casi fija, bastan 20
-    if (t - this.last < (this.paused && !this.photo.on && !this.watch.on ? 48 : 13)) return;
+    if (t - this.last < (this.paused && !this.photo.on && !this.watch.on && !this.party ? 48 : 13)) return;
     const dt = Math.min(0.05, Math.max(0.001, (t - this.last) / 1000));
     this.last = t;
     this.frame++;
@@ -734,6 +736,12 @@ class Game {
         if (this.input.hit('pause')) this.soundOn ? this.closeSound() : this.setPaused(!this.paused);
         if (this.input.hit('photo') && !this.soundOn) this.photo.open();
         if (!this.paused) this.update(dt, inp);
+        else if (this.party) {
+          // En red no hay pausa de verdad: el mundo sigue y el personaje se queda sin manos en el
+          // manillar. Lo pulsado con el menú delante no cuenta
+          this.input.endFrame();
+          this.update(dt, this.input.neutral);
+        }
       }
     } else {
       if (this.soundOn && this.input.hit('pause')) this.closeSound();

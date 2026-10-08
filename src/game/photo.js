@@ -167,7 +167,8 @@ export class Photo {
 
   open() {
     const g = this.game;
-    if (this.on || g.state !== 'play') return;
+    // En red el tiempo no se puede parar, y el modo foto lo para
+    if (this.on || g.state !== 'play' || g.party) return;
     this.on = true;
     this.back = g.paused; // si se entra desde la pausa, al salir se vuelve a ella
     g.paused = true;
