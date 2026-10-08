@@ -1194,7 +1194,8 @@ export class Folks {
       g.scene.add(fig.group, tag);
       return { name, fig, tag, off, tagY: off ? 6.6 : 7.8, s: 0, seg: 0, x: 0, z: 0, heading: 0, dodge: 0, fly: 0, vy: 0, y: 0, cd: 0, ph: i * 2.1, init: false };
     });
-    this.joggers = { pts, cum, len, list, s: 0, marker: { x: pts[0][0], z: pts[0][1], icon: '🏃‍♀️' } };
+    // ahead: lo que llevan corrido de más mientras se las seguía con la partida parada (ver game/watch.js)
+    this.joggers = { pts, cum, len, list, s: 0, ahead: 0, marker: { x: pts[0][0], z: pts[0][1], icon: '🏃‍♀️' } };
     this.markers.push(this.joggers.marker);
   }
 
@@ -1219,7 +1220,9 @@ export class Folks {
     const T = this.T;
     const g = this.game;
     const q = (this._q ||= { x: 0, z: 0, ux: 0, uz: 1 });
-    R.s = (R.s + 8.6 * dt) % R.len;
+    // Por dónde van sale del reloj del juego, que en red es el mismo para todos: se las ve a la par
+    // en todas las pantallas
+    R.s = (((8.6 * (time + (g.party ? 0 : R.ahead))) % R.len) + R.len) % R.len;
     this.pathAt(R.s, q);
     R.marker.x = q.x;
     R.marker.z = q.z;
@@ -1255,6 +1258,11 @@ export class Folks {
       let gap = want - j.s;
       if (gap < -R.len / 2) gap += R.len;
       if (gap > R.len / 2) gap -= R.len;
+      // Si el reloj da un salto (al entrar en una partida en red), aparece con el grupo
+      if (Math.abs(gap) > 30) {
+        j.s = want;
+        gap = 0;
+      }
       const speed = 8.6 + clamp(gap * 0.9, -3, 7);
       j.s += speed * dt;
       this.pathAt(j.s, q);

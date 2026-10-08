@@ -65,6 +65,9 @@ export class Watch {
     if (!this.on) return;
     const g = this.game;
     this.on = false;
+    // Lo que han corrido mientras se las miraba no lo ha contado el reloj de la partida: se apunta
+    // para que al volver sigan por donde iban
+    g.folks.joggers.ahead += this.time - g.time;
     this.el.root.classList.add('hidden');
     g.hud.show(true);
     g.sfx.jogging(false);
