@@ -55,6 +55,15 @@ habitación con focos que no tiene que ver con el cielo del juego y que no cambi
 
 ### T1 · Plástico con materia
 
+**Estado.** Hecho en parte, solo en «Altos» (`uDetail` en `legoUniforms`, lo pone
+`applyQuality()`): el canto de los studs y las aristas de los ladrillos inclinan la normal, y
+cada ladrillo de pared y cada placa de suelo varía un poco su rugosidad. El efecto es modesto:
+se ve de cerca (studs con más bulto, aristas que cogen luz) y a media distancia casi no cambia
+nada. Queda fuera el grano fino de la rugosidad, y `plastic` (muñecos y vehículos) sigue igual.
+Coste: alternando con y sin detalle en la misma sesión, a 1440 × 810 y densidad 1, la
+diferencia no sale del ruido (de −1,3 a +3,4 ms según la repetición, +0,25 ms de media). Sin
+medir a densidad 1,5 ni en móvil.
+
 **Qué.** Hacer en el shader de `createBrickMaterial` lo que hoy solo se insinúa con color:
 
 - **Studs con relieve.** Perturbar la normal en el borde del stud en vez de oscurecerlo: el
@@ -174,7 +183,7 @@ Nada de esto se ha probado en móvil ni en tableta, igual que el resto de medida
 | --- | --- | --- |
 | 1 | T3 · Nitidez (hecho) | Rápido, sin riesgo y sin coste. Se valida con una captura |
 | 2 | T4 · Suelo (hecho) | Pequeño y aislado; sirve para ensayar cambios en el shader antes de T1 |
-| 3 | T1 · Plástico | El de más efecto. Con medida antes y después y el interruptor de calidad |
+| 3 | T1 · Plástico (hecho en parte) | El de más efecto. Con medida antes y después y el interruptor de calidad |
 | 4 | T2 · Reflejos | Después de T1, porque los reflejos lucen sobre el plástico ya tratado y obligan a reajustar la luz una sola vez |
 | 5 | T5 · Sprites | Opcional |
 
