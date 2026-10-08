@@ -1,5 +1,5 @@
 {
- "_": "Qué frase dice cada voz. «texto» es lo que sale en pantalla (da igual con emojis o sin ellos) y «dicho», si está, lo que se oye. Ver README.md.",
+ "_": "Qué frase dice cada voz. «texto» es lo que sale en pantalla (da igual con emojis o sin ellos) o, si el aviso lleva un dato que cambia, la frase fija que el código pasa para que se oiga; «dicho», si está, es lo que se oye. Ver README.md.",
  "papeles": {
   "narrador": {
    "voz": "narrador-nodo-s1",
@@ -8,6 +8,22 @@
   "consejos": {
    "voz": "padre-s1",
    "tono": "cercano"
+  },
+  "abuela": {
+   "voz": "abuela-s5",
+   "tono": "bronca"
+  },
+  "municipal": {
+   "voz": "municipal-s1",
+   "tono": "desgana"
+  },
+  "marciano": {
+   "voz": "marciano-s1",
+   "tono": "nervioso"
+  },
+  "comentarista": {
+   "voz": "comentarista-s1",
+   "tono": "euforia"
   }
  },
  "tonos": {
@@ -35,6 +51,21 @@
   "triunfo": {
    "alegria": 0.4,
    "sorpresa": 0.1
+  },
+  "bronca": {
+   "ira": 0.4
+  },
+  "desgana": {
+   "calma": 0.4,
+   "asco": 0.1
+  },
+  "nervioso": {
+   "sorpresa": 0.3,
+   "alegria": 0.2
+  },
+  "euforia": {
+   "alegria": 0.45,
+   "sorpresa": 0.2
   }
  },
  "lineas": [
@@ -252,10 +283,9 @@
    "tono": "triunfo"
   },
   {
-   "papel": "narrador",
+   "papel": "comentarista",
    "texto": "¡GOOOL!",
-   "dicho": "¡Gol!",
-   "tono": "triunfo"
+   "dicho": "¡Gooool!"
   },
   {
    "papel": "narrador",
@@ -263,14 +293,13 @@
    "tono": "triunfo"
   },
   {
-   "papel": "narrador",
+   "papel": "abuela",
    "texto": "¡Zapatillazo!",
-   "tono": "pena"
+   "dicho": "¡Toma zapatillazo!"
   },
   {
-   "papel": "narrador",
-   "texto": "¡Zapatilla va!",
-   "tono": "alarma"
+   "papel": "abuela",
+   "texto": "¡Zapatilla va!"
   },
   {
    "papel": "narrador",
@@ -283,9 +312,9 @@
    "tono": "triunfo"
   },
   {
-   "papel": "narrador",
+   "papel": "marciano",
    "texto": "¡Te han pillado!",
-   "tono": "pena"
+   "dicho": "¡Te pillamos!"
   },
   {
    "papel": "narrador",
@@ -333,9 +362,8 @@
    "tono": "triunfo"
   },
   {
-   "papel": "narrador",
-   "texto": "¡Multa!",
-   "tono": "pena"
+   "papel": "municipal",
+   "texto": "¡Multa!"
   },
   {
    "papel": "narrador",
@@ -396,12 +424,11 @@
    "tono": "alarma"
   },
   {
-   "papel": "narrador",
-   "texto": "¡Entregada!",
-   "tono": "triunfo"
+   "papel": "comentarista",
+   "texto": "¡Entregada!"
   },
   {
-   "papel": "narrador",
+   "papel": "comentarista",
    "texto": "¡En propia puerta!",
    "tono": "pena"
   },
@@ -435,9 +462,8 @@
    "tono": "pena"
   },
   {
-   "papel": "narrador",
-   "texto": "¡Alto ahí!",
-   "tono": "alarma"
+   "papel": "municipal",
+   "texto": "¡Alto ahí!"
   },
   {
    "papel": "narrador",
@@ -450,9 +476,349 @@
    "tono": "pena"
   },
   {
+   "papel": "marciano",
+   "texto": "¡Abducido!"
+  },
+  {
+   "papel": "consejos",
+   "texto": "¡Bienvenido a Cobeña! Busca los iconos del mapa para jugar."
+  },
+  {
    "papel": "narrador",
-   "texto": "¡Abducido!",
+   "texto": "¡El platillo va a por un vecino!",
    "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Marciano disfrazado fuera!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Has echado a todos los disfrazados!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Ya no quedan disfrazados por hoy."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Dicen que hay marcianos disfrazados de vecino paseando por Cobeña. Fíjate bien: les asoma una antena. Embístelos… pero no te equivoques de vecino.",
+   "tono": "misterio"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Les has dado esquinazo al municipal y a la abuela. Y ahora, a portarse bien.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Le has dado esquinazo al municipal. Y ahora, a portarse bien.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "municipal",
+   "texto": "Multa por destrozar el mobiliario… y derechito a la Policía Local."
+  },
+  {
+   "papel": "municipal",
+   "texto": "No llevas ni un stud, así que te libras con una bronca… y derechito a la Policía Local."
+  },
+  {
+   "papel": "municipal",
+   "texto": "Multa por destrozar el mobiliario. ¡Y que no se repita!"
+  },
+  {
+   "papel": "municipal",
+   "texto": "No llevas ni un stud, así que te libras con una bronca. ¡Y que no se repita!"
+  },
+  {
+   "papel": "abuela",
+   "texto": "¡Se acabó la fiesta! Tú te vienes conmigo."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Coge carrerilla en el half-pipe con el turbo y sal disparado hacia arriba: unos cuantos coscorrones en la panza y la nodriza cae. Con gravedad lunar se llega de un salto desde lo alto de la rampa."
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Has derribado la nave nodriza! Y con premio extra.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Has recogido todos los meteoritos de esta lluvia. Los cráteres se quedan hasta la próxima.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Invasión rechazada! Volverán otra noche… con refuerzos y otra nodriza más dura.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Te han soltado donde les ha dado la gana. ¡Qué cara!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Tarde! Ya va dentro del platillo. Echa a los marcianos para que suelte su botín.",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Marcianos tontos perdidos: ahora el culetazo vale por cualquier lado.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Marciano tonto perdido: ahora el culetazo vale por cualquier lado.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Le has quitado la estatua dorada al ladrón! Vuelve volando a su fuente.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Ahora llevas a Jose con su patinete. De la realidad al juego: equilibrado y con el mejor tailwhip."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Ahora llevas a Adrián con su monopatín. Surfea el asfalto: gira fino, buen ollie y kickflips de escándalo."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Ahora llevas a Yago con su monociclo. Gira sobre una moneda y salta más que nadie, pero corre menos."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Ahora llevas a Teo con su bicicleta. Pedalea que se las pela: más velocidad punta y buenos saltos."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Ahora llevas a Emma con sus patines. Viene de fuera: su padre la deja en el parque. Sobre patines arranca y gira como nadie."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Ahora llevas a Iker con su e-patinete. No para quieto: sale de una calle cualquiera. Su patinete eléctrico es lo que más corre, pero pesa: salta y gira peor.",
+   "dicho": "Ahora llevas a Iker con su patinete eléctrico. No para quieto: sale de una calle cualquiera. Su patinete eléctrico es lo que más corre, pero pesa: salta y gira peor."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Ahora llevas a Leo con su patinete. Su patinete es el de toda la vida: ligero, arranca rápido y salta mucho."
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Has encontrado todos los ladrillos dorados!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "municipal",
+   "texto": "¡El municipal ha atajado por otra calle y te corta el paso!",
+   "dicho": "¡He atajado por otra calle! De aquí no pasa usted."
+  },
+  {
+   "papel": "abuela",
+   "texto": "A la abuela no se le escapa nadie: ¡sale por la otra esquina!",
+   "dicho": "¡A tu abuela no se le escapa nadie!"
+  },
+  {
+   "papel": "consejos",
+   "texto": "Con el turbo se asustan y salen huyendo: ¡es el momento de darles en el culo!"
+  },
+  {
+   "papel": "consejos",
+   "texto": "No te quedes bajo el rayo del platillo. Si te atrapa, machaca Espacio para soltarte.",
+   "dicho": "No te quedes bajo el rayo del platillo. Si te atrapa, machaca el botón de saltar para soltarte."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Cuando el platillo se queda atontado (al soltarte del rayo o al rescatar a alguien) baja mucho: salta y dale un coscorrón. ¡Al tercero es tuyo!",
+   "dicho": "Cuando el platillo se queda atontado, baja mucho: salta y dale un coscorrón. ¡Al tercero es tuyo!"
+  },
+  {
+   "papel": "consejos",
+   "texto": "Ojo con la baba verde que dejan los marcianos: rodando por encima derrapas, pero si caes encima de un salto, rebotas. A ellos también les hace resbalar."
+  },
+  {
+   "papel": "narrador",
+   "texto": "El platillo suelta al que se había llevado.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Tres estrellas: el municipal saca su patinete oficial y ya corre casi tanto como tú.",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Tres estrellas: el municipal saca su patinete oficial y ya corre casi tanto como tú. Si te pilla, acabas en la Policía Local.",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Les has dado esquinazo a las gallinas. Premio: 300 studs… y a mirar por dónde pisas.",
+   "dicho": "Les has dado esquinazo a las gallinas. Premio: trescientos studs… y a mirar por dónde pisas.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Con el gorro puesto el rayo no te detecta durante 20 segundos. Los marcianos de a pie sí te ven.",
+   "dicho": "Con el gorro puesto el rayo no te detecta durante veinte segundos. Los marcianos de a pie sí te ven."
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Agárrate! Turbo infinito durante 10 segundos.",
+   "dicho": "¡Agárrate! Turbo infinito durante diez segundos.",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Durante 60 segundos los saltos son gigantes: llegas al rayo, al platillo y a los tejados.",
+   "dicho": "Durante sesenta segundos los saltos son gigantes: llegas al rayo, al platillo y a los tejados."
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Un marciano se lleva la estatua dorada de la Plaza de la Villa! Búscalo en el minimapa y dale 3 culetazos antes de que se escape.",
+   "dicho": "¡Un marciano se lleva la estatua dorada de la Plaza de la Villa! Búscalo en el minimapa y dale tres culetazos antes de que se escape.",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Timbre sónico!"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Gorro de aluminio!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡YA!",
+   "dicho": "¡Ya!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "0 bolos",
+   "dicho": "¡Ni uno! ¡Cero bolos!",
+   "tono": "pena"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "1 bolos",
+   "dicho": "¡Un bolo!",
+   "tono": "pena"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "2 bolos",
+   "dicho": "¡Dos bolos!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "3 bolos",
+   "dicho": "¡Tres bolos!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "4 bolos",
+   "dicho": "¡Cuatro bolos!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "5 bolos",
+   "dicho": "¡Cinco bolos!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "6 bolos",
+   "dicho": "¡Seis bolos!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "7 bolos",
+   "dicho": "¡Siete bolos!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "8 bolos",
+   "dicho": "¡Ocho bolos!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "9 bolos",
+   "dicho": "¡Nueve bolos!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "10 bolos",
+   "dicho": "¡Diez bolos! ¡Pleno!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Salto del municipal!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Salto de la abuela!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Coscorrón a la nodriza!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Coscorrón al platillo!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Rescate aéreo!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Rescate!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Culetazo!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Doble culetazo!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Triple culetazo!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Lluvia de marcianos!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Culetazo galáctico!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Superculetazo al ladrón!"
+  },
+  {
+   "papel": "comentarista",
+   "texto": "¡Culetazo al ladrón!"
+  },
+  {
+   "papel": "marciano",
+   "texto": "¡Vaca a bordo!"
+  },
+  {
+   "papel": "marciano",
+   "texto": "¡Coche a bordo!"
+  },
+  {
+   "papel": "marciano",
+   "texto": "¡Vecino a bordo!"
   }
  ]
 }

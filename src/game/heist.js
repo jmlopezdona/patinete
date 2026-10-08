@@ -162,7 +162,7 @@ export class Heist {
     g.hud.big('¡Estatua recuperada!', GOLD, 2.2);
     g.sfx.fanfare();
     g.confetti(k.x, k.y, k.z);
-    g.hud.toast(`🏆 ¡Le has quitado la <b>estatua dorada</b> al ladrón! Vuelve volando a su fuente. Premio: <b>${reward.toLocaleString('es-ES')}</b> studs.`);
+    g.hud.toast(`🏆 ¡Le has quitado la <b>estatua dorada</b> al ladrón! Vuelve volando a su fuente. Premio: <b>${reward.toLocaleString('es-ES')}</b> studs.`, '¡Le has quitado la estatua dorada al ladrón! Vuelve volando a su fuente.');
   }
 
   // Se acabó el tiempo: el platillo lo recoge con la estatua y todo

@@ -377,7 +377,7 @@ export class Meteors {
     g.sfx.fanfare();
     g.confetti();
     g.hud.big('¡Todos los meteoritos!', '#ffd23a', 1.8);
-    g.hud.toast(`☄️ Has recogido los <b>${this.total}</b> meteoritos de esta lluvia: <b>+${BONUS}</b> studs. Los cráteres se quedan hasta la próxima.`);
+    g.hud.toast(`☄️ Has recogido los <b>${this.total}</b> meteoritos de esta lluvia: <b>+${BONUS}</b> studs. Los cráteres se quedan hasta la próxima.`, 'Has recogido todos los meteoritos de esta lluvia. Los cráteres se quedan hasta la próxima.');
   }
 
   update(dt, p, time) {

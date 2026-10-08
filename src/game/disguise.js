@@ -106,7 +106,7 @@ export class Disguise {
     g.hud.setSpies(this.caught, this.total);
     const left = this.list.filter((o) => o.state === 'hidden').length;
     if (left) {
-      g.hud.toast(`👽 ¡Marciano disfrazado fuera! Quedan <b>${left}</b> paseando por Cobeña.`);
+      g.hud.toast(`👽 ¡Marciano disfrazado fuera! Quedan <b>${left}</b> paseando por Cobeña.`, '¡Marciano disfrazado fuera!');
       return;
     }
     const all = this.caught === this.total;
@@ -116,7 +116,7 @@ export class Disguise {
       g.confetti();
       g.hud.big('¡Ni un disfrazado!', GREEN, 2);
     }
-    g.hud.toast(`${all ? '🏆 ¡Has echado a todos los disfrazados!' : '👽 Ya no quedan disfrazados por hoy.'} La oleada de esta noche llegará con <b>${this.discount()}</b> marcianos menos.`);
+    g.hud.toast(`${all ? '🏆 ¡Has echado a todos los disfrazados!' : '👽 Ya no quedan disfrazados por hoy.'} La oleada de esta noche llegará con <b>${this.discount()}</b> marcianos menos.`, all ? '¡Has echado a todos los disfrazados!' : 'Ya no quedan disfrazados por hoy.');
   }
 
   update(dt, p, time) {
@@ -130,7 +130,7 @@ export class Disguise {
     if (!this.list.length) return;
     if (this.tipT > 0 && !g.missions.active) {
       this.tipT -= dt;
-      if (this.tipT <= 0) g.hud.toast(`🥸 Dicen que hay <b>${this.total}</b> marcianos <b>disfrazados de vecino</b> paseando por Cobeña. Fíjate bien: les asoma una <b>antena</b>. Embístelos… pero no te equivoques de vecino.`);
+      if (this.tipT <= 0) g.hud.toast(`🥸 Dicen que hay <b>${this.total}</b> marcianos <b>disfrazados de vecino</b> paseando por Cobeña. Fíjate bien: les asoma una <b>antena</b>. Embístelos… pero no te equivoques de vecino.`, 'Dicen que hay marcianos disfrazados de vecino paseando por Cobeña. Fíjate bien: les asoma una antena. Embístelos… pero no te equivoques de vecino.');
     }
     for (const s of this.list) {
       if (s.state === 'hidden') {

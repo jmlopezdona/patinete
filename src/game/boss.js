@@ -267,7 +267,7 @@ export class Boss {
     }
     if (!m.seen && d < NEAR) {
       m.seen = true;
-      g.hud.toast(`🛹 Coge carrerilla en el <b>half-pipe</b> con el <b>turbo</b> y sal disparado hacia arriba: <b>${m.need} coscorrones</b> en la panza y la nodriza cae. Con <b>gravedad lunar</b> se llega de un salto desde lo alto de la rampa.`);
+      g.hud.toast(`🛹 Coge carrerilla en el <b>half-pipe</b> con el <b>turbo</b> y sal disparado hacia arriba: <b>${m.need} coscorrones</b> en la panza y la nodriza cae. Con <b>gravedad lunar</b> se llega de un salto desde lo alto de la rampa.`, 'Coge carrerilla en el half-pipe con el turbo y sal disparado hacia arriba: unos cuantos coscorrones en la panza y la nodriza cae. Con gravedad lunar se llega de un salto desde lo alto de la rampa.');
     }
     // Bombas de baba: llueven con el escudo levantado; sin él cae alguna suelta
     m.bombT -= dt;
@@ -373,7 +373,7 @@ export class Boss {
     this.hide();
     g.save.motherships = (g.save.motherships || 0) + 1;
     g.addStuds(reward);
-    g.hud.toast(`🛸 ¡Has derribado la <b>nave nodriza</b>! Premio extra: <b>${reward.toLocaleString('es-ES')}</b> studs.`);
+    g.hud.toast(`🛸 ¡Has derribado la <b>nave nodriza</b>! Premio extra: <b>${reward.toLocaleString('es-ES')}</b> studs.`, '¡Has derribado la nave nodriza! Y con premio extra.');
     A.victory();
   }
 

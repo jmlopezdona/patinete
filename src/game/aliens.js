@@ -228,7 +228,7 @@ export class Aliens {
     g.hud.big('¡Cobeña salvada!', GREEN, 2.6);
     g.sfx.fanfare();
     g.confetti();
-    g.hud.toast(`🏆 ¡Invasión rechazada! Premio: <b>${reward.toLocaleString('es-ES')}</b> studs${W.saved ? `, con <b>${W.saved * 500}</b> por los rescates` : ''}. Volverán otra noche… con refuerzos y otra nodriza más dura.`);
+    g.hud.toast(`🏆 ¡Invasión rechazada! Premio: <b>${reward.toLocaleString('es-ES')}</b> studs${W.saved ? `, con <b>${W.saved * 500}</b> por los rescates` : ''}. Volverán otra noche… con refuerzos y otra nodriza más dura.`, '¡Invasión rechazada! Volverán otra noche… con refuerzos y otra nodriza más dura.');
   }
 
   setUfo(state) {
@@ -549,7 +549,7 @@ export class Aliens {
       u.dur = 11;
       g.camera3.snap = true;
       g.sfx.escape();
-      g.hud.toast(`👽 Te han soltado en <b>${c.dest.name}</b>${c.stolen ? ` y te han birlado <b>${c.stolen}</b> studs` : ''}. ¡Qué cara!`);
+      g.hud.toast(`👽 Te han soltado en <b>${c.dest.name}</b>${c.stolen ? ` y te han birlado <b>${c.stolen}</b> studs` : ''}. ¡Qué cara!`, 'Te han soltado donde les ha dado la gana. ¡Qué cara!');
     }
   }
 
@@ -797,7 +797,7 @@ export class Aliens {
     g.sfx.sos();
     g.hud.toast(g.save.rescues
       ? `🆘 ¡El platillo va a por <b>${this.vic.name}</b>!`
-      : `🆘 ¡El platillo va a por <b>${this.vic.name}</b>! <b>Salta</b> y cruza el rayo por el aire para cortarlo.`);
+      : `🆘 ¡El platillo va a por <b>${this.vic.name}</b>! <b>Salta</b> y cruza el rayo por el aire para cortarlo.`, '¡El platillo va a por un vecino!');
     return true;
   }
 
@@ -919,7 +919,7 @@ export class Aliens {
     v.obj.visible = false;
     this.lost.push(v);
     g.sfx.abducted();
-    g.hud.toast(`👽 ¡Tarde! <b>${v.name[0].toUpperCase()}${v.name.slice(1)}</b> ya va dentro del platillo. Echa a los marcianos para que suelte su botín.`);
+    g.hud.toast(`👽 ¡Tarde! <b>${v.name[0].toUpperCase()}${v.name.slice(1)}</b> ya va dentro del platillo. Echa a los marcianos para que suelte su botín.`, '¡Tarde! Ya va dentro del platillo. Echa a los marcianos para que suelte su botín.');
     this.setUfo('rest');
   }
 
