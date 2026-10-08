@@ -4,6 +4,7 @@ import * as THREE from 'three';
 export const legoUniforms = {
   uNight: { value: 0 },
   uSunDir: { value: new THREE.Vector2(0.6, 0.4) },
+  uDetail: { value: 1 }, // 1: relieve en studs y cantos y brillo distinto en cada pieza (solo en «Altos»)
 };
 
 // Material de los ladrillos estáticos (mallas instanciadas por sectores) y del suelo por capas.
@@ -16,6 +17,7 @@ export function createBrickMaterial({ ground = false, ...opts } = {}) {
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = legoUniforms.uNight;
     shader.uniforms.uSunDir = legoUniforms.uSunDir;
+    shader.uniforms.uDetail = legoUniforms.uDetail;
     shader.vertexShader = shader.vertexShader
       .replace(
         '#include <common>',
@@ -24,6 +26,8 @@ attribute float aFlags;
 varying vec3 vLPos;
 varying vec3 vLSize;
 varying vec3 vLNormal;
+varying vec3 vLAxX;
+varying vec3 vLAxZ;
 varying float vFlags;`
       )
       .replace(
@@ -36,6 +40,15 @@ legoScale = vec3(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz), l
 vLSize = legoScale;
 vLPos = position * legoScale;
 vLNormal = normal;
+// Los ejes X y Z de la pieza vistos desde la cámara: con ellos se inclina la normal en studs y cantos
+vec3 legoAxX = vec3(1.0, 0.0, 0.0);
+vec3 legoAxZ = vec3(0.0, 0.0, 1.0);
+#ifdef USE_INSTANCING
+legoAxX = instanceMatrix[0].xyz / legoScale.x;
+legoAxZ = instanceMatrix[2].xyz / legoScale.z;
+#endif
+vLAxX = mat3(modelViewMatrix) * legoAxX;
+vLAxZ = mat3(modelViewMatrix) * legoAxZ;
 vFlags = aFlags;`
       );
     shader.fragmentShader = shader.fragmentShader
@@ -44,9 +57,12 @@ vFlags = aFlags;`
         `#include <common>
 uniform float uNight;
 uniform vec2 uSunDir;
+uniform float uDetail;
 varying vec3 vLPos;
 varying vec3 vLSize;
 varying vec3 vLNormal;
+varying vec3 vLAxX;
+varying vec3 vLAxZ;
 varying float vFlags;
 float legoHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }`
       )
@@ -61,6 +77,9 @@ bool fSeams = mod(floor(legoF / 2.0), 2.0) >= 1.0;
 bool fWin = mod(floor(legoF / 4.0), 2.0) >= 1.0;
 bool fGlow = mod(floor(legoF / 8.0), 2.0) >= 1.0;
 bool fLit = mod(floor(legoF / 16.0), 2.0) >= 1.0;
+bool legoFine = uDetail > 0.5;
+vec3 legoBump = vec3(0.0); // cuánto se inclina la normal, en los ejes de la pieza
+float legoRough = 1.0;
 if (fStuds && vLNormal.y > 0.5) {
   vec2 st = fract(legoQ.xz) - 0.5;
   float r = length(st);
@@ -73,6 +92,8 @@ if (fStuds && vLNormal.y > 0.5) {
   float sh = (1.0 - smoothstep(0.30, 0.42, length(st + uSunDir * 0.08))) * (1.0 - inside);
   float k = 1.0 + inside * 0.06 + ring * dot(dir, uSunDir) * 0.30 - ring * 0.10 - sh * 0.24;
   diffuseColor.rgb *= mix(1.0, k, fade);
+  // El canto del stud mira hacia fuera: el brillo del sol y del cielo lo recorre al moverse la cámara
+  if (legoFine) legoBump.xz += dir * ring * fade * 0.85;
 }
 #ifdef LEGO_GROUND
 if (vLNormal.y > 0.5) {
@@ -80,7 +101,19 @@ if (vLNormal.y > 0.5) {
   // De lejos se apaga, que ahí solo sería ruido
   float px = max(legoDQ.x, legoDQ.z);
   float fade = 1.0 - smoothstep(0.5, 2.5, px);
-  diffuseColor.rgb *= 1.0 + (legoHash(floor(legoQ.xz / 8.0)) - 0.5) * 0.10 * fade;
+  float plate = legoHash(floor(legoQ.xz / 8.0)) - 0.5;
+  diffuseColor.rgb *= 1.0 + plate * 0.10 * fade;
+  if (legoFine) legoRough += plate * 0.24 * fade;
+}
+#endif
+#ifdef USE_INSTANCING
+if (legoFine) {
+  // Cantos redondeados: cerca de cada arista la normal se inclina hacia la cara de al lado
+  vec3 edge = min(legoQ, vLSize - legoQ);
+  float px = max(legoDQ.x, max(legoDQ.y, legoDQ.z));
+  float fade = 1.0 - smoothstep(0.03, 0.14, px);
+  vec3 w = (1.0 - smoothstep(0.0, 0.07, edge)) * (1.0 - abs(vLNormal));
+  legoBump += sign(legoQ - vLSize * 0.5) * w * fade * 0.8;
 }
 #endif
 if (fSeams && abs(vLNormal.y) < 0.5) {
@@ -100,13 +133,21 @@ if (fSeams && abs(vLNormal.y) < 0.5) {
   float line = smoothstep(0.0, 0.035 + aa, dv) * smoothstep(0.0, 0.035 + aa, du);
   float tint = 0.955 + 0.09 * legoHash(vec2(col, row) + vLSize.xz);
   diffuseColor.rgb *= mix(1.0, mix(0.60, 1.0, line) * tint, fade);
+  // Cada ladrillo brilla un poco distinto que el de al lado
+  if (legoFine) legoRough += (tint - 1.0) * 3.0 * fade;
 }
 vec3 legoBase = diffuseColor.rgb;`
       )
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
+roughnessFactor *= legoRough;
 if (fWin) roughnessFactor = 0.07;`
+      )
+      .replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+if (legoFine) normal = normalize(normal + vLAxX * legoBump.x + cross(vLAxZ, vLAxX) * legoBump.y + vLAxZ * legoBump.z);`
       )
       .replace(
         '#include <emissivemap_fragment>',

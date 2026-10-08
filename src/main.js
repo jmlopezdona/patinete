@@ -15,7 +15,7 @@ import { Sfx } from './core/audio.js';
 import { Voice } from './core/voice.js';
 import { BrickBatch } from './lego/batch.js';
 import { Builder } from './lego/builder.js';
-import { createBrickMaterial, plastic, plasticDouble, goldMetal, textTexture } from './lego/materials.js';
+import { createBrickMaterial, legoUniforms, plastic, plasticDouble, goldMetal, textTexture } from './lego/materials.js';
 import { createScooter } from './lego/scooter.js';
 import { Terrain } from './world/terrain.js';
 import { buildTown, zoneAt, BOUNDS } from './world/cobena.js';
@@ -307,6 +307,7 @@ class Game {
       }
     }
     this.final.uniforms.uBlur.value = q === 2 ? 1 : 0;
+    legoUniforms.uDetail.value = q === 2 ? 1 : 0;
     document.getElementById('p-quality').textContent = `Gráficos: ${QUALITY_NAMES[q]}`;
     this.resize();
   }
