@@ -444,6 +444,21 @@ export class Sfx {
   }
 
   // ---------- Nivel de búsqueda ----------
+  // Las gallinas: cacareo tranquilo, el grito de la atropellada y el picotazo
+  cluck(vol = 1) {
+    if (vol < 0.05) return;
+    this.tone(620, 0.05, 'square', 0.045 * vol, 1.5);
+    this.tone(480, 0.09, 'square', 0.045 * vol, 0.7, 0.07);
+  }
+  squawk() {
+    for (let i = 0; i < 4; i++) this.tone(700 + i * 130, 0.07, 'sawtooth', 0.07, 1.5, i * 0.06);
+    this.tone(1250, 0.32, 'sawtooth', 0.08, 0.5, 0.24);
+    this.noise(0.2, 0.08, 2600, 2, 'bandpass', 0.02);
+  }
+  peck() {
+    this.tone(1500, 0.04, 'square', 0.08, 0.5);
+    this.tone(520, 0.1, 'triangle', 0.1, 0.6, 0.03);
+  }
   wanted(stars) {
     for (let i = 0; i < stars; i++) this.tone(660 * Math.pow(2, i / 6), 0.1, 'square', 0.09, 0, i * 0.08);
     this.tone(110, 0.5, 'sawtooth', 0.07, 0.8);

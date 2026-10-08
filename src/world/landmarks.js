@@ -524,6 +524,37 @@ function megaJump(W) {
   W.places.mega = { x: X(150), z, hole: h, islandX: ix };
 }
 
+// ---------- El gallinero, en el campo del Mega Salto ----------
+
+function henhouse(W) {
+  const { batch, terrain } = W;
+  const m = W.places.mega;
+  const x = m.x - 10;
+  const z = m.z + 50;
+  batch.level = lift(x, z); // la caseta entera, a la cota de su centro
+  for (const sx of [-3, 3]) for (const sz of [-2.2, 2.2]) batch.box(x + sx, 0, z + sz, 0.6, 1, 0.6, C.brown, 0);
+  batch.box(x, 1, z, 7, 3.4, 5.5, C.red, F.SEAMS);
+  batch.box(x, 4.4, z, 8.2, 0.6, 6.7, C.brown, F.STUDS);
+  batch.box(x, 5, z, 6, 0.6, 4.5, C.brown, F.STUDS);
+  batch.box(x, 5.6, z, 3.8, 0.6, 2.3, C.brown, F.STUDS);
+  // La puerta mira al camino de tierra, con sus dos escalones
+  batch.box(x, 1, z - 2.76, 1.8, 2.2, 0.1, C.black, 0);
+  batch.box(x, 0, z - 3.5, 1.8, 1, 1.2, C.tan, 0);
+  batch.box(x, 0, z - 4.7, 1.8, 0.5, 1.2, C.tan, 0);
+  addSign(W, 'GALLINERO', x, 3.85, z - 2.8, Math.PI, 5, 0.9, '#5c3a21', '#ffd23a');
+  batch.level = null;
+  terrain.box(x, z, 7, 5.5, 6.2);
+  // El corral: postes sueltos, comedero y unas balas de paja
+  for (let i = 0; i < 7; i++) {
+    for (const s of [-1, 1]) batch.box(x + s * 13, 0, z + 3 - i * 4.4, 0.6, 1.6, 0.6, C.brown, F.STUDS);
+  }
+  batch.box(x + 6, 0, z - 10, 3, 0.5, 1, C.dgray, 0);
+  batch.box(x - 8, 0, z - 1, 2.4, 1.4, 1.6, C.yellow, F.SEAMS);
+  batch.box(x - 8.4, 0, z - 3, 2.4, 1.4, 1.6, C.yellow, F.SEAMS);
+  W.map.blocks.push({ x, z, w: 7, d: 5.5, color: '#c91a09' });
+  W.places.hens = { x, z: z - 13, door: { x, z: z - 5.6 } };
+}
+
 // ---------- La puerta de la Escuela de Música: Adrián, el pequeño batería heavy ----------
 
 // La huella del escenario, en su marco: la tarima con el telón de fondo y las dos torres de altavoces
@@ -770,6 +801,7 @@ export function buildLandmarks(W) {
   bowling(W);
   soccer(W);
   megaJump(W);
+  henhouse(W);
   drummer(W);
   for (const [x, z] of DATA.playgrounds) playground(W, x, z);
   oldSkate(W);
