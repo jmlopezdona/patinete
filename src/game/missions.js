@@ -52,15 +52,15 @@ export class Missions {
     this.defs = [
       { id: 'race', name: 'Gran Premio de Cobeña', icon: '🏁', color: 0xffc61a, x: sp.x - Math.sin(sp.heading) * 14, z: sp.z - Math.cos(sp.heading) * 14, desc: 'Da la vuelta al barrio de los ríos lo más rápido que puedas.', lower: true, unit: (v) => fmt(v) },
       { id: 'tricks', name: 'Rey del Skatepark', icon: '🛹', color: 0xfe8a18, x: P.trick.marker.x, z: P.trick.marker.z, desc: '75 segundos para encadenar tus mejores trucos.', unit: (v) => `${Math.round(v)} pts` },
-      { id: 'bowling', name: 'Bolos Gigantes', icon: '🎳', color: 0x2f7dff, x: P.bowling.x - 5.5, z: P.bowling.z + 1.5, desc: 'Tú eres la bola: derriba los 10 bolos en dos tiradas.', night: false, unit: (v) => `${v} bolos` },
+      { id: 'bowling', name: 'Bolos Gigantes', icon: '🎳', color: 0x2f7dff, x: P.bowling.x - 5.5, z: P.bowling.z + 1.5, desc: 'Tú eres la bola: derriba los 10 bolos en dos tiradas.', night: false, spot: 0, unit: (v) => `${v} bolos` },
       // De noche, en el mismo sitio, los bolos son marcianos
-      { id: 'alienbowl', name: 'Bolos Marcianos', icon: '👽', color: 0x7ddc1f, x: P.bowling.x - 5.5, z: P.bowling.z + 1.5, desc: 'Los bolos son marcianos y se apartan: tumba los 10 en dos tiradas.', night: true, unit: (v) => `${v} marcianos` },
+      { id: 'alienbowl', name: 'Bolos Marcianos', icon: '👽', color: 0x7ddc1f, x: P.bowling.x - 5.5, z: P.bowling.z + 1.5, desc: 'Los bolos son marcianos y se apartan: tumba los 10 en dos tiradas.', night: true, spot: 0, unit: (v) => `${v} marcianos` },
       { id: 'pizza', name: 'Pizza Exprés', icon: '🍕', color: 0xe23b2a, x: P.pizza.x, z: P.pizza.z, desc: 'Reparte 5 pizzas por las calles de Cobeña antes de que se enfríen.', lower: true, unit: (v) => fmt(v) },
-      { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Márcale a Teo todos los goles que puedas en 60 segundos.', night: false, unit: (v) => `${v} goles` },
+      { id: 'soccer', name: 'Chut a Puerta', icon: '⚽', color: 0x4bbf5a, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'Márcale a Teo todos los goles que puedas en 60 segundos.', night: false, spot: 1, unit: (v) => `${v} goles` },
       // De noche Teo se toma la noche libre: para un marciano con cuatro brazos
       // Solo cuando Emma está de vecina en el parque; dónde, lo dice ella (ver place)
       { id: 'selfie', name: 'Selfie con Emma', icon: '🤳', color: 0xff5fa2, x: 0, z: 0, desc: `Cuélate en las ${SHOTS} fotos de Emma: sal bien de fondo y que el flash te pille haciendo un truco distinto cada vez.`, when: () => !!game.folks?.emma && !game.folks.away.has('emma'), linger: 180, unit: (v) => `${Math.round(v)} pts` },
-      { id: 'aliensoccer', name: 'Chut Marciano', icon: '👾', color: 0x7ddc1f, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'El portero es un marciano con cuatro brazos que no le quita ojo al balón: márcale en 60 segundos.', night: true, unit: (v) => `${v} goles` },
+      { id: 'aliensoccer', name: 'Chut Marciano', icon: '👾', color: 0x7ddc1f, x: P.soccer.marker.x, z: P.soccer.marker.z, desc: 'El portero es un marciano con cuatro brazos que no le quita ojo al balón: márcale en 60 segundos.', night: true, spot: 1, unit: (v) => `${v} goles` },
     ];
     this.state = 'idle';
     this.cur = null;
@@ -68,6 +68,7 @@ export class Missions {
     this.t = 0;
     this.time = 0;
     this.near = null;
+    this.who = null;
 
     // Marcadores en el mundo
     const ringGeo = new THREE.TorusGeometry(3.2, 0.28, 8, 40);
@@ -166,6 +167,13 @@ export class Missions {
     this.game.hud.toast('Misión abandonada');
   }
 
+  // En red: en ese sitio ya estaba jugando otro (ver game/spots.js)
+  bounce() {
+    if (this.state === 'idle') return;
+    this._cleanup();
+    this.game.hud.toast('Ahí ya hay alguien jugando: espera a que acabe');
+  }
+
   _cleanup() {
     const g = this.game;
     if (this.cur && this.cur.cleanup) this.cur.cleanup();
@@ -232,15 +240,19 @@ export class Missions {
     if (idle) {
       let near = null;
       for (const d of this.defs) if (!d.hidden && Math.hypot(p.pos.x - d.x, p.pos.z - d.z) < 5.5) near = d;
-      if (near !== this.near) {
+      // En red, la bolera y la pista son de quien esté jugando en ellas
+      const who = near && near.spot != null ? g.spots.player(near.spot) : null;
+      if (near !== this.near || who !== this.who) {
         this.near = near;
-        if (near) {
+        this.who = who;
+        if (who) g.hud.prompt(`<b>${near.icon} ${near.name}</b><small>${who.char.icon} ${who.char.name} está jugando: espera a que acabe</small>`);
+        else if (near) {
           const st = g.save.stars[near.id] || 0;
           const best = g.save.best[near.id];
           g.hud.prompt(`<kbd>E</kbd> <b>${near.icon} ${near.name}</b><span>${'★'.repeat(st)}${'☆'.repeat(3 - st)}${best != null ? ' · Récord: ' + near.unit(best) : ''}</span><small>${near.desc}</small>`);
         } else g.hud.prompt(null);
       }
-      if (near && g.input.hit('action') && p.crashT <= 0) this.begin(near);
+      if (near && !who && g.input.hit('action') && p.crashT <= 0) this.begin(near);
       return;
     }
     if (this.state === 'countdown') {
@@ -364,6 +376,7 @@ export class Missions {
     const g = this.game;
     const P = g.world.places.bowling;
     const alien = pins !== g.pins;
+    g.spots.play(0);
     pins.reset();
     g.player.place(P.x, P.z, P.heading);
     g.player.boost = 1;
@@ -408,7 +421,10 @@ export class Missions {
           }
         }
       },
-      cleanup: () => pins.reset(),
+      cleanup: () => {
+        pins.reset();
+        g.spots.leave(0);
+      },
     };
   }
 
@@ -481,6 +497,7 @@ export class Missions {
   _pitch(need, tip) {
     const g = this.game;
     const P = g.world.places.soccer;
+    g.spots.play(1);
     g.ball.reset();
     g.player.place(P.start.x, P.start.z, P.start.heading);
     g.player.boost = 1;
@@ -496,7 +513,10 @@ export class Missions {
           this.finish(stars, n, [`Goles: <b>${n}</b>`, stars === 0 ? `Empuja el balón hacia la portería ${g.ball.keeperName.replace(/^el /, 'del ').replace(/^(?!del )/, 'de ')}.` : tip]);
         }
       },
-      cleanup: () => g.ball.reset(),
+      cleanup: () => {
+        g.ball.reset();
+        g.spots.leave(1);
+      },
     };
   }
 
@@ -668,7 +688,8 @@ export class Missions {
 
   goal(side) {
     const g = this.game;
-    if (this.state === 'run' && this.cur.soccer) {
+    const playing = this.state === 'run' && this.cur.soccer;
+    if (playing) {
       if (side === 'east') {
         this.goals++;
         g.hud.big('¡GOOOL!', '#4dff88', 1.4);
@@ -679,6 +700,8 @@ export class Missions {
     }
     g.sfx.goal();
     g.confetti(g.ball.pos.x, g.ball.pos.y + 2, g.ball.pos.z);
+    // En red lo ven y lo oyen los que anden cerca
+    g.party?.tell('gol', playing && side !== 'east' ? 0 : 1);
   }
 }
 

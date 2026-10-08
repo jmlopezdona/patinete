@@ -6,8 +6,8 @@ import { F } from '../net/protocol.js';
 
 const tmp = new THREE.Vector3();
 // Lo que el mundo le hace a un jugador llamando a sus métodos. A uno remoto no se le puede hacer
-// aquí: en el anfitrión viaja como `orden` y se cumple en la pantalla de su dueño
-export const ORDERS = ['bump', 'place', 'crash', 'launch', 'skid'];
+// aquí: lo que le pasa a cada jugador lo decide su pantalla, así que en un remoto no hacen nada
+const LOCAL = ['bump', 'place', 'crash', 'launch', 'skid'];
 
 // Lo que hay que contar de un jugador para que otro lo pinte: justo lo que lee `Player.updateVisual`.
 // Los giros viajan como se ven (con el coletazo de aterrizar ya sumado), no como los lleva la física
@@ -96,10 +96,6 @@ export class RemotePlayer extends Player {
     this.tag.visible = this.model.visible;
   }
 
-  order(m, a) {
-    this.game.party?.order(this, m, a);
-  }
-
   dropTag() {
     if (!this.tag) return;
     this.tag.removeFromParent();
@@ -115,8 +111,4 @@ export class RemotePlayer extends Player {
   }
 }
 
-for (const m of ORDERS) {
-  RemotePlayer.prototype[m] = function (...a) {
-    this.order(m, a);
-  };
-}
+for (const m of LOCAL) RemotePlayer.prototype[m] = () => {};
