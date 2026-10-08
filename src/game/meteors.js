@@ -75,6 +75,14 @@ function rockGeo() {
 // Lluvia de meteoritos: de día, de tarde en tarde, caen unos cuantos en los descampados de
 // alrededor. Cada uno avisa con una diana en el suelo, manda por los aires a quien pille debajo y
 // deja un cráter que se patina como un bowl, con el meteorito en el fondo para quien baje a por él.
+//
+// En red la lluvia es la misma para todos, pero no viaja en la `foto`: una vez decidido dónde y
+// cuándo cae cada uno, lo demás es cuestión de tiempo y cada pantalla lo lleva por su cuenta.
+// - El anfitrión decide cuándo empieza y reparte las dianas (`start`), y lo cuenta entero (`lluvia`).
+// - Cada pantalla hace caer los suyos, levanta los cráteres y manda por los aires a su jugador.
+// - El meteorito del fondo es para el primero que baje: cada jugador lo pide (`meteorito`) y el
+//   anfitrión lo da y lo dice (`cogido`). La cuenta de recogidos es de todos, y el premio final también.
+// - A quien entra tarde se le cuenta cómo está todo (`dump` y `load`, en el `mundo`).
 export class Meteors {
   constructor(game) {
     this.game = game;
@@ -135,7 +143,7 @@ export class Meteors {
       core.castShadow = true;
       mesh.visible = glow.visible = core.visible = false;
       scene.add(mesh, glow, core);
-      this.craters.push({ mesh, glow, core, halo, on: false, x: 0, z: 0, k: 1, r: 0, age: 0, rise: 1, sink: 0, old: false, has: false, coreT: 0, prims: [], blip: { x: 0, z: 0, icon: '☄️' } });
+      this.craters.push({ mesh, glow, core, halo, on: false, x: 0, z: 0, k: 1, r: 0, age: 0, rise: 1, sink: 0, old: false, has: false, coreT: 0, askT: 0, prims: [], blip: { x: 0, z: 0, icon: '☄️' } });
     }
   }
 
@@ -233,54 +241,69 @@ export class Meteors {
 
   // ---------- La lluvia ----------
 
-  // Empieza una lluvia si hay sitio cerca donde quepan los cráteres. Devuelve si ha empezado
-  start() {
+  // Empieza una lluvia si hay sitio cerca donde quepan los cráteres. Devuelve si ha empezado.
+  // Solo jugando solo o en el anfitrión. p: alrededor de quién cae
+  start(p = this.game.player) {
     const g = this.game;
-    const p = g.player;
     if (this.state !== 'idle') return false;
-    // Los cráteres de la lluvia anterior se tapan, menos el que se esté patinando
-    for (const c of this.craters) c.old = c.on && (c.sink > 0 || Math.hypot(p.pos.x - c.x, p.pos.z - c.z) > c.r + 12);
+    // Los cráteres de la lluvia anterior se tapan, menos el que alguien esté patinando
+    for (const c of this.craters) c.old = c.on && (c.sink > 0 || g.nearest2(c.x, c.z) > (c.r + 12) ** 2);
     const spots = this.aim(p);
     if (!spots) return false;
-    for (const c of this.craters) if (c.old && !c.sink) this.fill(c);
     spots.sort((a, b) => Math.hypot(a.x - p.pos.x, a.z - p.pos.z) - Math.hypot(b.x - p.pos.x, b.z - p.pos.z));
-    this.falls.forEach((f, i) => {
-      const s = spots[i];
-      f.on = !!s;
-      if (!s) return;
-      f.x = f.blip.x = s.x;
-      f.z = f.blip.z = s.z;
-      f.k = s.k;
-      f.wait = WARN + i * GAP + Math.random() * 0.6;
-      f.t = 0;
-      // Todos vienen del mismo lado del cielo, cada uno un poco a su aire
+    // Todo lo que hay que saber de la lluvia, en una ristra de números: qué cráteres se tapan y,
+    // de cada meteorito, dónde cae, de qué tamaño, cuándo y de qué lado del cielo viene
+    const rain = [this.craters.reduce((m, c, i) => m | (c.old ? 1 << i : 0), 0)];
+    spots.forEach((s, i) => {
       const a = 0.9 + (Math.random() - 0.5) * 0.5;
-      f.sx = Math.sin(a) * SKY * 0.7;
-      f.sz = Math.cos(a) * SKY * 0.7;
-      // La diana, tumbada sobre la cuesta
-      lift(s.x, s.z);
-      f.mark.quaternion.setFromUnitVectors(_up, _n.set(-grade.x, 1, -grade.z).normalize());
+      rain.push(s.x, s.z, s.k, WARN + i * GAP + Math.random() * 0.6, Math.sin(a) * SKY * 0.7, Math.cos(a) * SKY * 0.7);
+    });
+    this.rain(rain);
+    g.party?.tell('lluvia', rain);
+    return true;
+  }
+
+  // La lluvia que ha decidido `start`, aquí o en el anfitrión
+  rain(list) {
+    const g = this.game;
+    const n = Math.min(COUNT, Math.floor((list.length - 1) / 6));
+    if (n < 1) return;
+    this.craters.forEach((c, i) => {
+      c.old = c.on && !!(list[0] & (1 << i));
+      if (c.old && !c.sink) this.fill(c);
+    });
+    this.falls.forEach((f, i) => {
+      f.on = i < n;
+      f.mesh.visible = f.mark.visible = false;
+      if (f.on) this.target(f, ...list.slice(1 + i * 6, 7 + i * 6), 0);
     });
     this.state = 'warn';
     this.t = 0;
     this.found = 0;
-    this.total = spots.length;
+    this.total = n;
     g.sfx.meteorAlarm();
     g.hud.big('¡Lluvia de meteoritos!', ORANGE, 2.2);
     g.hud.setMeteors(0, this.total);
     g.hud.toast('☄️ ¡Que vienen! Apártate de las <b>dianas</b>: cada meteorito deja un <b>cráter</b> que se patina como un bowl… y una piedra del espacio en el fondo.');
-    return true;
+  }
+
+  // Un meteorito con su diana: dónde cae, de qué tamaño, cuánto le falta y de qué lado viene
+  target(f, x, z, k, wait, sx, sz, t) {
+    f.x = f.blip.x = x;
+    f.z = f.blip.z = z;
+    f.k = k;
+    f.wait = wait;
+    f.t = t;
+    f.sx = sx;
+    f.sz = sz;
+    // La diana, tumbada sobre la cuesta
+    lift(x, z);
+    f.mark.quaternion.setFromUnitVectors(_up, _n.set(-grade.x, 1, -grade.z).normalize());
   }
 
   // Levanta el cráter: las primitivas del terreno y su malla, tendida sobre la cuesta que haya
-  dig(x, z, k) {
-    let c = null;
-    for (const o of this.craters) {
-      if (!o.on) {
-        c = o;
-        break;
-      }
-    }
+  dig(x, z, k, slot = this.craters.findIndex((o) => !o.on)) {
+    const c = this.craters[slot];
     if (!c) return null;
     const T = this.T;
     c.on = true;
@@ -360,35 +383,100 @@ export class Meteors {
     }
   }
 
-  take(c) {
+  // Jugando solo o en el anfitrión: el meteorito de ese cráter es para `by`. El premio es suyo; el
+  // de recogerlos todos, de toda la pandilla
+  grant(i, by) {
     const g = this.game;
+    const c = this.craters[i];
+    if (!c || !by || !c.on || !c.has) return;
+    this.collect(i);
+    g.party?.tell('cogido', i);
+    const to = g.to(by);
+    to.sfx.gold();
+    to.addStuds(PRIZE);
+    if (this.found < this.total) {
+      to.hud.big('¡Meteorito!', ORANGE, 1, true);
+      return;
+    }
+    const all = g.all;
+    all.addStuds(BONUS);
+    all.sfx.fanfare();
+    all.confetti();
+    all.hud.big('¡Todos los meteoritos!', '#ffd23a', 1.8);
+    all.hud.toast(`☄️ Has recogido los <b>${this.total}</b> meteoritos de esta lluvia: <b>+${BONUS}</b> studs. Los cráteres se quedan hasta la próxima.`, 'Has recogido todos los meteoritos de esta lluvia. Los cráteres se quedan hasta la próxima.');
+  }
+
+  // Lo que se ve en todas las pantallas cuando alguien se lleva uno
+  collect(i) {
+    const g = this.game;
+    const c = this.craters[i];
+    if (!c || !c.has) return;
     c.has = false;
     c.core.visible = false;
     this.found++;
-    g.sfx.gold();
-    g.addStuds(PRIZE);
-    g.bits.burst(c.x, 2, c.z, [0xff7a1a, 0xffd23a, 0xffffff, C.dgray], 18, 10, 0, 0.5);
+    g.here(c.x, c.z).bits.burst(c.x, 2, c.z, [0xff7a1a, 0xffd23a, 0xffffff, C.dgray], 18, 10, 0, 0.5);
     g.hud.setMeteors(this.found, this.total);
-    if (this.found < this.total) {
-      g.hud.big('¡Meteorito!', ORANGE, 1, true);
-      return;
+  }
+
+  // En red: cómo está la lluvia, para contárselo al que entra, y lo que hace él al saberlo
+  dump() {
+    return {
+      s: this.state, t: this.t, f: this.found, n: this.total,
+      falls: this.falls.filter((f) => f.on).map((f) => [f.x, f.z, f.k, f.wait, f.sx, f.sz, f.t]),
+      craters: this.craters.map((c, i) => (c.on ? [i, c.x, c.z, c.k, c.age, c.has ? 1 : 0, c.coreT, c.old ? 1 : 0, c.sink] : null)).filter(Boolean),
+    };
+  }
+
+  load(w) {
+    const num = (v) => +v || 0;
+    for (const c of this.craters) {
+      for (const q of c.prims) this.T.remove(q);
+      c.prims.length = 0;
+      c.on = c.has = c.old = false;
+      c.sink = 0;
+      c.mesh.visible = c.glow.visible = c.core.visible = false;
+      c.mesh.position.y = 0;
     }
-    g.addStuds(BONUS);
-    g.sfx.fanfare();
-    g.confetti();
-    g.hud.big('¡Todos los meteoritos!', '#ffd23a', 1.8);
-    g.hud.toast(`☄️ Has recogido los <b>${this.total}</b> meteoritos de esta lluvia: <b>+${BONUS}</b> studs. Los cráteres se quedan hasta la próxima.`, 'Has recogido todos los meteoritos de esta lluvia. Los cráteres se quedan hasta la próxima.');
+    for (const e of Array.isArray(w.craters) ? w.craters : []) {
+      const c = this.dig(num(e[1]), num(e[2]), num(e[3]), num(e[0]));
+      if (!c) continue;
+      c.age = num(e[4]);
+      c.rise = 1;
+      c.coreT = num(e[6]);
+      c.old = !!e[7];
+      c.has = c.core.visible = !!e[5];
+      if (num(e[8]) > 0) {
+        this.fill(c);
+        c.sink = num(e[8]);
+      }
+    }
+    const falls = Array.isArray(w.falls) ? w.falls : [];
+    this.falls.forEach((f, i) => {
+      const e = falls[i];
+      f.on = !!e;
+      if (e) this.target(f, ...e.slice(0, 7).map(num));
+      f.mesh.visible = f.mark.visible = f.on && f.wait <= 0;
+    });
+    this.state = ['idle', 'warn', 'rain'].includes(w.s) ? w.s : 'idle';
+    this.t = num(w.t);
+    this.found = num(w.f);
+    this.total = num(w.n);
+    this.game.hud.setMeteors(...(this.total ? [this.found, this.total] : [null]));
   }
 
   update(dt, p, time) {
     const g = this.game;
     this.blips.length = 0;
 
-    // De día y sin nada más entre manos, de tarde en tarde cae una
+    // De día y sin nada más entre manos, de tarde en tarde cae una. En red la decide el anfitrión,
+    // y cae alrededor de alguno de los que no están a otra cosa
+    const party = g.party;
+    const led = !!party && !party.hosting;
     if (this.state === 'idle') {
-      if (!g.aliens.active && g.env.target < 0.5 && !g.missions.active && !p.held) {
+      const who = led ? [] : party ? g.crowd(p).filter((o) => !g.busy(o) && !o.held) : !g.missions.active && !p.held ? [p] : [];
+      if (!g.aliens.active && g.env.target < 0.5 && who.length) {
         this.cd -= dt;
-        if (this.cd <= 0) this.cd = this.start() ? EVERY : 25;
+        if (this.cd <= 0) this.cd = this.start(who[Math.floor(Math.random() * who.length)]) ? EVERY : 25;
       }
     } else {
       this.t += dt;
@@ -434,7 +522,9 @@ export class Meteors {
     }
 
     let cores = 0;
-    for (const c of this.craters) {
+    for (let i = 0; i < this.craters.length; i++) {
+      const c = this.craters[i];
+      c.askT -= dt;
       if (!c.on) continue;
       if (c.sink) {
         // Tapándose: la tierra se hunde y el hueco queda libre para otro
@@ -477,7 +567,14 @@ export class Meteors {
       c.core.position.y = 1.8 + Math.sin(time * 2.4 + c.z) * 0.3;
       c.core.rotation.set(time * 1.3, time * 1.9, 0);
       c.halo.material.opacity = 0.3 + Math.sin(time * 6 + c.x) * 0.1;
-      if (pop >= 1 && p.crashT <= 0 && !p.held && Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < 3.4 && p.pos.y < 5) this.take(c);
+      // Lo toca el jugador de esta pantalla: es suyo, o lo pide si el que manda es el anfitrión
+      if (pop >= 1 && p.crashT <= 0 && !p.held && Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < 3.4 && p.pos.y < 5) {
+        if (!led) this.grant(i, p);
+        else if (c.askT <= 0) {
+          c.askT = 0.5;
+          party.tell('meteorito', i);
+        }
+      }
     }
     // El contador se esconde cuando ya no queda ninguno por recoger ni por caer
     if (this.state === 'idle' && !cores && this.total) {
