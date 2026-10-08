@@ -28,7 +28,7 @@ const SIGN_BG = ['#c91a09', '#0055bf', '#237841', '#fe8a18', '#6b3fa0', '#008f9b
 const PROPS = ['hydrant', 'bin', 'mailbox', 'cone', 'bench', 'crate', 'flowerpot', 'barrier'];
 const HOMES = new Set(Object.values(D.places.homes).map((h) => h.b)); // casas de los personajes
 // Capas del suelo, de abajo arriba
-const LY = { field: 0, urban: 1, green: 2, water: 3, sidewalk: 4, path: 5, road: 6, mark: 7 };
+export const LY = { field: 0, urban: 1, green: 2, water: 3, sidewalk: 4, path: 5, road: 6, mark: 7 };
 
 // ---------- Suelo por capas (calles, aceras, parques...), tendido sobre el relieve ----------
 const _col = new THREE.Color();

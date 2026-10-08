@@ -4,9 +4,10 @@ import { F } from '../lego/batch.js';
 import { profileGeo, frustumGeo } from '../lego/builder.js';
 import { addPin } from '../lego/models.js';
 import { BASE, frame, fbox, tree, lamp, palm, addSign } from './city.js';
-import { DATA, BOUNDS } from './cobena.js';
+import { DATA, BOUNDS, LY } from './cobena.js';
 import { lift } from './relief.js';
 import { roamSpot } from './streets.js';
+import { makeRng } from '../core/rng.js';
 
 const B = BASE;
 const RAD = Math.PI / 180;
@@ -310,6 +311,82 @@ function fountain(W) {
   }
   W.places.pizza = { x: spot.x, z: spot.z };
   W.map.circles.push({ x: bx, z: bz, r: 8, color: '#3a9be0' });
+}
+
+// ---------- El cartel de «COBEÑA»: letras blancas en la isleta de media luna de la calle Clavel ----------
+
+// La isleta queda entre la carretera (la cuerda) y el arco de la calle Clavel, un semicírculo con
+// el centro en mitad de la cuerda. En su marco la X corre a lo largo de la carretera y la Z mira
+// hacia ella: `r` llega a la acera del arco y `edge` al bordillo de la carretera.
+const ISLET = { x: 207.9, z: 11, rot: 0.5825, r: 41, edge: 7 };
+const PX = 0.85; // lado de cada ladrillo de las letras
+const GLYPHS = {
+  C: ['.####.', '######', '##..##', '##....', '##....', '##..##', '######', '.####.'],
+  O: ['.####.', '######', '##..##', '##..##', '##..##', '##..##', '######', '.####.'],
+  B: ['#####.', '######', '##..##', '#####.', '######', '##..##', '######', '#####.'],
+  E: ['######', '######', '##....', '#####.', '#####.', '##....', '######', '######'],
+  Ñ: ['.####.', '......', '##..##', '###.##', '###.##', '######', '##.###', '##.###', '##..##', '##..##'],
+  A: ['.####.', '######', '##..##', '##..##', '######', '######', '##..##', '##..##'],
+};
+const GW = 6 * PX; // ancho de una letra
+const BLOOM = [C.magenta, C.purple, C.white, C.red, C.lavender, C.white];
+
+function townSign(W) {
+  const { batch, terrain, ground } = W;
+  const f = frame(ISLET.x, ISLET.z, ISLET.rot);
+  const rnd = makeRng(1808); // propio, para no mover el resto del pueblo
+  const R = ISLET.r;
+  // Césped: la media luna entera, que las calzadas y la acera recortan por encima
+  const a0 = Math.asin(ISLET.edge / R);
+  const lawn = [];
+  for (let i = 0; i <= 24; i++) {
+    const a = a0 + ((Math.PI - 2 * a0) * i) / 24;
+    lawn.push(...f.p(Math.cos(a) * R, -Math.sin(a) * R));
+  }
+  ground.poly(LY.green, lawn, 0x58b35a, F.STUDS);
+  // La solera blanca sobre la que van las letras
+  ground.quad(LY.path, ...f.p(-25, -16.5), ...f.p(25, -16.5), ...f.p(25, -25.5), ...f.p(-25, -25.5), 0xeceae4, 0);
+  // El macizo de flores, delante de la solera: una lengua alargada de petunias a manchas de color
+  const bed = { z: -11.6, a: 16, b: 2.3 };
+  const leaves = [];
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2;
+    leaves.push(...f.p(Math.cos(a) * (bed.a + 0.5), bed.z + Math.sin(a) * (bed.b + 0.5)));
+  }
+  ground.poly(LY.sidewalk, leaves, 0x2f7d3b, F.STUDS);
+  let patch = C.white;
+  for (let lx = -bed.a; lx <= bed.a; lx += 0.72) {
+    if (rnd.chance(0.22)) patch = rnd.pick(BLOOM);
+    for (let lz = -bed.b; lz <= bed.b; lz += 0.72) {
+      const x = lx + rnd.range(-0.2, 0.2);
+      const z = lz + rnd.range(-0.2, 0.2);
+      if ((x / bed.a) ** 2 + (z / bed.b) ** 2 > 1) continue;
+      fbox(batch, f, x, 0, bed.z + z, 0.56, rnd.range(0.3, 0.6), 0.56, rnd.chance(0.7) ? patch : rnd.pick(BLOOM), F.STUDS, rnd.range(0, 1.5));
+    }
+  }
+  // Las letras, de cara a la carretera. Cada una va entera a la cota de su pie.
+  const text = 'COBEÑA';
+  const step = GW + 1.3;
+  const lz = -22.5;
+  [...text].forEach((ch, i) => {
+    const lx = (i - (text.length - 1) / 2) * step;
+    const c = f.p(lx, lz);
+    const rows = GLYPHS[ch];
+    const level = batch.level;
+    batch.level = lift(c[0], c[1]);
+    rows.forEach((row, j) => {
+      for (const m of row.matchAll(/#+/g)) {
+        fbox(batch, f, lx + (m.index + m[0].length / 2) * PX - GW / 2, (rows.length - 1 - j) * PX, lz, m[0].length * PX, PX, 1.4, C.white, F.STUDS);
+      }
+    });
+    batch.level = level;
+    terrain.box(c[0], c[1], GW, 1.4, 8 * PX, f.rot);
+  });
+  // Detrás, una palmera y un par de árboles como los de la rotonda
+  const Wl = { ...W, rng: rnd };
+  palm(Wl, ...f.p(-25, -27.5));
+  tree(Wl, ...f.p(20, -31), 0, 'round');
+  tree(Wl, ...f.p(-3, -35.5), 0, 'round');
 }
 
 // ---------- Bolera gigante en el Recinto Ferial ----------
@@ -689,6 +766,7 @@ function oldSkate(W) {
 export function buildLandmarks(W) {
   skatepark(W);
   fountain(W);
+  townSign(W);
   bowling(W);
   soccer(W);
   megaJump(W);
