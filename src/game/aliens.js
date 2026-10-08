@@ -42,7 +42,8 @@ function glowMaterial(color, opacity) {
 // se van de un culetazo. El rayo del platillo te abduce si te quedas debajo, y cuando no va
 // a por ti se lleva a un vecino, un coche o una vaca: se les suelta cruzando el rayo de un salto.
 // Cuando el platillo se queda atontado baja mucho: con tres coscorrones el piloto sale por los
-// aires y el platillo es tuyo un rato, con su rayo y todo. El ladrón de la estatua va aparte, en heist.js.
+// aires y el platillo es tuyo un rato, con su rayo y todo. El ladrón de la estatua va aparte, en
+// heist.js, y la nave nodriza que baja cuando ya no quedan marcianos de la oleada, en boss.js.
 export class Aliens {
   constructor(game) {
     this.game = game;
@@ -176,6 +177,11 @@ export class Aliens {
   resume(p) {
     const g = this.game;
     const u = this.u;
+    this.spawnT = 1.5;
+    this.snatchCd = 14;
+    g.hud.setAliens(this.wave.count, this.wave.goal);
+    // Con la oleada ya echada solo queda la nodriza: el platillo no vuelve
+    if (this.wave.count >= this.wave.goal) return;
     // El platillo baja del cielo por el lado del campanario
     const bf = g.world.places.belfry || g.world.places.plaza;
     const dx = bf.x - p.pos.x;
@@ -189,9 +195,6 @@ export class Aliens {
     u.meter = u.hits = 0;
     this.setUfo('arrive');
     this.ufo.visible = true;
-    this.spawnT = 1.5;
-    this.snatchCd = 14;
-    g.hud.setAliens(this.wave.count, this.wave.goal);
     g.hud.setUfo(0, UFO_HITS);
   }
 
@@ -220,7 +223,7 @@ export class Aliens {
     g.hud.big('¡Cobeña salvada!', GREEN, 2.6);
     g.sfx.fanfare();
     g.confetti();
-    g.hud.toast(`🏆 ¡Invasión rechazada! Premio: <b>${reward.toLocaleString('es-ES')}</b> studs${W.saved ? `, con <b>${W.saved * 500}</b> por los rescates` : ''}. Volverán otra noche… con refuerzos.`);
+    g.hud.toast(`🏆 ¡Invasión rechazada! Premio: <b>${reward.toLocaleString('es-ES')}</b> studs${W.saved ? `, con <b>${W.saved * 500}</b> por los rescates` : ''}. Volverán otra noche… con refuerzos y otra nodriza más dura.`);
   }
 
   setUfo(state) {
@@ -571,7 +574,7 @@ export class Aliens {
     if (this.game.heist.sonic(x, z, r)) n++;
     const ufo = (u.state === 'hunt' || u.state === 'rest' || u.state === 'snatch') && Math.hypot(u.x - x, u.z - z) < r * 1.4;
     if (ufo) this.setUfo('stun');
-    return { n, ufo };
+    return { n, ufo, boss: this.game.boss.sonic(x, z, r) };
   }
 
   hitUfo(p) {
@@ -600,22 +603,7 @@ export class Aliens {
     const g = this.game;
     const u = this.u;
     this.pilot.group.visible = false;
-    const a = this.aliens.find((o) => o.state === 'off');
-    if (a) {
-      const ang = Math.random() * TAU;
-      a.x = u.x;
-      a.z = u.z;
-      a.y = u.y + 2;
-      a.state = 'fly';
-      a.t = a.rot = a.fx = 0;
-      a.vx = Math.sin(ang) * 16;
-      a.vz = Math.cos(ang) * 16;
-      a.vy = 24;
-      a.spin = 14;
-      a.heading = ang;
-      a.fig.group.scale.setScalar(1);
-      a.fig.group.visible = true;
-    }
+    this.eject(u.x, u.y + 2, u.z);
     p.held = true;
     p.grounded = false;
     p.grind = null;
@@ -627,6 +615,33 @@ export class Aliens {
     g.hud.big('¡El platillo es tuyo!', '#ffd23a', 2.2);
     g.sfx.fanfare();
     g.confetti(u.x, u.y, u.z);
+  }
+
+  // Un marciano sale por los aires desde ahí arriba (el piloto del platillo, el comandante de la nodriza)
+  eject(x, y, z) {
+    const a = this.aliens.find((o) => o.state === 'off');
+    if (!a) return;
+    const ang = Math.random() * TAU;
+    a.x = x;
+    a.z = z;
+    a.y = y;
+    a.state = 'fly';
+    a.t = a.rot = a.fx = 0;
+    a.vx = Math.sin(ang) * 16;
+    a.vz = Math.cos(ang) * 16;
+    a.vy = 24;
+    a.spin = 14;
+    a.heading = ang;
+    a.fig.group.scale.setScalar(1);
+    a.fig.group.visible = true;
+  }
+
+  // Llega la nodriza: el platillo suelta lo que lleve y se recoge
+  dock() {
+    const g = this.game;
+    this.setUfo('leave');
+    this.giveBack();
+    g.hud.setUfo(null);
   }
 
   takeSeat(p) {
@@ -1275,7 +1290,9 @@ export class Aliens {
     if (this.active && W) {
       this.spawnT -= dt;
       const want = Math.min(POOL, 4 + lvl);
-      if (this.spawnT <= 0 && walking < want && W.count + walking < W.goal && (pAlive || riding)) {
+      // Echada la oleada solo bajan los refuerzos que mande la nodriza
+      const room = g.boss.fighting ? walking < g.boss.minions : walking < want && W.count + walking < W.goal;
+      if (this.spawnT <= 0 && room && (pAlive || riding)) {
         const a = this.aliens.find((o) => o.state === 'off');
         if (a && this.spawn(a, p)) this.spawnT = 0.9;
       }
@@ -1307,6 +1324,12 @@ export class Aliens {
     this.score(p, time, label || (turbo ? '¡Superculetazo!' : null), turbo && !label ? base + 300 : base);
   }
 
+  // Cae la nodriza: los que queden por el suelo revientan todos a la vez
+  rout() {
+    const p = this.game.player.pos;
+    for (const a of this.aliens) if (AFOOT.has(a.state)) this.pop(a, a.y, Math.hypot(a.x - p.x, a.z - p.z));
+  }
+
   // Revienta en ladrillos, suelta studs y deja el suelo perdido de baba
   pop(a, floor, dist) {
     const g = this.game;
@@ -1331,10 +1354,10 @@ export class Aliens {
     g.addStuds(pts / 10);
     p.boost = Math.min(1, p.boost + 0.16);
     g.save.aliens = (g.save.aliens || 0) + 1;
-    if (!W) return;
+    // Echado el último de la oleada baja la nodriza (boss.js): sus refuerzos ya no cuentan
+    if (!W || W.count >= W.goal) return;
     W.count++;
     g.hud.setAliens(W.count, W.goal);
-    if (W.count >= W.goal && !this.cleared) this.victory();
   }
 
   // Te pillan de frente: calambrazo, studs por los suelos y risas marcianas

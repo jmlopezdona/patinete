@@ -10,7 +10,9 @@ export class Hud {
       alienBox: $('alienbox'), aliens: $('aliens'), abduct: $('abduct'), abductFill: $('abductfill'), beam: $('beamwarn'),
       wantedBox: $('wantedbox'), wanted: $('wanted'), cop: $('copwarn'),
       ufoBox: $('ufobox'), ufoHits: $('ufohits'), heistBox: $('heistbox'), heist: $('heist'), ride: $('ride'), rideFill: $('ridefill'), itemBox: $('itembox'), itemIcon: $('itemicon'), itemName: $('itemname'), itemTime: $('itemtime'), itemBtn: $('tb-item'),
+      boss: $('boss'), bossPips: $('bosspips'), bossHint: $('bosshint'),
     };
+    this.lastBoss = null;
     this.lastRide = null;
     this.lastHeist = null;
     this.lastWanted = 0;
@@ -82,6 +84,22 @@ export class Hud {
     this.el.heist.textContent = key;
     b.classList.toggle('late', secs < 15);
     if (!pop) return;
+    b.classList.remove('pop');
+    void b.offsetWidth;
+    b.classList.add('pop');
+  }
+
+  // La nave nodriza: coscorrones que lleva de los que aguanta, y si tiene el escudo levantado (null lo esconde)
+  setBoss(n, total, shield = false) {
+    const key = n == null ? null : `${n}/${total}/${shield}`;
+    if (key === this.lastBoss) return;
+    this.lastBoss = key;
+    const b = this.el.boss;
+    b.classList.toggle('hidden', n == null);
+    if (n == null) return;
+    b.classList.toggle('shield', shield);
+    this.el.bossPips.innerHTML = '<i></i>'.repeat(total - n) + '<i class="off"></i>'.repeat(n);
+    this.el.bossHint.textContent = n >= total ? '¡Derribada!' : shield ? '🛡️ Escudo levantado: esquiva las bombas de baba' : 'Sal disparado del half-pipe y dale en la panza';
     b.classList.remove('pop');
     void b.offsetWidth;
     b.classList.add('pop');
