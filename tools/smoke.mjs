@@ -316,6 +316,39 @@ await log('marcianos: cohete', () => {
   p.invuln = 0;
   return { sale, cogido, lanzado, frenando, apagado: !p.rocket && !p.boosting && !I.rocket.visible && !I.fx };
 });
+await log('marcianos: gravedad lunar', () => {
+  const g = window.__game; const A = g.aliens; const I = g.items; const p = g.player;
+  // Después del cohete le toca a la luna: el mismo salto sube mucho más y tarda mucho más en caer
+  const sp = g.world.places.spawn;
+  for (const o of A.aliens) o.cd = 99;
+  A.setUfo('rest');
+  const salto = () => {
+    // Sin charcos debajo, que un rebote en la baba falsea la medida
+    for (const s of g.slime.list) { s.t = 0; s.mesh.visible = false; }
+    p.place(sp.x, sp.z, sp.heading); p.invuln = 99;
+    const y0 = p.pos.y; let top = 0; let air = 0;
+    window.sim(1 / 60, () => ({ jumpPressed: true }));
+    window.sim(5, () => { top = Math.max(top, p.pos.y - y0); if (!p.grounded) air++; });
+    return { alto: +top.toFixed(1), aire: +(air / 60).toFixed(2) };
+  };
+  const normal = salto();
+  I.stop(p); I.held = null; I.group.visible = false; I.cd = 0; I.last = 'rocket';
+  let n = 0; while (!I.group.visible && n++ < 600) window.sim(1 / 60);
+  const sale = I.drop.kind;
+  p.place(I.drop.x - 6, I.drop.z, Math.PI / 2);
+  window.sim(0.8, () => ({ throttle: 1 }));
+  const cogido = I.held;
+  p.place(sp.x, sp.z, sp.heading);
+  window.sim(1 / 60, () => ({ keys: ['KeyQ'] }));
+  const puesta = p.moon && I.helmet.visible;
+  const lunar = salto();
+  const escafandra = I.helmet.parent === p.rider.head;
+  I.fx.t = 0.1; window.sim(0.2);
+  const quitada = !p.moon && !I.helmet.visible && !I.fx;
+  const despues = salto();
+  p.invuln = 0;
+  return { sale, cogido, puesta, escafandra, normal, lunar, quitada, despues };
+});
 await log('marcianos: baba verde', () => {
   const g = window.__game; const A = g.aliens; const S = g.slime; const p = g.player; const u = A.u;
   const sp = g.world.places.spawn; const fx = Math.sin(sp.heading); const fz = Math.cos(sp.heading);

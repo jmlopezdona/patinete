@@ -65,7 +65,7 @@ se registra en la versión compilada (`npm run build` y `npm run preview`), no c
 | Empezar minijuego | `E` | Y |
 | Día / noche (de noche: ¡marcianos!) | `N` | — |
 | Soltarse del rayo abductor | machacar `Espacio` | A |
-| Usar el objeto que llevas (timbre, gorro, cohete) | `Q` | RB |
+| Usar el objeto que llevas (timbre, gorro, cohete, luna) | `Q` | RB |
 | Rayo del platillo robado | mantener `Espacio` | A |
 | Esquivar al municipal y la zapatilla | `Espacio` justo a tiempo | A |
 | Cámara cerca / lejos | `C` | Select |
@@ -175,6 +175,10 @@ campanario y empieza a soltar marcianos de ladrillo por las calles.
   minijuego). Al encenderlo, el turbo entra solo durante 10 segundos sin gastar la barra y un poco
   más rápido de lo normal; solo se para frenando. De noche vale por un superculetazo detrás de
   otro.
+- **Gravedad lunar** 🌙: como el cohete, aparece de noche y también de día. Durante un minuto se
+  cae mucho más despacio y el mismo salto sube el triple y pico: se llega de sobra al rayo para
+  rescatar vecinos, a la panza del platillo y a los tejados, y da tiempo a encadenar giros y
+  volteretas. El piloto lleva escafandra mientras dura.
 - **Baba verde** 🟢: los marcianos dejan un charco donde caen del platillo y otro donde revientan.
   Si lo pisas rodando, **derrapas**: trompo y un segundo largo sin freno ni manillar (saltar sí se
   puede, y es la forma de librarse). Si caes encima de un salto, **rebotas** como en una cama
@@ -192,7 +196,7 @@ campanario y empieza a soltar marcianos de ladrillo por las calles.
   según el tiempo que sobre. El contador 🏆 lleva los golpes y los segundos que le quedan: si se
   acaban, el platillo lo recoge con el botín y la fuente se queda vacía hasta que se marchen los
   marcianos. Con el platillo robado basta con pasarle el rayo por encima. Un robo por oleada.
-- Los objetos van saliendo por turnos (timbre, gorro, cohete), uno cada vez, y mientras dura el
+- Los objetos van saliendo por turnos (timbre, gorro, cohete, luna), uno cada vez, y mientras dura el
   efecto de uno no aparece el siguiente: el hueco del HUD enseña la cuenta atrás.
 - Cada noche hay que echar a una **oleada** (8 marcianos la primera, 4 más cada vez). Al
   conseguirlo el platillo huye, amanece y te llevas el premio. No hay «game over».
@@ -293,7 +297,7 @@ se guarda en el navegador.
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
   entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo, rayo,
   rescates y el robo del platillo), `heist.js`, el ladrón de la estatua dorada, `items.js`, los objetos que se recogen por la calle y se gastan
-  con `Q` (el timbre sónico, el gorro de aluminio y el cohete), `slime.js`, los charcos de baba
+  con `Q` (el timbre sónico, el gorro de aluminio, el cohete y la gravedad lunar), `slime.js`, los charcos de baba
   verde, `cows.js`, las vacas que pastan junto al Mega Salto,
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
   y la zapatilla). `walker.js` es el paso a pie que comparten marcianos y perseguidores.
