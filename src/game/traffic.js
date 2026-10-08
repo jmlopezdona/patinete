@@ -12,6 +12,12 @@ const KINDS = [
   ['icecream', C.pink], ['car', C.lime], ['car', C.sandBlue], ['bus', C.green], ['taxi', C.yellow], ['car', C.magenta],
 ];
 
+// Cómo viaja un coche por la red: sitio en décimas, rumbo en 16 bits y velocidad en octavos
+const CAR = 7;
+const POS = 10;
+const ANG = 32767 / Math.PI;
+const SPD = 8;
+
 // Paseo de ida y vuelta por una polilínea (puntos x, z seguidos)
 function walkPath(pts) {
   const cum = [0];
@@ -38,7 +44,7 @@ export class Traffic {
       mesh.castShadow = true;
       mesh.rotation.order = 'YXZ';
       const idx = Math.floor((at + rng() * 0.3) * path.length) % path.length;
-      const car = { mesh, kind, taken: false, path, idx, x: path[idx][0], z: path[idx][1], heading: 0, speed: 0, cruise: kind === 'bus' || kind === 'truck' ? 11 : rng.range(13, 17), hl: model.len / 2, hw: model.width / 2, honk: 0 };
+      const car = { mesh, kind, taken: false, path, idx, x: path[idx][0], z: path[idx][1], heading: 0, speed: 0, cruise: kind === 'bus' || kind === 'truck' ? 11 : rng.range(13, 17), hl: model.len / 2, hw: model.width / 2, honk: 0, away: false };
       const nx = path[(idx + 1) % path.length];
       car.heading = Math.atan2(nx[0] - car.x, nx[1] - car.z);
       game.scene.add(mesh);
@@ -59,7 +65,10 @@ export class Traffic {
         face: rng.pick(['smile', 'smile', 'grin', 'cool', 'wink']), print: rng.pick([null, 'tie', 'stripes', 'buttons', 'star']), printColor: rng.pick(['#ffffff', '#1b1d21', '#f7d117']),
       });
       game.scene.add(fig.group);
-      this.peds.push({ fig, loop, s: rng() * loop.len, seg: 0, dir: rng.chance(0.5) ? 1 : -1, speed: rng.range(2.2, 3.6), ph: rng() * 6, fly: 0, vy: 0, y: 0, x: 0, z: 0, off: rng.range(-0.7, 0.7), cd: 0, taken: false });
+      const p = { fig, loop, s: rng() * loop.len, seg: 0, dir: rng.chance(0.5) ? 1 : -1, speed: rng.range(2.2, 3.6), ph: rng() * 6, fly: 0, vy: 0, y: 0, x: 0, z: 0, off: rng.range(-0.7, 0.7), cd: 0, taken: false, lag: 0 };
+      // Por dónde va a la hora cero: de ahí y del reloj sale por dónde va en cada momento
+      p.u0 = p.dir > 0 ? p.s : 2 * loop.len - p.s;
+      this.peds.push(p);
     }
   }
 
@@ -75,27 +84,57 @@ export class Traffic {
     });
   }
 
+  // Coches y peatones son los mismos para todos los jugadores de una partida en red:
+  // - Los coches los mueve el anfitrión (`simulate`), que frena ante cualquier jugador, y viajan en
+  //   cada `foto` (`write` y `read`). Un invitado solo los pone donde le dicen.
+  // - Los peatones no viajan: por dónde va cada uno sale del reloj del juego, que es común.
+  // - Los choques los detecta cada jugador en su pantalla, contra lo que ve (`touch` y `walk`); el
+  //   atropello de un peatón, que lo ven todos, se avisa (`atropella`).
   update(dt, player, time) {
-    const px = player.pos.x;
-    const pz = player.pos.z;
-    const pAlive = player.crashT <= 0;
-    // --- Coches ---
+    const party = this.game.party;
+    const led = !!party && !party.hosting && party.fed;
+    if (this.led && !led) this.rejoin();
+    this.led = led;
+    if (!led) this.simulate(dt, this.game.crowd(player));
+    this.present(player);
+    this.touch(player);
+    this.walk(dt, player, time);
+    if (this.statics) {
+      for (const s of this.statics) {
+        const k = Math.max(0, Math.sin(time * 5 + s.ph));
+        s.fig.group.position.y += 0; // quietos, solo animan los brazos
+        s.fig.armL.rotation.x = -2.6 - k * 0.4;
+        s.fig.armR.rotation.x = -2.6 + k * 0.4 - 0.4;
+        s.fig.head.rotation.y = Math.sin(time * 0.8 + s.ph) * 0.5;
+      }
+    }
+  }
+
+  // ---------- Coches ----------
+  // Lo que decide por dónde van: solo jugando solo o en el anfitrión. who: los jugadores que hay por la calle
+  simulate(dt, who) {
     for (const c of this.cars) {
       if (c.taken) continue; // en el rayo del platillo: lo mueve la invasión
       const fx = Math.sin(c.heading);
       const fz = Math.cos(c.heading);
       let target = c.cruise;
-      // Frenar si el patinete u otro coche está delante
-      const dxp = px - c.x;
-      const dzp = pz - c.z;
-      const fwd = dxp * fx + dzp * fz;
-      const lat = dxp * fz - dzp * fx;
-      if (fwd > 0 && fwd < c.hl + 13 && Math.abs(lat) < c.hw + 1.4 && player.pos.y < 4) {
-        target = 0;
+      // Frenar si un patinete u otro coche está delante
+      let pita = null;
+      for (const p of who) {
+        const dxp = p.pos.x - c.x;
+        const dzp = p.pos.z - c.z;
+        const fwd = dxp * fx + dzp * fz;
+        const lat = dxp * fz - dzp * fx;
+        if (fwd > 0 && fwd < c.hl + 13 && Math.abs(lat) < c.hw + 1.4 && p.pos.y < 4) {
+          target = 0;
+          if (fwd < c.hl + 8) pita ??= p;
+        }
+      }
+      if (target === 0) {
         c.honk -= dt;
-        if (c.honk <= 0 && fwd < c.hl + 8) {
+        if (c.honk <= 0 && pita) {
           c.honk = 2.5;
-          this.game.sfx.honk();
+          this.game.to(pita).sfx.honk();
         }
       }
       for (const o of this.cars) {
@@ -128,60 +167,154 @@ export class Traffic {
       const n2 = c.path[(c.idx + 2) % c.path.length];
       const th = Math.atan2(n2[0] - c.x, n2[1] - c.z);
       c.heading += angDiff(c.heading, th) * Math.min(1, 6 * dt);
+    }
+  }
+
+  // Lo que se ve: cada coche en su sitio, estén donde estén decididos
+  present(player) {
+    for (const c of this.cars) {
+      if (c.taken) continue;
       c.mesh.position.set(c.x, 0, c.z);
       c.mesh.rotation.y = c.heading;
       // Morro arriba o abajo según la cuesta
       lift(c.x, c.z);
-      c.mesh.rotation.x = -Math.atan(grade.x * fx + grade.z * fz);
-      const far = Math.abs(dxp) + Math.abs(dzp) > 420;
-      c.mesh.visible = !far;
-      // Choque con el patinete
-      if (pAlive && player.pos.y < 4.4) {
-        const lx = dxp * fz - dzp * fx;
-        const lz = dxp * fx + dzp * fz;
-        const ox = c.hw + 1.0 - Math.abs(lx);
-        const oz = c.hl + 1.0 - Math.abs(lz);
-        if (ox > 0 && oz > 0) {
-          let nx;
-          let nz;
-          let pen;
-          if (ox < oz) {
-            const s = Math.sign(lx) || 1;
-            nx = fz * s;
-            nz = -fx * s;
-            pen = ox;
-          } else {
-            const s = Math.sign(lz) || 1;
-            nx = fx * s;
-            nz = fz * s;
-            pen = oz;
-          }
-          const hard = player.speed > 14 || c.speed > 8;
-          player.bump(nx, nz, pen + 0.05, 0.35);
-          if (hard && player.bumpCd <= 0) {
-            player.bumpCd = 0.6;
-            if (player.grounded) player.v = -Math.abs(player.v) * 0.3 - c.speed * 0.2;
-            this.game.onBump(20);
-          }
+      c.mesh.rotation.x = -Math.atan(grade.x * Math.sin(c.heading) + grade.z * Math.cos(c.heading));
+      c.mesh.visible = !c.away && Math.abs(player.pos.x - c.x) + Math.abs(player.pos.z - c.z) <= 420;
+    }
+  }
+
+  // Choque del jugador de esta pantalla con los coches, tal como los ve
+  touch(player) {
+    if (player.crashT > 0 || player.pos.y >= 4.4) return;
+    for (const c of this.cars) {
+      if (c.taken || c.away) continue;
+      const fx = Math.sin(c.heading);
+      const fz = Math.cos(c.heading);
+      const dxp = player.pos.x - c.x;
+      const dzp = player.pos.z - c.z;
+      const lx = dxp * fz - dzp * fx;
+      const lz = dxp * fx + dzp * fz;
+      const ox = c.hw + 1.0 - Math.abs(lx);
+      const oz = c.hl + 1.0 - Math.abs(lz);
+      if (ox <= 0 || oz <= 0) continue;
+      let nx;
+      let nz;
+      let pen;
+      if (ox < oz) {
+        const s = Math.sign(lx) || 1;
+        nx = fz * s;
+        nz = -fx * s;
+        pen = ox;
+      } else {
+        const s = Math.sign(lz) || 1;
+        nx = fx * s;
+        nz = fz * s;
+        pen = oz;
+      }
+      const hard = player.speed > 14 || c.speed > 8;
+      player.bump(nx, nz, pen + 0.05, 0.35);
+      if (hard && player.bumpCd <= 0) {
+        player.bumpCd = 0.6;
+        if (player.grounded) player.v = -Math.abs(player.v) * 0.3 - c.speed * 0.2;
+        this.game.onBump(20);
+      }
+    }
+  }
+
+  // En red, lo que viaja de los coches en cada `foto`: sitio, rumbo y velocidad de cada uno, y
+  // cuáles tiene la invasión del anfitrión
+  get bytes() {
+    return this.cars.length * CAR + 2;
+  }
+
+  write(dv, o) {
+    let taken = 0;
+    this.cars.forEach((c, i) => {
+      dv.setInt16(o, Math.round(c.x * POS), true);
+      dv.setInt16(o + 2, Math.round(c.z * POS), true);
+      dv.setInt16(o + 4, Math.round(angDiff(0, c.heading) * ANG), true);
+      dv.setUint8(o + 6, Math.max(0, Math.min(255, Math.round(c.speed * SPD))));
+      if (c.taken) taken |= 1 << i;
+      o += CAR;
+    });
+    dv.setUint16(o, taken, true);
+    return o + 2;
+  }
+
+  // Invitado: los coches, entre dos fotos del anfitrión (k de 0 a 1)
+  read(a, b, o, k) {
+    const taken = a.getUint16(o + this.cars.length * CAR, true);
+    this.cars.forEach((c, i) => {
+      // El que tiene la invasión de esta pantalla no se mueve de donde está; el que tiene la del
+      // anfitrión no está en la calle
+      c.away = !c.taken && !!(taken & (1 << i));
+      if (!c.taken) {
+        const xa = a.getInt16(o, true) / POS;
+        const za = a.getInt16(o + 2, true) / POS;
+        const ha = a.getInt16(o + 4, true) / ANG;
+        const sa = a.getUint8(o + 6) / SPD;
+        c.x = xa + (b.getInt16(o, true) / POS - xa) * k;
+        c.z = za + (b.getInt16(o + 2, true) / POS - za) * k;
+        c.heading = ha + angDiff(ha, b.getInt16(o + 4, true) / ANG) * k;
+        c.speed = sa + (b.getUint8(o + 6) / SPD - sa) * k;
+      }
+      o += CAR;
+    });
+    return o + 2;
+  }
+
+  // Al acabar la partida en red los coches vuelven a ser de esta pantalla: cada uno sigue su
+  // circuito desde el tramo en el que lo ha dejado el anfitrión
+  rejoin() {
+    for (const c of this.cars) {
+      c.away = false;
+      let best = Infinity;
+      const P = c.path;
+      for (let i = 0; i < P.length; i++) {
+        const n = P[(i + 1) % P.length];
+        const ex = n[0] - P[i][0];
+        const ez = n[1] - P[i][1];
+        const t = Math.max(0, Math.min(1, ((c.x - P[i][0]) * ex + (c.z - P[i][1]) * ez) / (ex * ex + ez * ez || 1)));
+        // Entre dos tramos igual de cerca (una calle de ida y vuelta), el que va hacia donde mira
+        const d = Math.hypot(c.x - P[i][0] - ex * t, c.z - P[i][1] - ez * t) + (ex * Math.sin(c.heading) + ez * Math.cos(c.heading) < 0 ? 6 : 0);
+        if (d < best) {
+          best = d;
+          c.idx = i;
         }
       }
     }
+  }
 
-    // --- Peatones ---
+  // ---------- Peatones ----------
+  // Sale por los aires (sin daños: son de plástico). mine: lo ha atropellado el jugador de esta pantalla
+  knock(i, mine) {
+    const p = this.peds[i];
+    if (!p || p.taken || p.fly > 0) return;
+    p.fly = 1.4;
+    p.vy = 13;
+    const y = this.game.terrain.height(p.x, p.z);
+    if (mine) {
+      this.game.onPedHit(p, p.x, y, p.z);
+      this.game.party?.tell('atropella', i);
+    } else this.game.here(p.x, p.z).sfx.ouch();
+  }
+
+  walk(dt, player, time) {
+    const px = player.pos.x;
+    const pz = player.pos.z;
+    const pAlive = player.crashT <= 0;
     const T = this.game.terrain;
-    for (const p of this.peds) {
-      if (p.taken) continue;
+    for (let i = 0; i < this.peds.length; i++) {
+      const p = this.peds[i];
       const L = p.loop;
-      if (p.fly <= 0) {
-        p.s += p.dir * p.speed * dt;
-        if (p.s >= L.len) {
-          p.s = L.len;
-          p.dir = -1;
-        } else if (p.s <= 0) {
-          p.s = 0;
-          p.dir = 1;
-        }
+      if (p.taken) {
+        p.lag += dt; // cogido por la invasión de esta pantalla: se queda donde estaba
+        continue;
       }
+      // Va y viene por su recorrido al paso del reloj del juego, que en red es el mismo para todos
+      const u = (((p.u0 + p.speed * (time - p.lag)) % (2 * L.len)) + 2 * L.len) % (2 * L.len);
+      p.dir = u <= L.len ? 1 : -1;
+      p.s = u <= L.len ? u : 2 * L.len - u;
       while (p.seg < L.cum.length - 2 && p.s > L.cum[p.seg + 1]) p.seg++;
       while (p.seg > 0 && p.s < L.cum[p.seg]) p.seg--;
       const i2 = p.seg * 2;
@@ -207,7 +340,6 @@ export class Traffic {
       const gy = T.height(x, z);
       const f = p.fig;
       if (p.fly > 0) {
-        // Por los aires tras un atropello (sin daños: son de plástico)
         p.fly -= dt;
         p.vy -= 30 * dt;
         p.y += p.vy * dt;
@@ -232,11 +364,7 @@ export class Traffic {
           if (player.speed > 7) {
             p.cd = 2;
             // Si era un marciano disfrazado, lo que sale por los aires es el disfraz
-            if (!this.game.disguise.unmask(p, x, gy, z)) {
-              p.fly = 1.4;
-              p.vy = 13;
-              this.game.onPedHit(p, x, gy, z);
-            }
+            if (!this.game.disguise.unmask(p, x, gy, z)) this.knock(i, true);
           } else {
             const d = Math.sqrt(d2) || 1;
             player.bump(dx / d, dz / d, 0.15, 0.9);
@@ -244,15 +372,6 @@ export class Traffic {
         }
       }
       g.position.set(x, gy + p.y, z);
-    }
-    if (this.statics) {
-      for (const s of this.statics) {
-        const k = Math.max(0, Math.sin(time * 5 + s.ph));
-        s.fig.group.position.y += 0; // quietos, solo animan los brazos
-        s.fig.armL.rotation.x = -2.6 - k * 0.4;
-        s.fig.armR.rotation.x = -2.6 + k * 0.4 - 0.4;
-        s.fig.head.rotation.y = Math.sin(time * 0.8 + s.ph) * 0.5;
-      }
     }
   }
 }

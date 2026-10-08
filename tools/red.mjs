@@ -154,6 +154,40 @@ await wait(300);
 [na, nb] = [await noche(A), await noche(B)];
 check('el anfitrión hace de día', igual && na.noche === 0 && nb.noche === 0 && nb.dicho.includes('Teo ha hecho de día'), nb.dicho);
 
+// El tráfico es el mismo para todos: los coches los mueve el anfitrión y los peatones salen del reloj
+const trafico = (page) => page.evaluate(() => { const t = window.__game.traffic; return { coches: t.cars.map((c) => [c.x, c.z, c.speed]), gente: t.peds.map((q) => [q.x, q.z]), guiado: !!t.led }; });
+const peor = (a, b) => Math.max(...a.map((v, i) => Math.hypot(v[0] - b[i][0], v[1] - b[i][1])));
+const [ta, tb] = await Promise.all([trafico(A), trafico(B)]);
+await wait(1000);
+const ta2 = await trafico(A);
+check('el invitado ve los coches donde los lleva el anfitrión', tb.guiado && !ta.guiado && peor(ta.coches, tb.coches) < 5 && peor(ta.coches, ta2.coches) > 5, `hasta ${peor(ta.coches, tb.coches).toFixed(1)} unidades de diferencia entre ${ta.coches.length} coches`);
+check('y los peatones, por el mismo sitio', peor(ta.gente, tb.gente) < 1.5 && peor(ta.gente, ta2.gente) > 1.5, `hasta ${peor(ta.gente, tb.gente).toFixed(2)} unidades entre ${ta.gente.length} peatones`);
+check('lo que pesa una foto', true, `${await A.evaluate(() => window.__game.party.session.sent)} bytes con dos jugadores`);
+// Un invitado se planta delante de un coche: el del anfitrión frena y le pita a él
+const b0c = await yo(B);
+const delante = await A.evaluate(() => {
+  const c = window.__game.traffic.cars.reduce((a, b) => (b.speed > a.speed ? b : a));
+  return { i: window.__game.traffic.cars.indexOf(c), x: c.x + Math.sin(c.heading) * (c.hl + 9), z: c.z + Math.cos(c.heading) * (c.hl + 9), h: c.heading, v: c.speed };
+});
+await A.evaluate(() => { window.__pitos = 0; const f = window.__game.sfx.honk; window.__game.sfx.honk = function () { window.__pitos++; return f.call(this); }; });
+await B.evaluate((d) => { window.__pitos = 0; const g = window.__game; const f = g.sfx.honk; g.sfx.honk = function () { window.__pitos++; return f.call(this); }; g.player.place(d.x, d.z, d.h); }, delante);
+await wait(1500);
+const frenado = await A.evaluate((i) => window.__game.traffic.cars[i].speed, delante.i);
+check('el coche del anfitrión frena ante un invitado', delante.v > 8 && frenado < 1, `de ${delante.v.toFixed(1)} a ${frenado.toFixed(1)}`);
+check('y le pita a él, no al anfitrión', (await B.evaluate(() => window.__pitos)) > 0 && (await A.evaluate(() => window.__pitos)) === 0);
+// Y si se mete en el coche que ve, es su pantalla la que lo saca
+const dentro = (page) => page.evaluate((i) => { const g = window.__game; const c = g.traffic.cars[i]; const p = g.player.pos; const fx = Math.sin(c.heading); const fz = Math.cos(c.heading); return Math.abs((p.x - c.x) * fx + (p.z - c.z) * fz) < c.hl + 0.9 && Math.abs((p.x - c.x) * fz - (p.z - c.z) * fx) < c.hw + 0.9; }, delante.i);
+await B.evaluate((i) => { const g = window.__game; const c = g.traffic.cars[i]; g.player.place(c.x + Math.cos(c.heading) * 0.5, c.z - Math.sin(c.heading) * 0.5, c.heading); }, delante.i);
+const metido = await dentro(B);
+await wait(400);
+check('el invitado choca en su pantalla con el coche que ve', metido && !(await dentro(B)));
+await B.evaluate((b) => window.__game.player.place(b.x, b.z, 0), b0c);
+// Un peatón atropellado sale por los aires en todas las pantallas; los studs, para quien lo atropella
+const peaton = await B.evaluate(() => { const t = window.__game.traffic; const i = t.peds.findIndex((q) => !q.taken); window.__st = window.__game.studs.cursor; t.knock(i, true); return i; });
+await A.waitForFunction((i) => window.__game.traffic.peds[i].fly > 0, { timeout: 3000, polling: 30 }, peaton).catch(() => {});
+check('un peatón atropellado vuela también en la pantalla de los demás', await A.evaluate((i) => window.__game.traffic.peds[i].fly > 0, peaton));
+await wait(400);
+
 // El mobiliario es el mismo para todos: lo rompe uno y lo ven roto los demás
 const mueble = await A.evaluate(() => {
   const g = window.__game;
@@ -240,6 +274,16 @@ await D.close();
 await A.close();
 await C.waitForFunction(() => window.__game.lobby.error, { timeout: PEER ? 30000 : 5000 }).catch(() => {});
 check('si el anfitrión se va, se acaba la partida', (await C.evaluate(() => `${window.__game.lobby.error} ${window.__game.party}`)) === 'host null', await C.evaluate(() => document.getElementById('fr-msg').textContent));
+// Y los coches vuelven a ser de cada uno: siguen su circuito desde donde estaban
+const tc = await trafico(C);
+await wait(1500);
+const tc2 = await trafico(C);
+const fuera = await C.evaluate(() => Math.max(...window.__game.traffic.cars.map((c) => {
+  let d = Infinity;
+  c.path.forEach((a, i) => { const b = c.path[(i + 1) % c.path.length]; const ex = b[0] - a[0]; const ez = b[1] - a[1]; const t = Math.max(0, Math.min(1, ((c.x - a[0]) * ex + (c.z - a[1]) * ez) / (ex * ex + ez * ez || 1))); d = Math.min(d, Math.hypot(c.x - a[0] - ex * t, c.z - a[1] - ez * t)); });
+  return d;
+})));
+check('sin anfitrión, los coches siguen por su circuito', !tc2.guiado && peor(tc.coches, tc2.coches) > 5 && peor(tc.coches, tc2.coches) < 40 && fuera < 0.5, `el que más se sale, ${fuera.toFixed(2)} unidades`);
 await C.close();
 
 // ---------- La sala, desde el menú ----------

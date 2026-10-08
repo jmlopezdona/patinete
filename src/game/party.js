@@ -21,8 +21,8 @@ export const WHY = {
 };
 
 // La pandilla: la partida en red vista desde el juego. Cuenta a los demás dónde está el jugador
-// local y pinta a los que llegan. El reloj, el día y la noche y el mobiliario roto son los mismos
-// para todos; el resto del mundo (tráfico, marcianos, municipal) va todavía por libre en cada pantalla
+// local y pinta a los que llegan. El reloj, el día y la noche, el mobiliario roto y el tráfico son
+// los mismos para todos; el resto del mundo (marcianos, municipal) va todavía por libre en cada pantalla
 export class Party {
   constructor(game, code, hosting, kind, relay) {
     this.game = game;
@@ -32,7 +32,14 @@ export class Party {
     this.blips = [];
     this.state = blankState();
     this.tmp = blankState();
-    this.world = { time: 0, night: 0 };
+    // Lo que se mueve solo y viaja en cada `foto`: el anfitrión lo escribe (`write(dv, o)`) y los
+    // invitados lo leen entre dos fotos (`read(a, b, o, k)`), cada sistema su trozo y en este orden
+    this.shared = [game.traffic];
+    const bytes = this.shared.reduce((n, s) => n + s.bytes, 0);
+    this.world = { time: 0, night: 0, bytes, write: (dv, o) => this.shared.reduce((at, s) => s.write(dv, at), o) };
+    this.snap = { a: null, b: null, k: 0 };
+    this.fed = false; // invitado: ya le llega del anfitrión lo que se mueve solo
+    this.crew = [];
     this.el = document.getElementById('net');
     const p = game.player;
     this.char = p.char.id;
@@ -64,6 +71,7 @@ export class Party {
     };
     S.onAviso = (pl, k, v) => {
       if (k === 'rompe') game.props.hit(v, this.remotes.get(pl.slot));
+      else if (k === 'atropella') game.traffic.knock(v, false);
       else if (k === 'arregla' && pl.slot === 0) game.props.fix(v);
       if (k !== 'noche' && k !== 'alba') return;
       if (this.hosting) game.env.target = k === 'noche' && v ? 1 : 0;
@@ -134,6 +142,14 @@ export class Party {
     const S = this.session;
     if (this.hosting || S.slot < 0) this.game.env.target = on;
     S.aviso(quiet ? 'alba' : 'noche', on);
+  }
+
+  // Los jugadores que andan por la calle: `p` (el de esta pantalla) y los amigos
+  crowd(p) {
+    this.crew.length = 0;
+    this.crew.push(p);
+    for (const r of this.remotes.values()) if (r.seen && !r.hidden) this.crew.push(r);
+    return this.crew;
   }
 
   // Algo que ha hecho el jugador local y cambia el mundo de todos
@@ -209,6 +225,9 @@ export class Party {
         g.shiftTime(Math.abs(d) > 0.25 ? d : d * Math.min(1, dt * 4));
         g.env.target = S.world.night;
       }
+      const w = S.moving(now, this.snap);
+      this.fed = !!w && w.a.byteLength === this.world.bytes;
+      if (this.fed) this.shared.reduce((o, s) => s.read(w.a, w.b, o, w.k), 0);
     }
     S.update(now, this.state, this.world);
     this.blips.length = 0;

@@ -26,6 +26,8 @@ export class Session {
     this.heard = 0;
     this.next = 0;
     this.world = null; // invitado: lo último que ha dicho el anfitrión del mundo: { t, time, night }
+    this.worlds = []; // y sus últimas fotos, para pintar lo que se mueve solo entre dos de ellas
+    this.sent = 0; // anfitrión: lo que ocupa la última foto enviada
     this.off = null; // y la diferencia entre su reloj y el mío
     // onMe: el anfitrión me ha puesto otro personaje. onSync: ha cambiado algo de la sala.
     // onAviso(pl, k, v): otro jugador ha hecho algo. onTell(m): el anfitrión dice algo (`TOLD`)
@@ -235,6 +237,8 @@ export class Session {
       this.heard = now; // la última vez que se supo del anfitrión
       this.off = this.lag(this.off, now - m.t);
       this.world = m;
+      this.worlds.push(m);
+      if (this.worlds.length > KEEP) this.worlds.shift();
       for (const e of m.players) {
         const pl = this.players.get(e.slot);
         if (pl) this.push(pl, m.t, e.state, now);
@@ -261,6 +265,22 @@ export class Session {
     return w ? w.time + Math.min(AHEAD, now - this.off - w.t) / 1000 : null;
   }
 
+  // Invitado: las dos fotos entre las que cae el momento que toca pintar (con el mismo retraso
+  // que los jugadores) y cuánto de cada una. Deja en `out` { a, b, k }, con lo que se mueve solo
+  // de cada foto, o devuelve null si aún no ha llegado ninguna
+  moving(now, out) {
+    const B = this.worlds;
+    if (!B.length) return null;
+    const t = now - this.off - DELAY;
+    let i = B.length - 1;
+    while (i > 0 && B[i].t > t) i--;
+    const b = B[i + 1];
+    out.a = B[i].moving;
+    out.b = b && t > B[i].t ? b.moving : out.a;
+    out.k = out.b === out.a ? 0 : (t - B[i].t) / (b.t - B[i].t);
+    return out;
+  }
+
   push(pl, t, state, now) {
     pl.off = this.lag(pl.off, now - t);
     pl.last = state;
@@ -282,7 +302,7 @@ export class Session {
   }
 
   // Una vez por fotograma, con el estado del jugador local y, en el anfitrión, el del mundo
-  // ({ time, night }). Los envíos llevan su propia cadencia
+  // ({ time, night, bytes, write }). Los envíos llevan su propia cadencia
   update(now, state, world) {
     if (this.slot < 0 || this.closed || now < this.next) return;
     this.next = Math.max(now, this.next) + 1000 / (this.hosting ? RATE_FOTO : RATE_YO);
@@ -294,6 +314,10 @@ export class Session {
     // A cada invitado, el anfitrión y los demás invitados de los que ya se sabe algo
     const all = [{ slot: 0, state }];
     for (const pl of this.players.values()) if (pl.last) all.push({ slot: pl.slot, state: pl.last });
-    for (const pl of this.players.values()) this.tr.send(pl.peer, packFoto(this.seq, now, world, all.filter((e) => e.slot !== pl.slot)));
+    for (const pl of this.players.values()) {
+      const foto = packFoto(this.seq, now, world, all.filter((e) => e.slot !== pl.slot));
+      this.sent = foto.byteLength;
+      this.tr.send(pl.peer, foto);
+    }
   }
 }

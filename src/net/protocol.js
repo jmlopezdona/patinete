@@ -10,7 +10,8 @@
 //   adios  cualquiera             { t, why }
 // Por el canal sin garantías va binario, que caduca enseguida:
 //   yo     invitado → anfitrión   el estado de su personaje
-//   foto   anfitrión → invitado   el reloj del mundo, si es de noche y el estado de todos los demás
+//   foto   anfitrión → invitado   el reloj del mundo, si es de noche, lo que se mueve solo (que aquí no se
+//                                 mira: lo escribe y lo lee el juego) y el estado de todos los demás
 const T_YO = 1;
 const T_FOTO = 2;
 
@@ -23,7 +24,7 @@ export const F = { GROUND: 1, GRIND: 2, BOOST: 4, CRASH: 8, SUNK: 16, HIDDEN: 32
 
 const HEAD = 7; // tipo (1) + número de orden (2) + reloj del que envía en ms (4)
 const STATE = 31;
-const WORLD = 5; // reloj del mundo en ms (4) + noche (1)
+const WORLD = 7; // reloj del mundo en ms (4) + noche (1) + cuánto ocupa lo que se mueve solo (2)
 const TAU = Math.PI * 2;
 const ANG = 32767 / Math.PI;
 const WHIP = 255 / 0.45;
@@ -76,13 +77,16 @@ export function packYo(seq, t, state) {
   return dv.buffer;
 }
 
-// world: { time, night }, la hora del mundo en segundos y si es de noche. list: [{ slot, state }]
+// world: { time, night, bytes, write }, la hora del mundo en segundos, si es de noche y lo que se
+// mueve solo: cuánto ocupa y quién lo escribe (`write(dv, o)`). list: [{ slot, state }]
 export function packFoto(seq, t, world, list) {
-  const dv = head(T_FOTO, seq, t, HEAD + WORLD + 1 + list.length * (1 + STATE));
+  const dv = head(T_FOTO, seq, t, HEAD + WORLD + world.bytes + 1 + list.length * (1 + STATE));
   dv.setUint32(HEAD, (world.time * 1000) >>> 0, true);
   dv.setUint8(HEAD + 4, world.night ? 1 : 0);
-  dv.setUint8(HEAD + WORLD, list.length);
-  let o = HEAD + WORLD + 1;
+  dv.setUint16(HEAD + 5, world.bytes, true);
+  if (world.bytes) world.write(dv, HEAD + WORLD);
+  let o = HEAD + WORLD + world.bytes;
+  dv.setUint8(o++, list.length);
   for (const e of list) {
     dv.setUint8(o, e.slot);
     putState(dv, o + 1, e.state);
@@ -91,7 +95,8 @@ export function packFoto(seq, t, world, list) {
   return dv.buffer;
 }
 
-// Devuelve { type: 'yo', seq, t, state }, { type: 'foto', seq, t, time, night, players } o null si el paquete no cuadra
+// Devuelve { type: 'yo', seq, t, state }, { type: 'foto', seq, t, time, night, moving, players } o null si el
+// paquete no cuadra. moving: un `DataView` con lo que se mueve solo
 export function unpack(buf) {
   const dv = new DataView(buf);
   if (dv.byteLength < HEAD) return null;
@@ -100,11 +105,14 @@ export function unpack(buf) {
   const t = dv.getUint32(3, true);
   if (type === T_YO && dv.byteLength === HEAD + STATE) return { type: 'yo', seq, t, state: getState(dv, HEAD) };
   if (type === T_FOTO && dv.byteLength > HEAD + WORLD) {
-    const n = dv.getUint8(HEAD + WORLD);
-    if (dv.byteLength !== HEAD + WORLD + 1 + n * (1 + STATE)) return null;
+    const size = dv.getUint16(HEAD + 5, true);
+    const at = HEAD + WORLD + size;
+    if (dv.byteLength <= at) return null;
+    const n = dv.getUint8(at);
+    if (dv.byteLength !== at + 1 + n * (1 + STATE)) return null;
     const players = [];
-    for (let i = 0, o = HEAD + WORLD + 1; i < n; i++, o += 1 + STATE) players.push({ slot: dv.getUint8(o), state: getState(dv, o + 1) });
-    return { type: 'foto', seq, t, time: dv.getUint32(HEAD, true) / 1000, night: dv.getUint8(HEAD + 4), players };
+    for (let i = 0, o = at + 1; i < n; i++, o += 1 + STATE) players.push({ slot: dv.getUint8(o), state: getState(dv, o + 1) });
+    return { type: 'foto', seq, t, time: dv.getUint32(HEAD, true) / 1000, night: dv.getUint8(HEAD + 4), moving: new DataView(buf, HEAD + WORLD, size), players };
   }
   return null;
 }
