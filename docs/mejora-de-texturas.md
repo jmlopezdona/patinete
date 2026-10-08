@@ -88,6 +88,15 @@ el coste extra se puede limitar a lo cercano.
 `fade`. El material `plastic` (muñecos, vehículos) no pasa por este shader: quedaría igual que
 hoy salvo que se le aplique el mismo tratamiento, y conviene decidirlo para que no desentone.
 
+**Plástico de muñecos y vehículos.** Hecho después: `createPlastic` redondea en «Altos» los
+cantos de las cajas de aristas vivas que monta `Builder.box` (las de `o.r` ya van redondeadas
+de geometría). Como esas piezas van fusionadas y giradas, cada vértice lleva en `aBevel`
+(cuatro bytes) en qué esquina de su cara está y cuánto mide la cara, y el shader saca la
+pendiente de cómo cambia la altura entre píxeles vecinos. Cilindros, esferas y piezas hechas
+a mano no cambian, así que en los muñecos apenas se nota; se ve en coches y mobiliario.
+Memoria: 1 MB (260 000 vértices de 1,55 millones). Coste: con y sin detalle, la diferencia
+sigue sin salir del ruido (−0,2 ms de media en nueve medidas a 1440 × 810 y densidad 1).
+
 ### T2 · Reflejos del cielo del juego
 
 **Estado.** Hecho. El `RoomEnvironment` desaparece y `Environment.reflect()` (`src/game/env.js`)
