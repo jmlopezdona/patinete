@@ -181,11 +181,22 @@ campanario y empieza a soltar marcianos de ladrillo por las calles.
   elástica, cada vez más alto; al tercer bote el charco se deshace. A los marcianos que corren por
   encima también les hace resbalar: se quedan un momento tontos y el culetazo vale por cualquier
   lado. Se secan solos en medio minuto, y todos a la vez al amanecer.
+- **El robo de la estatua dorada** 🏆: a los pocos segundos de empezar la invasión, un marciano con
+  jersey de presidiario se descuelga sobre la fuente de la Plaza de la Villa, se echa la estatua
+  del patinete a la cabeza y se larga con ella por las calles (🏆 en el minimapa). Mientras no te
+  ve se pasea tan pancho; en cuanto te acercas sale por piernas, tira en cada cruce por la calle
+  que más le aleja de ti y va soltando baba para quien le pise los talones. Con las manos ocupadas
+  no puede defenderse: el **culetazo vale por cualquier lado** (y el pisotón, el tailwhip y el
+  timbrazo, que lo deja tonto). Cada golpe le saca un puñado de studs y le hace dar media vuelta, algo
+  más deprisa; **al tercero** suelta la estatua, que vuelve volando a su fuente, y hay premio
+  según el tiempo que sobre. El contador 🏆 lleva los golpes y los segundos que le quedan: si se
+  acaban, el platillo lo recoge con el botín y la fuente se queda vacía hasta que se marchen los
+  marcianos. Con el platillo robado basta con pasarle el rayo por encima. Un robo por oleada.
 - Los objetos van saliendo por turnos (timbre, gorro, cohete), uno cada vez, y mientras dura el
   efecto de uno no aparece el siguiente: el hueco del HUD enseña la cuenta atrás.
 - Cada noche hay que echar a una **oleada** (8 marcianos la primera, 4 más cada vez). Al
   conseguirlo el platillo huye, amanece y te llevas el premio. No hay «game over».
-- Los puntos verdes del minimapa son marcianos; el 🛸, el platillo. Durante los minijuegos se esconden.
+- Los puntos verdes del minimapa son marcianos; el 🛸, el platillo; el 🏆, el ladrón de la estatua. Durante los minijuegos se esconden.
 
 ### Nivel de búsqueda
 
@@ -281,7 +292,7 @@ se guarda en el navegador.
   skatepark funcionan igual que en llano.
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
   entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo, rayo,
-  rescates y el robo del platillo), `items.js`, los objetos que se recogen por la calle y se gastan
+  rescates y el robo del platillo), `heist.js`, el ladrón de la estatua dorada, `items.js`, los objetos que se recogen por la calle y se gastan
   con `Q` (el timbre sónico, el gorro de aluminio y el cohete), `slime.js`, los charcos de baba
   verde, `cows.js`, las vacas que pastan junto al Mega Salto,
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela

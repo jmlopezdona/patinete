@@ -42,7 +42,7 @@ function glowMaterial(color, opacity) {
 // se van de un culetazo. El rayo del platillo te abduce si te quedas debajo, y cuando no va
 // a por ti se lleva a un vecino, un coche o una vaca: se les suelta cruzando el rayo de un salto.
 // Cuando el platillo se queda atontado baja mucho: con tres coscorrones el piloto sale por los
-// aires y el platillo es tuyo un rato, con su rayo y todo.
+// aires y el platillo es tuyo un rato, con su rayo y todo. El ladrón de la estatua va aparte, en heist.js.
 export class Aliens {
   constructor(game) {
     this.game = game;
@@ -568,6 +568,7 @@ export class Aliens {
       a.cd = a.fx = 0;
       n++;
     }
+    if (this.game.heist.sonic(x, z, r)) n++;
     const ufo = (u.state === 'hunt' || u.state === 'rest' || u.state === 'snatch') && Math.hypot(u.x - x, u.z - z) < r * 1.4;
     if (ufo) this.setUfo('stun');
     return { n, ufo };
