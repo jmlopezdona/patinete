@@ -1,0 +1,458 @@
+{
+ "_": "Qué frase dice cada voz. «texto» es lo que sale en pantalla (da igual con emojis o sin ellos) y «dicho», si está, lo que se oye. Ver README.md.",
+ "papeles": {
+  "narrador": {
+   "voz": "narrador-nodo-s1",
+   "tono": "solemne"
+  },
+  "consejos": {
+   "voz": "padre-s1",
+   "tono": "cercano"
+  }
+ },
+ "tonos": {
+  "_": "Intensidades del vector de emoción de IndexTTS (de 0 a 1): alegria, ira, tristeza, miedo, asco, melancolia, sorpresa, calma. Lo que el vector no suma lo pone la voz.",
+  "solemne": {
+   "calma": 0.4
+  },
+  "cercano": {
+   "alegria": 0.25,
+   "calma": 0.25
+  },
+  "misterio": {
+   "miedo": 0.35,
+   "calma": 0.2
+  },
+  "alarma": {
+   "sorpresa": 0.35,
+   "miedo": 0.15
+  },
+  "pena": {
+   "melancolia": 0.3,
+   "tristeza": 0.15,
+   "calma": 0.2
+  },
+  "triunfo": {
+   "alegria": 0.4,
+   "sorpresa": 0.1
+  }
+ },
+ "lineas": [
+  {
+   "papel": "consejos",
+   "texto": "Mantén Mayús para usar el turbo. Se recarga con studs y trucos.",
+   "dicho": "Si quieres correr de verdad, usa el turbo. Se recarga cogiendo studs y haciendo trucos."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Los iconos del minimapa son minijuegos: acércate y pulsa E.",
+   "dicho": "Los iconos del minimapa son minijuegos. Acércate a uno y entra, que no muerden."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Dicen que de noche pasan cosas muy raras en Cobeña… pulsa N si te atreves.",
+   "dicho": "Dicen que de noche pasan cosas muy raras en Cobeña… Hazte de noche, si te atreves.",
+   "tono": "misterio"
+  },
+  {
+   "papel": "consejos",
+   "texto": "Embiste bancos, papeleras y buzones: sueltan studs. Eso sí: si te pasas rompiendo, sale el policía municipal."
+  },
+  {
+   "papel": "consejos",
+   "texto": "En el aire: A/D giran, F hace el truco de tu personaje y S un backflip.",
+   "dicho": "En el aire puedes girar, hacer el truco de tu personaje y hasta un backflip. Tú prueba, que para eso está el casco."
+  },
+  {
+   "papel": "consejos",
+   "texto": "El skatepark está al final de la calle Río Júcar, junto a la rotonda."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Detrás del skatepark, en el campo, te espera el Mega Salto sobre la charca."
+  },
+  {
+   "papel": "consejos",
+   "texto": "En el campo del Mega Salto hay un gallinero. Mira por dónde pisas: si atropellas a una gallina, te persiguen todas."
+  },
+  {
+   "papel": "consejos",
+   "texto": "De día, de tarde en tarde, cae una lluvia de meteoritos en los descampados: apártate de las dianas y luego baja a patinar los cráteres, que hay premio en el fondo."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Sube hasta la Plaza de la Villa: allí están la fuente, la iglesia y el ayuntamiento."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Busca a los vecinos en el minimapa: Yago en el skatepark, Jose y su padre en la canasta, las corredoras del parque, Emma y sus selfies en El Palmeral, Adrián, el batería de la puerta de la Escuela de Música, Iker, que no para de dar vueltas con su patinete eléctrico, y Leo, que pelotea en la pista de tenis.",
+   "dicho": "Busca a los vecinos en el minimapa, que andan todos por ahí: Yago, Jose, Emma, Adrián, Iker y Leo. Y las corredoras del parque, que no paran."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Pulsa N para cambiar entre día y noche, y V para pintar tu vehículo.",
+   "dicho": "Puedes cambiar entre el día y la noche cuando quieras. Y pintar tu vehículo del color que más te guste."
+  },
+  {
+   "papel": "consejos",
+   "texto": "En la pausa puedes cambiar de personaje: patinete, monopatín, monociclo, bici, patines o patinete eléctrico."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Pulsa T en pleno salto: el modo foto para el tiempo y te deja mover la cámara para sacar la foto.",
+   "dicho": "Prueba el modo foto en pleno salto: para el tiempo y te deja mover la cámara para sacar la foto."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Llevas el timbre sónico. Hazlo sonar con Q cuando tengas marcianos cerca: los deja tontos, y al platillo también.",
+   "dicho": "Llevas el timbre sónico. Hazlo sonar cuando tengas marcianos cerca: los deja tontos, y al platillo también."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Llevas el gorro de aluminio. Póntelo con Q y el rayo del platillo deja de verte un buen rato.",
+   "dicho": "Llevas el gorro de aluminio. Póntelo y el rayo del platillo deja de verte un buen rato."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Llevas el cohete. Enciéndelo con Q: turbo sin gastar durante 10 segundos. Solo se para frenando.",
+   "dicho": "Llevas el cohete. Enciéndelo y tienes turbo sin gastar durante diez segundos. Solo se para frenando."
+  },
+  {
+   "papel": "consejos",
+   "texto": "Llevas la gravedad lunar. Actívala con Q: durante un minuto saltas como en la Luna.",
+   "dicho": "Llevas la gravedad lunar. Actívala y durante un minuto saltas como en la Luna."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Misión abandonada",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Al ladrón le quedan 15 segundos para llegar al platillo con la estatua!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Con la luz del día los marcianos se esconden… pero volverán esta noche."
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Que vienen! Apártate de las dianas: cada meteorito deja un cráter que se patina como un bowl… y una piedra del espacio en el fondo.",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Se acabó la gravedad lunar: vuelves a pesar lo de siempre.",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Por ahí se acaba Cobeña: solo quedan campos de cereal.",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "El gorro se ha deshecho: el platillo vuelve a verte."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Sin platillo a la vista no hace falta esconderse: guárdalo para esta noche."
+  },
+  {
+   "papel": "narrador",
+   "texto": "El ladrón suelta la estatua dorada, que vuelve volando a su fuente.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "El platillo suelta la estatua dorada, que vuelve a su fuente.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Has atropellado a una gallina y ahora te persiguen todas. Cada picotazo te quita studs: dales esquinazo o aguanta hasta que se cansen.",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Las gallinas se han cansado de correr y se vuelven al gallinero.",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Dos estrellas: el municipal aprieta el paso y la multa engorda."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Tanto destrozo ha hecho salir al policía municipal. Dale esquinazo o sáltalo: si te toca, multa."
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Cinco estrellas! Han avisado a tu abuela, que viene con la zapatilla. Cuando la lance, salta o haz un quiebro.",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "El ladrón se ha subido al platillo con la estatua dorada. Echa a los marcianos para que la devuelvan."
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Se le ha caído el disfraz! Que no se escape: dale un culetazo antes de que se esfume.",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "El marciano disfrazado se ha esfumado. Esta noche vendrá con los demás.",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡El platillo se ha quedado atontado y pierde altura! Salta y dale un coscorrón.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡El timbrazo le ha roto el escudo a la nave nodriza! Aprovecha y dale en la panza.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Riiing! Aquí no hay marcianos a los que aturdir: guárdalo para esta noche.",
+   "dicho": "Aquí no hay marcianos a los que aturdir: guárdalo para esta noche."
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Riiing! No había ningún marciano lo bastante cerca.",
+   "dicho": "No había ningún marciano lo bastante cerca."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Cuatro estrellas. Rompe algo más… y llaman a tu abuela.",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "La nodriza levanta el escudo y suelta bombas de baba y refuerzos. Esquiva los círculos rojos y espera a que se apague… o rómpeselo de un timbrazo."
+  },
+  {
+   "papel": "narrador",
+   "texto": "Se acabó el paseo: otro marciano se ha colado en el platillo y te ha echado. Con otros tres coscorrones vuelve a ser tuyo.",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "Ya no quedan marcianos de a pie… ¡y por eso baja la nave nodriza! Se planta sobre el skatepark: búscala en el minimapa.",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Has robado el platillo! Se conduce igual que el patinete. Mantén Espacio para encender el rayo y pasa por encima de los marcianos.",
+   "dicho": "¡Has robado el platillo! Se conduce igual que el patinete. Enciende el rayo y pasa por encima de los marcianos.",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡GOOOL!",
+   "dicho": "¡Gol!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Esquinazo!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Zapatillazo!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Zapatilla va!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Todos los meteoritos!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Te has soltado!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Te han pillado!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Socorro!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Sin escudo!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Se ha escapado!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Resbalón!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Por los aires!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Picotazo!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Patinete oficial!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Nodriza derribada!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Ni un disfrazado!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Multa!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Meteorito!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Lluvia de meteoritos!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Las gallinas!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Ladrillo dorado!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡La nave nodriza!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡La abuela!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Invisible!"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Invasión!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Gravedad lunar!"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Estatua recuperada!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Escudo!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Era un marciano!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Entregada!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡En propia puerta!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡El rayo!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡El platillo es tuyo!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Cohete!"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Cobeña salvada!",
+   "tono": "triunfo"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Castañazo!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Bombazo de baba!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Alto ahí!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Al ladrón!",
+   "tono": "alarma"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Al agua!",
+   "tono": "pena"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Abducido!",
+   "tono": "alarma"
+  }
+ ]
+}
