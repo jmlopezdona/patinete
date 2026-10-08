@@ -82,7 +82,7 @@ export class Photo {
     button('ph-exit', () => this.close());
     button('ph-again', () => this.closePreview());
     button('ph-share', () => {
-      navigator.share({ files: [this.file], title: 'Cobeña en patinete' }).catch(() => {});
+      navigator.share({ files: [this.file], title: 'Cobeña · Los Panacotas' }).catch(() => {});
     });
 
     // Arrastrar gira; con dos dedos (o el botón derecho) se acerca y se desplaza
@@ -395,7 +395,7 @@ export class Photo {
       c.fillText(t, x, H - m - size / 2);
     };
     c.letterSpacing = `${sub * 0.2}px`;
-    text('EN PATINETE', m, sub, '#ffd23a', 'left');
+    text('LOS PANACOTAS', m, sub, '#ffd23a', 'left');
     c.letterSpacing = '0px';
     text(g.zoneName(g.player.pos.x, g.player.pos.z), W - m, u * 3.6, '#fff', 'right');
   }
