@@ -9,8 +9,10 @@ export const legoUniforms = {
 // Material de los ladrillos estáticos (mallas instanciadas por sectores) y del suelo por capas.
 // El shader dibuja los studs en las caras superiores y las juntas entre ladrillos
 // en las paredes, usando coordenadas locales de cada pieza.
-export function createBrickMaterial(opts = {}) {
+// ground: el suelo, además, varía un pelín el tono de placa en placa.
+export function createBrickMaterial({ ground = false, ...opts } = {}) {
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.46, metalness: 0, ...opts });
+  if (ground) mat.defines.LEGO_GROUND = '';
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = legoUniforms.uNight;
     shader.uniforms.uSunDir = legoUniforms.uSunDir;
@@ -72,6 +74,15 @@ if (fStuds && vLNormal.y > 0.5) {
   float k = 1.0 + inside * 0.06 + ring * dot(dir, uSunDir) * 0.30 - ring * 0.10 - sh * 0.24;
   diffuseColor.rgb *= mix(1.0, k, fade);
 }
+#ifdef LEGO_GROUND
+if (vLNormal.y > 0.5) {
+  // Placas de 8 × 8 studs, cada una de un tono algo distinto: sin esto una plaza o un campo son un plano liso.
+  // De lejos se apaga, que ahí solo sería ruido
+  float px = max(legoDQ.x, legoDQ.z);
+  float fade = 1.0 - smoothstep(0.5, 2.5, px);
+  diffuseColor.rgb *= 1.0 + (legoHash(floor(legoQ.xz / 8.0)) - 0.5) * 0.10 * fade;
+}
+#endif
 if (fSeams && abs(vLNormal.y) < 0.5) {
   bool xFace = abs(vLNormal.x) > 0.5;
   float u = xFace ? legoQ.z : legoQ.x;

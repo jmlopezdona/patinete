@@ -122,6 +122,11 @@ Cuatro arreglos pequeños e independientes:
 
 ### T4 · Suelo con variedad
 
+**Estado.** Hecho, con placas de 8 × 8 studs y una variación de ±5 %: con el ±3-4 % previsto
+apenas se veía. Solo lo lleva el suelo (`ground: true` en `createBrickMaterial`), no los
+ladrillos. Se nota en arena, hierba y aceras; en el asfalto, casi nada. El coste está sin
+aclarar: las medidas bailaron entre 6 y 16 ms de una repetición a otra, con y sin el cambio.
+
 **Qué.** Asfalto, hierba y tierra son un color por vértice idéntico en superficies muy grandes.
 Añadir en el shader una variación suave por baldosa en las caras superiores, igual que el
 `tint` que ya llevan las paredes (`legoHash(vec2(col, row) + …)`), con una amplitud pequeña
@@ -168,7 +173,7 @@ Nada de esto se ha probado en móvil ni en tableta, igual que el resto de medida
 | Paso | Mejora | Por qué en este orden |
 | --- | --- | --- |
 | 1 | T3 · Nitidez (hecho) | Rápido, sin riesgo y sin coste. Se valida con una captura |
-| 2 | T4 · Suelo | Pequeño y aislado; sirve para ensayar cambios en el shader antes de T1 |
+| 2 | T4 · Suelo (hecho) | Pequeño y aislado; sirve para ensayar cambios en el shader antes de T1 |
 | 3 | T1 · Plástico | El de más efecto. Con medida antes y después y el interruptor de calidad |
 | 4 | T2 · Reflejos | Después de T1, porque los reflejos lucen sobre el plástico ya tratado y obligan a reajustar la luz una sola vez |
 | 5 | T5 · Sprites | Opcional |
