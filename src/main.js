@@ -430,7 +430,7 @@ class Game {
     document.getElementById('menu').classList.add('out');
     this.hud.show(true);
     this.dropoff.leave();
-    this.hud.toast(`¡Bienvenido a <b>Cobeña</b>! ${this.home.drop ? 'Tu padre te deja en' : this.home.roam ? 'Hoy apareces en' : this.home.spot ? 'Sales de' : 'Sales de casa, en'} ${this.home.name}. Busca los iconos del mapa para jugar.`);
+    this.hud.toast(`¡Bienvenido a <b>Cobeña</b>! ${this.home.drop ? 'Tu padre te deja en' : this.home.roam ? 'Hoy apareces en' : this.home.spot ? 'Sales de' : 'Sales de casa, en'} ${this.home.name}. Busca los iconos del mapa para jugar.`, '¡Bienvenido a Cobeña! Busca los iconos del mapa para jugar.');
     if (this.env.target > 0.5) this.tipI = Math.max(this.tipI, 2);
     setTimeout(() => document.getElementById('keys').classList.add('fade'), 14000);
   }

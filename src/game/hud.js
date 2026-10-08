@@ -252,7 +252,8 @@ export class Hud {
     this.voice?.say(text, true);
   }
 
-  toast(text) {
+  // say: lo que se oye, cuando el aviso lleva un dato que cambia (un nombre, un premio)
+  toast(text, say = text) {
     const d = document.createElement('div');
     d.className = 'toast';
     d.innerHTML = text;
@@ -260,10 +261,11 @@ export class Hud {
     setTimeout(() => d.classList.add('out'), 4600);
     setTimeout(() => d.remove(), 5100);
     while (this.el.toasts.children.length > 4) this.el.toasts.firstChild.remove();
-    this.voice?.say(text);
+    this.voice?.say(say);
   }
 
   trick(name, points, mult) {
+    this.voice?.say(name, true);
     const t = this.el.trick;
     t.innerHTML = `<span class="tn">${name}</span><span class="tp">+${points.toLocaleString('es-ES')}</span>${mult > 1 ? `<span class="tm">×${mult}</span>` : ''}`;
     t.className = '';

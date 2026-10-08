@@ -182,7 +182,7 @@ export class Wanted {
     g.addStuds(prize);
     g.hud.big('¡Esquinazo!', '#4dff88', 1.4);
     g.sfx.escape();
-    g.hud.toast(`💨 ${s >= 5 ? 'Les has dado esquinazo al municipal y a la abuela' : 'Le has dado esquinazo al municipal'}. Premio: <b>${prize.toLocaleString('es-ES')}</b> studs… y a portarse bien.`);
+    g.hud.toast(`💨 ${s >= 5 ? 'Les has dado esquinazo al municipal y a la abuela' : 'Le has dado esquinazo al municipal'}. Premio: <b>${prize.toLocaleString('es-ES')}</b> studs… y a portarse bien.`, s >= 5 ? 'Les has dado esquinazo al municipal y a la abuela. Y ahora, a portarse bien.' : 'Le has dado esquinazo al municipal. Y ahora, a portarse bien.');
     this.reset();
   }
 
@@ -215,10 +215,10 @@ export class Wanted {
     if (jail) {
       p.place(this.station.x, this.station.z, this.station.heading);
       g.camera3.snap = true;
-      g.hud.toast(`🚓 ${paid}… y derechito a la <b>Policía Local</b>.`);
+      g.hud.toast(`🚓 ${paid}… y derechito a la <b>Policía Local</b>.`, lost ? 'Multa por destrozar el mobiliario… y derechito a la Policía Local.' : 'No llevas ni un stud, así que te libras con una bronca… y derechito a la Policía Local.');
       this.reset(true);
     } else {
-      g.hud.toast(`👮 ${paid}. ¡Y que no se repita!`);
+      g.hud.toast(`👮 ${paid}. ¡Y que no se repita!`, lost ? 'Multa por destrozar el mobiliario. ¡Y que no se repita!' : 'No llevas ni un stud, así que te libras con una bronca. ¡Y que no se repita!');
       this.setState(c, 'gloat');
       this.reset();
     }
@@ -235,7 +235,7 @@ export class Wanted {
     p.respawnAt = { x: sp.x, z: sp.z, heading: sp.heading };
     g.sfx.slap();
     g.hud.big('¡Zapatillazo!', PINK, 1.6);
-    g.hud.toast(`👵 La abuela te manda <b>${g.home.drop || g.home.roam || g.home.spot ? `de vuelta a ${g.home.name}` : 'castigado a casa'}</b>${lost ? ` y te requisa <b>${lost.toLocaleString('es-ES')}</b> studs de la paga` : ''}.`);
+    g.hud.toast(`👵 La abuela te manda <b>${g.home.drop || g.home.roam || g.home.spot ? `de vuelta a ${g.home.name}` : 'castigado a casa'}</b>${lost ? ` y te requisa <b>${lost.toLocaleString('es-ES')}</b> studs de la paga` : ''}.`, '¡Se acabó la fiesta! Tú te vienes conmigo.');
     if (G.state !== 'off') this.setState(G, 'gloat');
     this.reset();
   }
