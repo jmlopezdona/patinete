@@ -1,5 +1,6 @@
 import { CHARACTERS, characterById } from './characters.js';
-import { RemotePlayer, readState } from './remote-player.js';
+import { RemotePlayer, readState, ORDERS } from './remote-player.js';
+import { echo, play, NEAR } from './fx.js';
 import { createTransport } from '../net/transport.js';
 import { Session } from '../net/session.js';
 import { blankState, F } from '../net/protocol.js';
@@ -20,8 +21,8 @@ export const WHY = {
 };
 
 // La pandilla: la partida en red vista desde el juego. Cuenta a los demás dónde está el jugador
-// local y pinta a los que llegan. El reloj y el día y la noche son los del anfitrión; el resto
-// del mundo (tráfico, marcianos, municipal) va todavía por libre en cada pantalla
+// local y pinta a los que llegan. El reloj, el día y la noche y el mobiliario roto son los mismos
+// para todos; el resto del mundo (tráfico, marcianos, municipal) va todavía por libre en cada pantalla
 export class Party {
   constructor(game, code, hosting, kind, relay) {
     this.game = game;
@@ -40,6 +41,8 @@ export class Party {
     S.onJoin = (pl, fresh) => {
       this.remotes.set(pl.slot, new RemotePlayer(game, pl));
       if (fresh) this.say(pl, 'ha entrado en la partida');
+      // Al que entra, cómo está lo que no viaja en la `foto`
+      S.tell(pl.slot, 'mundo', { props: game.props.broken() });
     };
     S.onLeave = (pl) => {
       this.remotes.get(pl.slot)?.dispose();
@@ -60,10 +63,23 @@ export class Party {
       if (go && game.state === 'menu') game.start();
     };
     S.onAviso = (pl, k, v) => {
+      if (k === 'rompe') game.props.hit(v, this.remotes.get(pl.slot));
+      else if (k === 'arregla' && pl.slot === 0) game.props.fix(v);
       if (k !== 'noche' && k !== 'alba') return;
       if (this.hosting) game.env.target = k === 'noche' && v ? 1 : 0;
       if (k === 'noche') this.say(pl, v ? 'ha hecho de noche 🌙' : 'ha hecho de día ☀️');
     };
+    S.onTell = (m) => {
+      if (m.t === 'efecto') play(game, m.s, m.m, m.a);
+      else if (m.t === 'orden') {
+        if (ORDERS.includes(m.m) && Array.isArray(m.a)) game.player[m.m](...m.a.map((v) => (typeof v === 'number' || typeof v === 'boolean' ? v : null)));
+      } else if (Array.isArray(m.props)) game.props.restore(m.props);
+    };
+    // Lo que es para todos: aquí y, si se es el anfitrión, en las demás pantallas
+    this.all = echo((s, m, a) => {
+      game[s][m](...a);
+      S.tell(null, 'efecto', { s, m, a });
+    });
     S.onEnd = (why) => game.closeParty(why);
     this.onHide = () => {
       this.keepGoing(document.hidden);
@@ -118,6 +134,31 @@ export class Party {
     const S = this.session;
     if (this.hosting || S.slot < 0) this.game.env.target = on;
     S.aviso(quiet ? 'alba' : 'noche', on);
+  }
+
+  // Algo que ha hecho el jugador local y cambia el mundo de todos
+  tell(k, v) {
+    this.session.aviso(k, v);
+  }
+
+  // Lo que se ve y se oye, para otro jugador: solo el anfitrión decide por los demás
+  to(r) {
+    if (!this.hosting) return null;
+    return (r.fx ??= echo((s, m, a) => this.session.tell(r.slot, 'efecto', { s, m, a })));
+  }
+
+  // Y en un sitio: aquí si queda cerca (`near`) y en las pantallas de los que estén cerca de allí
+  at(x, z, near) {
+    if (!this.hosting) return null;
+    return echo((s, m, a) => {
+      if (near) this.game[s][m](...a);
+      for (const r of this.remotes.values()) if (r.seen && !r.hidden && (r.pos.x - x) ** 2 + (r.pos.z - z) ** 2 < NEAR * NEAR) this.session.tell(r.slot, 'efecto', { s, m, a });
+    });
+  }
+
+  // Anfitrión: el mundo le hace algo al personaje de otro, que es quien lo cumple
+  order(r, m, a) {
+    if (this.hosting) this.session.tell(r.slot, 'orden', { m, a });
   }
 
   // Anfitrión: todos a la calle

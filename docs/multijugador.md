@@ -25,7 +25,9 @@ estado de un jugador ya son reales** (salen de `src/net/protocol.js`); las del m
   con Chrome por cable y invitado en un móvil con Edge por 4G, fluido. Hay transporte, protocolo,
   jugadores remotos, sala («Jugar con amigos», con código, enlace y personajes sin repetir),
   partida sin pausa y prueba automática. **La fase 2 está empezada**: el reloj y el día y la
-  noche ya son los del anfitrión (C8). Se hace junto con la parte de la refactorización que se
+  noche ya son los del anfitrión (C8), el mobiliario roto es el mismo para todos y está hecho el
+  mecanismo para que lo que decide el anfitrión se vea, se oiga y le pase a quien toca (la base
+  de C9 y C10). Se hace junto con la parte de la refactorización que se
   solapa con ella y sistema a sistema; el orden está en el [plan](#4-plan-de-implementación).
 
 ## 1. La función
@@ -64,7 +66,7 @@ sistema sale donde el navegador lo tiene, y donde no, copia el enlace.
 | Tráfico y peatones | Compartido | Los coches frenan y atropellan a cualquiera |
 | Municipal y abuela | Compartido | Un solo nivel de búsqueda para la pandilla (decisión abierta D1) |
 | Gallinas | Compartido | Si uno atropella a una, persiguen al que la ha atropellado; los demás las ven correr |
-| Mobiliario que se rompe | Compartido | Si uno revienta un banco, los demás lo ven roto |
+| Mobiliario que se rompe | Compartido | Si uno revienta un banco, los demás lo ven roto. **Ya funciona** |
 | Objetos (timbre, gorro, cohete) | Compartido | El que sale por la calle es uno para todos; se lo queda quien llega antes |
 | Vecinos con nombre | Compartido a medias | Faltan del pueblo los que lleva algún jugador; sus animaciones van por libre en cada pantalla |
 | Studs y ladrillos dorados | Personal | Cada uno recoge los suyos y los guarda en su progreso |
@@ -181,12 +183,12 @@ Dos canales por conexión: uno **sin garantías** para el estado, que caduca ens
 | --- | --- | --- | --- | --- | :---: |
 | `hola` | invitado → anfitrión | fiable | al entrar y al cambiar de personaje o color | versión del juego, personaje, color | Hecho |
 | `sala` | anfitrión → todos | fiable | al cambiar | qué sitio te toca, si la partida ha empezado, y quién está con qué personaje y color | Hecho |
-| `mundo` | anfitrión → invitado | fiable | al entrar | estado completo: oleada, estatua, charcos, cráteres, mobiliario roto, abducidos, objeto en la calle. La hora no hace falta: va en cada `foto` | Fase 2, con el primer sistema que lo necesite (`props.js`) |
+| `mundo` | anfitrión → invitado | fiable | al entrar | estado completo: oleada, estatua, charcos, cráteres, mobiliario roto, abducidos, objeto en la calle. La hora no hace falta: va en cada `foto` | Hecho para el mobiliario roto |
 | `yo` | invitado → anfitrión | sin garantías | 20/s | estado de su personaje (38 bytes) | Hecho, sin los contadores de controles |
 | `foto` | anfitrión → invitado | sin garantías | 15/s | reloj del mundo, si es de noche y los demás jugadores; más adelante, todo lo que se mueve | Hecho para el reloj, la noche y los jugadores |
-| `orden` | anfitrión → un invitado | fiable | cuando pasa | algo que el mundo le hace a su personaje: empujón, castañazo, rayo, lanzamiento, congelar | Fase 2 |
-| `aviso` | jugador → anfitrión → los demás | fiable | cuando pasa | «he roto el banco 12», «he cogido el timbre», «hago de noche». Va como `{ k, v }`: qué y un número; el anfitrión le pone de quién es (`from`) al repartirlo | Hecho para la noche (`noche` y `alba`) |
-| `efecto` | anfitrión → uno o todos | fiable | cuando pasa | cartel, sonido, partículas, sacudida de cámara, studs de premio | Fase 2 |
+| `orden` | anfitrión → un invitado | fiable | cuando pasa | algo que el mundo le hace a su personaje: empujón, castañazo, rayo, lanzamiento, congelar. Va como método de `Player` y argumentos: `{ m, a }` | Hecho el mecanismo, con los cinco métodos que ya había; aún no lo usa ningún sistema |
+| `aviso` | jugador → anfitrión → los demás | fiable | cuando pasa | «he roto el banco 12», «he cogido el timbre», «hago de noche». Va como `{ k, v }`: qué y un número; el anfitrión le pone de quién es (`from`) al repartirlo | Hecho para la noche (`noche` y `alba`) y el mobiliario (`rompe` y `arregla`) |
+| `efecto` | anfitrión → uno o todos | fiable | cuando pasa | cartel, sonido, partículas, sacudida de cámara, studs de premio. Va como sistema, método y argumentos: `{ s, m, a }` | Hecho el mecanismo; aún no lo usa ningún sistema |
 | `adios` | cualquiera | fiable | al salir o al no dejar entrar | motivo: `host`, `bye`, `version`, `full` | Hecho |
 
 `yo` y `foto` llevan una cabecera de 7 bytes: tipo, número de orden (para tirar el paquete que
@@ -275,9 +277,9 @@ para comparar entre sí, no plazos.
 | C6 | Partida sin pausa | `main.js`, `party.js`, `photo.js`, `watch.js` | P | 1 | **Hecho** |
 | C7 | Pruebas con varios navegadores | `tools/red.mjs`, `package.json` | M | 1 | **Hecho** |
 | C8 | Reloj, día y noche compartidos | `env.js`, `party.js`, `main.js`, `aliens.js`, `src/net/*` | P | 2 | **Hecho** |
-| C9 | Órdenes al jugador en vez de tocarle los campos | `player.js` y los sistemas de cada fase | M | 2 y 3 | |
-| C10 | HUD, sonido y partículas con destinatario | los sistemas de cada fase, `src/net/*` | G | 2 y 3 | |
-| C11 | Sistemas para varios jugadores | `traffic.js`, `wanted.js`, `props.js`, `items.js`, `hens.js`, `meteors.js`, `cows.js` | G | 2 | |
+| C9 | Órdenes al jugador en vez de tocarle los campos | `player.js`, `remote-player.js` y los sistemas de cada fase | M | 2 y 3 | Hecha la base |
+| C10 | HUD, sonido y partículas con destinatario | `fx.js`, los sistemas de cada fase, `src/net/*` | G | 2 y 3 | Hecha la base |
+| C11 | Sistemas para varios jugadores | `traffic.js`, `wanted.js`, `props.js`, `items.js`, `hens.js`, `meteors.js`, `cows.js` | G | 2 | Hecho `props.js` |
 | C12 | Simular en el anfitrión, pintar en todos | los mismos, más `src/net/*`; en la fase 3, los de C13 | G | 2 y 3 | |
 | C13 | Invasión cooperativa | `aliens.js`, `boss.js`, `heist.js`, `disguise.js`, `slime.js` | G | 3 | |
 | C14 | Minijuegos con más gente en el pueblo | `missions.js`, `minigames.js` | M | 3 | |
@@ -401,6 +403,10 @@ tercero con `?red=local` y comprueba:
 - que con la ventana del anfitrión minimizada su partida sigue y los demás lo ven moverse;
 - que la pausa no para el mundo y a quien la abre se le ve ocupado, y que si el anfitrión deja
   de calcular el invitado lo sabe;
+- que el banco que rompe uno lo ven roto los demás y quien entra tarde, que los studs son solo
+  para quien lo rompe y que lo reconstruye el anfitrión para todos;
+- que un cartel para todos, para uno o para quien esté cerca de un sitio sale donde debe y sin
+  HTML ajeno, y que un empujón del anfitrión mueve al invitado en su pantalla;
 - que el invitado lleva el reloj del anfitrión, que si uno hace de noche lo es para todos y a los
   demás les dicen quién ha sido, y que quien llega tarde se encuentra la noche y el reloj;
 - que el castañazo de otro se ve, pero no te saca el cartel;
@@ -453,6 +459,12 @@ dueño. El cambio es que **todo pase por métodos de `Player`** (`slow(k)`, `hol
 `setBoost()`, `hide()`…, además de los que ya hay). En el `Player` local se aplican tal cual; en
 el `RemotePlayer` del anfitrión se convierten en un mensaje `orden`.
 
+**Hecha la base.** `RemotePlayer` ya no hereda `bump`, `place`, `crash`, `launch` y `skid` de
+`Player`: en el anfitrión se convierten en un `orden` (`Party.order`) y el invitado los ejecuta
+sobre su jugador; en un invitado no hacen nada. Los métodos nuevos (`slow`, `hold`…) se añaden a
+esa lista (`ORDERS`) con el sistema que los necesite. Todavía no lo usa ninguno: está probado
+desde `test:red`.
+
 Mientras `held` es cierto, la posición la manda el anfitrión en la `foto` y el dueño la acata: es
 lo que hacen hoy las 17 escrituras a `p.pos` de `aliens.js`.
 
@@ -489,6 +501,24 @@ llamada tiene que decir **para quién es**:
 Si el destinatario es el jugador local, se ejecuta en el momento; si no, viaja como `efecto` con
 el nombre del método y sus argumentos, que ya son números y textos.
 
+**Hecha la base** (`src/game/fx.js` y `Game.to`, `all`, `at`):
+
+- Jugando solo, y para el jugador local, los tres devuelven el propio `g`: la llamada es la de
+  siempre. Para otro jugador devuelven un `g` de pega (`echo`) que recoge sistema, método y
+  argumentos y los manda.
+- «Cerca» son 140 unidades (`NEAR`). `g.at` no ejecuta nada en la pantalla que queda lejos, ni
+  manda el `efecto` a los jugadores que quedan lejos.
+- **`g.here(x, z)`** es un cuarto destinatario que no estaba previsto: en un sitio, pero solo en
+  esta pantalla. Es para lo que cada pantalla hace por su cuenta al enterarse de algo, como los
+  trozos y el ruido de un banco que ha roto otro.
+- Al recibir un `efecto` (`play`) solo se ejecutan métodos propios de `hud`, `sfx`, `bits` y
+  `camera3`, con argumentos que sean datos sueltos, y a los textos del HUD se les quita el HTML
+  que no sea `b`, `i`, `kbd`, `small` o `span` (riesgo R6).
+- Solo el anfitrión decide por los demás: en un invitado, `g.to(otro)` no hace nada y `g.all` y
+  `g.at` se quedan en su pantalla.
+- Todavía no lo usa ningún sistema para mandar nada: está probado desde `test:red`. El primero
+  será el claxon de `traffic.js`.
+
 Esto es la propuesta **R2** de `docs/refactorizacion-y-optimizacion.md` (un bus de eventos entre
 sistemas) con un requisito más: que el evento lleve destinatario. Conviene hacer las dos cosas de
 una vez y no dos refactorizaciones seguidas sobre los mismos archivos.
@@ -502,7 +532,7 @@ lista y decide a quién mira:
 | --- | --- |
 | `traffic.js` | Los coches frenan si tienen delante a cualquier jugador; atropellos y empujones, contra cada uno |
 | `wanted.js` | Un solo nivel de búsqueda (D1). Los destrozos de todos suman; municipal y abuela van a por el más cercano que no esté ocupado; el rastro de migas (`trail`) es el de su objetivo |
-| `props.js` | Cada jugador detecta sus propios choques y manda `aviso`; el anfitrión lo reparte y lleva la cuenta atrás para reconstruirlo |
+| `props.js` | **Hecho.** Cada jugador detecta sus propios choques y manda `aviso` (`rompe`, con el número del mueble); el anfitrión lo reparte, lleva la cuenta atrás y avisa al reconstruirlo (`arregla`), cuando no hay ningún jugador a menos de 30 unidades (`Game.nearest2`). Los trozos salen con la velocidad que llevaba quien lo rompió; los studs y el lío con el municipal son solo para él. Al que entra se le dice cuáles están rotos (`mundo`) |
 | `items.js` | El objeto de la calle es uno; lo gana el primer `aviso` que llegue al anfitrión. Gorro, cohete y gravedad lunar (`p.foil`, `p.rocket`, `p.moon`) son del que lo usa. El timbre aturde alrededor de quien lo toca |
 | `hens.js` | Persiguen a quien ha atropellado a una (`rage` deja de ser del sistema y pasa a tener dueño); los picotazos le quitan studs a ese jugador |
 | `meteors.js` | La lluvia la decide el anfitrión; las dianas apuntan cerca de cualquier jugador (`aim(p)`), y manda por los aires a quien pille debajo. Los cráteres cambian el terreno: tienen que llegar a todos, también al que entra tarde (`mundo`) |
@@ -670,7 +700,7 @@ Decidido el 8 de octubre de 2026:
 | Paso | Qué | Cambios | Estado |
 | :---: | --- | --- | --- |
 | 1 | **Reloj, día y noche**. No necesita refactorización y estrena el `aviso` | C8 | **Hecho** |
-| 2 | **El mecanismo y `props.js` entero**: `g.to(p)`, `g.all`, `g.at(x, z)`, las órdenes al jugador y el `mundo` para el que entra tarde. Son 91 líneas y una sola llamada a la presentación: el sitio más barato para comprobar el diseño | C9 y C10 (la base), C11 | |
+| 2 | **El mecanismo y `props.js` entero**: `g.to(p)`, `g.all`, `g.at(x, z)`, las órdenes al jugador y el `mundo` para el que entra tarde | C9 y C10 (la base), C11 | **Hecho**. `props.js` no ha servido para probar `efecto` ni `orden` con un sistema de verdad: como cada jugador detecta sus choques, no los necesita. Eso queda para el paso 3 |
 | 3 | **`traffic.js`**: el primero con `simulate`/`present` y con el mundo en la `foto`. Aquí se mide el peso de verdad (R8) | C11, C12 | |
 | 4 | **`wanted.js`, `items.js`, `hens.js` y `meteors.js`**, ya con el patrón probado | C9–C12 | |
 
@@ -712,7 +742,7 @@ informe de deuda técnica) queda para más adelante y no bloquea ninguna fase.
 | R3 | Anfitrión con el juego tapado | En ordenador, cambiar de pestaña o minimizar ya no para la partida (metrónomo con worker, C6). En un móvil, bloquear la pantalla o cambiar de aplicación la congela para todos. Sin probar: Safari y el ahorro de energía de Chrome | `wakeLock`, aviso a los invitados y recomendar que haga de anfitrión quien juegue con ordenador |
 | R4 | Redes que no dejan conexión directa | Alguien no consigue entrar. **Ha pasado a la primera con datos móviles** | Mensaje claro y el TURN de ExpressTURN. Con `?ice=relay` se comprueba que sigue vivo. Si se acaba el cupo o alguien abusa de las credenciales, que están a la vista, se cambian o se pasa a Cloudflare con un Worker |
 | R5 | Depender del broker público de PeerJS | Si está caído no se pueden crear salas (las ya empezadas siguen) | El transporte es intercambiable (C1); se puede pasar a otro servicio sin tocar el juego |
-| R6 | Textos con HTML por la red | Los carteles del HUD son HTML y los invitados pintarían lo que mande el anfitrión | Limitar a las etiquetas que ya se usan (`b`, `kbd`, `small`, `span`) al recibir. Hoy no viaja ningún texto: los avisos se montan en cada pantalla con el nombre del personaje |
+| R6 | Textos con HTML por la red | Los carteles del HUD son HTML y los invitados pintarían lo que mande el anfitrión | Hecho: al recibir un `efecto` solo se dejan las etiquetas que ya se usan (`b`, `i`, `kbd`, `small`, `span`) |
 | R7 | Las refactorizaciones rompen el juego de un jugador | Fallos en algo que hoy funciona | Sistema a sistema, un PR cada uno, con las pruebas pasando en cada paso |
 | R8 | Las estimaciones de peso del mundo están sin medir | El anfitrión sube más de lo previsto | Medir en la fase 2; bajar la cadencia de `foto` o mandar solo lo cercano a cada invitado |
 | R9 | El juego crece más deprisa que el multijugador | Las fases 2 y 3 son cada vez más grandes | Lo dicho en «La fase 2 y la refactorización»: que lo nuevo nazca ya con la forma de C9 y C10 |

@@ -8,6 +8,8 @@ const DELAY = 100;
 const KEEP = 12;
 // Si el anfitrión deja de mandar, su reloj no se da por avanzado más que esto: el mundo se para con él
 const AHEAD = 250;
+// Lo que el anfitrión les dice a los invitados y la sesión entrega sin mirar
+const TOLD = ['mundo', 'efecto', 'orden'];
 
 export class Session {
   // me: { v, char, color }. chars: los personajes que hay; no se repiten, así que caben tantos como haya
@@ -26,8 +28,8 @@ export class Session {
     this.world = null; // invitado: lo último que ha dicho el anfitrión del mundo: { t, time, night }
     this.off = null; // y la diferencia entre su reloj y el mío
     // onMe: el anfitrión me ha puesto otro personaje. onSync: ha cambiado algo de la sala.
-    // onAviso(pl, k, v): otro jugador ha hecho algo
-    this.onJoin = this.onLeave = this.onChange = this.onEnd = this.onMe = this.onSync = this.onAviso = () => {};
+    // onAviso(pl, k, v): otro jugador ha hecho algo. onTell(m): el anfitrión dice algo (`TOLD`)
+    this.onJoin = this.onLeave = this.onChange = this.onEnd = this.onMe = this.onSync = this.onAviso = this.onTell = () => {};
     transport.onData = (id, data) => (typeof data === 'string' ? this.text(id, data) : this.binary(id, data));
     transport.onClose = (id) => this.gone(id);
   }
@@ -82,6 +84,13 @@ export class Session {
     for (const pl of this.players.values()) if (pl.slot !== from) this.tr.send(pl.peer, msg);
   }
 
+  // Anfitrión: le dice algo a un invitado, o a todos si no se dice a cuál. t: uno de `TOLD`
+  tell(slot, t, body) {
+    if (!this.hosting || this.closed) return;
+    const msg = JSON.stringify({ ...body, t });
+    for (const pl of this.players.values()) if (slot === null || pl.slot === slot) this.tr.send(pl.peer, msg);
+  }
+
   close(why = this.hosting ? 'host' : 'bye') {
     if (this.closed) return;
     this.closed = true;
@@ -123,6 +132,7 @@ export class Session {
     } else if (id === this.hostId) {
       if (m.t === 'sala') this.sync(m);
       else if (m.t === 'aviso') this.told(this.players.get(m.from), m, false);
+      else if (TOLD.includes(m.t)) this.onTell(m);
       else if (m.t === 'adios') this.end(m.why);
     }
   }

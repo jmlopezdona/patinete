@@ -5,6 +5,9 @@ import { nameTag } from '../lego/minifig.js';
 import { F } from '../net/protocol.js';
 
 const tmp = new THREE.Vector3();
+// Lo que el mundo le hace a un jugador llamando a sus métodos. A uno remoto no se le puede hacer
+// aquí: en el anfitrión viaja como `orden` y se cumple en la pantalla de su dueño
+export const ORDERS = ['bump', 'place', 'crash', 'launch', 'skid'];
 
 // Lo que hay que contar de un jugador para que otro lo pinte: justo lo que lee `Player.updateVisual`.
 // Los giros viajan como se ven (con el coletazo de aterrizar ya sumado), no como los lleva la física
@@ -34,6 +37,7 @@ export function readState(p, inp, s) {
 export class RemotePlayer extends Player {
   constructor(game, info) {
     super(game);
+    this.slot = info.slot;
     this.rail = { speed: 0 };
     this.inp = { steer: 0, throttle: 0 };
     this.down = false;
@@ -90,6 +94,10 @@ export class RemotePlayer extends Player {
     this.tag.visible = this.model.visible;
   }
 
+  order(m, a) {
+    this.game.party?.order(this, m, a);
+  }
+
   dropTag() {
     if (!this.tag) return;
     this.tag.removeFromParent();
@@ -103,4 +111,10 @@ export class RemotePlayer extends Player {
     this.root.removeFromParent();
     this.root.traverse((o) => o.isMesh && o.geometry.dispose());
   }
+}
+
+for (const m of ORDERS) {
+  RemotePlayer.prototype[m] = function (...a) {
+    this.order(m, a);
+  };
 }

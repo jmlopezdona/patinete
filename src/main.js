@@ -49,6 +49,7 @@ import { Slime } from './game/slime.js';
 import { Heist } from './game/heist.js';
 import { Boss } from './game/boss.js';
 import { Party, WHY } from './game/party.js';
+import { NOBODY, NEAR } from './game/fx.js';
 import { Lobby } from './game/lobby.js';
 
 const SAVE_KEY = 'cobena-patinete-v1';
@@ -467,6 +468,37 @@ class Game {
     this.missions.defs.find((d) => d.id === 'soccer').desc = `Márcale a ${this.ball.teo ? 'Teo' : 'el suplente'} todos los goles que puedas en 60 segundos.`;
   }
 
+  // ---------- Para quién es lo que se ve y se oye (ver game/fx.js) ----------
+  to(p) {
+    return p === this.player ? this : this.party?.to(p) ?? NOBODY;
+  }
+
+  get all() {
+    return this.party?.hosting ? this.party.all : this;
+  }
+
+  at(x, z) {
+    return this.party?.at(x, z, this.near(x, z)) ?? this.here(x, z);
+  }
+
+  here(x, z) {
+    return this.near(x, z) ? this : NOBODY;
+  }
+
+  near(x, z) {
+    const p = this.player.pos;
+    return (p.x - x) ** 2 + (p.z - z) ** 2 < NEAR * NEAR;
+  }
+
+  // A qué distancia (al cuadrado) queda de ahí el jugador más cercano, sea el local o un amigo
+  // que ande por la calle
+  nearest2(x, z) {
+    const p = this.player.pos;
+    let d = (p.x - x) ** 2 + (p.z - z) ** 2;
+    if (this.party) for (const r of this.party.remotes.values()) if (r.seen && !r.hidden) d = Math.min(d, (r.pos.x - x) ** 2 + (r.pos.z - z) ** 2);
+    return d;
+  }
+
   // En red el reloj es el del anfitrión: lo que se guarda como «la hora a la que pasó» se mueve con él
   shiftTime(d) {
     this.time += d;
@@ -589,7 +621,6 @@ class Game {
   }
 
   onSmash() {
-    this.sfx.bricks(5);
     this.camera3.addShake(0.12);
     this.wanted.add();
   }
