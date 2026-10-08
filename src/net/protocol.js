@@ -4,6 +4,9 @@
 //   hola   invitado → anfitrión   { t, v, char, color }       al entrar y cada vez que cambia de personaje o color
 //   sala   anfitrión → invitado   { t, you, on, players: [{ slot, char, color }] }   on: la partida ya ha empezado
 //   aviso  jugador → anfitrión → los demás   { t, k, v } y, ya repartido, { t, from, k, v }: algo que ha hecho uno
+//   mundo  anfitrión → invitado   { t, … }            al entrar: cómo está lo que no viaja en la `foto`
+//   efecto anfitrión → invitado   { t, s, m, a }      algo que se ve o se oye: sistema, método y argumentos
+//   orden  anfitrión → invitado   { t, m, a }         algo que el mundo le hace a su personaje
 //   adios  cualquiera             { t, why }
 // Por el canal sin garantías va binario, que caduca enseguida:
 //   yo     invitado → anfitrión   el estado de su personaje

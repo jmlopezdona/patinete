@@ -154,6 +154,20 @@ await wait(300);
 [na, nb] = [await noche(A), await noche(B)];
 check('el anfitrión hace de día', igual && na.noche === 0 && nb.noche === 0 && nb.dicho.includes('Teo ha hecho de día'), nb.dicho);
 
+// El mobiliario es el mismo para todos: lo rompe uno y lo ven roto los demás
+const mueble = await A.evaluate(() => {
+  const g = window.__game;
+  let best = 0;
+  g.props.items.forEach((it, i) => { if (g.nearest2(it.x, it.z) > g.nearest2(g.props.items[best].x, g.props.items[best].z)) best = i; });
+  return best;
+});
+const sano = (page) => page.evaluate((i) => window.__game.props.items[i].alive, mueble);
+const studs0 = await A.evaluate(() => window.__game.studs.cursor);
+await B.evaluate((i) => window.__game.props.smash(window.__game.props.items[i], 0, 0), mueble);
+await A.waitForFunction((i) => !window.__game.props.items[i].alive, { timeout: 3000, polling: 50 }, mueble).catch(() => {});
+check('un invitado rompe un banco y el anfitrión lo ve roto', !(await sano(A)) && !(await sano(B)), `mueble ${mueble}`);
+check('pero los studs son para quien lo rompe', (await A.evaluate(() => window.__game.studs.cursor)) === studs0);
+
 // Al anfitrión se le duerme el equipo: deja de calcular y los invitados se enteran
 await A.evaluate(() => window.__game.renderer.setAnimationLoop(null));
 await wait(2600);
@@ -171,8 +185,35 @@ const [hc, hd] = await Promise.all([hora(A), hora(C)]);
 check('quien llega tarde se encuentra la noche y el reloj de los demás', (await noche(C)).noche === 1 && Math.abs(hc - hd) < 0.2, `${hc.toFixed(2)} y ${hd.toFixed(2)} s`);
 await A.evaluate(() => window.__game.env.toggle());
 await wait(300);
+check('y el mobiliario que ya estaba roto', !(await sano(C)));
+// Lo reconstruye el anfitrión, cuando le toca y no hay nadie cerca
+await A.evaluate((i) => { window.__game.props.items[i].t = 0; }, mueble);
+await C.waitForFunction((i) => window.__game.props.items[i].alive, { timeout: 3000, polling: 50 }, mueble).catch(() => {});
+check('el anfitrión lo reconstruye para todos', (await sano(A)) && (await sano(B)) && (await sano(C)));
 check('los invitados se ven entre sí', lejos(b1, await otro(C, 1)) < 0.05 && lejos(await yo(C), await otro(B, 2)) < 0.05);
 check('con su nombre encima', (await otro(C, 1))?.tag === true);
+
+// Lo que el anfitrión decide para otros se ve y se oye en su pantalla
+const dicho = (page) => page.evaluate(() => document.getElementById('toasts').innerHTML);
+await A.evaluate(() => {
+  const g = window.__game;
+  const r = g.party.remotes.get(1);
+  g.all.hud.toast('<b>Para todos</b><img src="x">');
+  g.to(r).hud.toast('Solo para uno');
+  g.at(r.pos.x, r.pos.z).hud.toast('Por aquí cerca');
+});
+await wait(500);
+const [da, db, dc] = [await dicho(A), await dicho(B), await dicho(C)];
+const cerca = (page) => page.evaluate(([x, z]) => window.__game.near(x, z), [b1.x, b1.z]);
+check('un cartel para todos sale en todas las pantallas', [da, db, dc].every((d) => d.includes('<b>Para todos</b>')));
+check('sin el HTML que el juego no usa', !db.includes('<img') && db.includes('&lt;img'));
+check('uno para un jugador, solo en la suya', db.includes('Solo para uno') && !da.includes('Solo para uno') && !dc.includes('Solo para uno'));
+check('y lo que pasa en un sitio, a quien esté cerca', db.includes('Por aquí cerca') && da.includes('Por aquí cerca') === (await cerca(A)) && dc.includes('Por aquí cerca') === (await cerca(C)), `anfitrión ${await cerca(A)}, tercero ${await cerca(C)}`);
+// Y lo que el mundo le hace al personaje de otro lo cumple su dueño
+await A.evaluate(() => { const r = window.__game.party.remotes.get(1); r.bump(1, 0, 3, 1); r.skid(); });
+await wait(500);
+const b2 = await yo(B);
+check('un empujón del anfitrión mueve al invitado en su pantalla', Math.abs(b2.x - b1.x - 3) < 0.2 && (await B.evaluate(() => window.__game.player.slip > 0)) && lejos(b2, await otro(A, 1)) < 0.3, `${(b2.x - b1.x).toFixed(2)} unidades`);
 
 // Castañazo: los demás lo ven saltar en pedazos, pero ni cartel ni sacudida de cámara
 const antesCartel = await B.evaluate(() => document.getElementById('big').textContent);
