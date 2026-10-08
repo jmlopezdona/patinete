@@ -177,6 +177,7 @@ await log('marcianos: culetazo', () => {
   p.place(sp.x, sp.z, sp.heading);
   g.env.night = g.env.target = 1; g.env.apply();
   window.sim(4);
+  g.heist.cd = 999; // el robo de la estatua, cuando le toque su prueba
   const goal = A.wave.goal;
   // Embestir por la espalda a un marciano despistado
   const a = A.aliens.find((x) => x.state !== 'off' && x.state !== 'drop');
@@ -348,6 +349,39 @@ await log('marcianos: baba verde', () => {
   // Al irse los marcianos se secan todos
   S.clear(); window.sim(1.2);
   return { puesto: !!c, derrape, rebote, marcianoResbala: tonto, alReventar, secos: vivos() === 0 };
+});
+await log('marcianos: robo de la estatua', () => {
+  const g = window.__game; const A = g.aliens; const H = g.heist; const p = g.player; const k = H.k;
+  const P = g.world.places.plaza;
+  const quiet = () => { for (const o of A.aliens) o.cd = 99; p.invuln = 99; A.u.x = p.pos.x + 300; A.setUfo('rest'); };
+  // El ladrón cae sobre la fuente, levanta la estatua y sale a la calle con ella
+  p.place(P.x + 30, P.z + 8, -1.6); quiet();
+  H.cd = 0; window.sim(2.7, quiet);
+  const robo = { corre: k.state === 'run', aCuestas: H.where === 'carried', minimapa: H.blips.length === 1, hud: document.getElementById('heist').textContent };
+  // Tres culetazos, con un timbrazo por medio, y la estatua vuelve volando a su fuente
+  const ram = () => {
+    quiet(); p.place(k.x - Math.sin(k.heading) * 10, k.z - Math.cos(k.heading) * 10, k.heading); p.v = 45; p.invuln = 0; k.cd = 0;
+    const h0 = H.hits; let hit = false;
+    window.sim(1.2, () => { hit = hit || H.hits > h0; return hit ? {} : { throttle: 1, boost: true }; });
+    return hit;
+  };
+  const golpes = [ram()];
+  window.sim(1.5);
+  p.place(k.x + 12, k.z, 0); quiet();
+  const tonto = A.sonic(p.pos.x, p.pos.z, 46).n > 0 && k.state === 'dazed';
+  golpes.push(ram()); window.sim(1.2); golpes.push(ram());
+  const suelta = H.where === 'flying' && k.state === 'fly';
+  window.sim(4);
+  const recuperada = { golpes, tonto, suelta, enLaFuente: H.home && H.statue.position.distanceTo(H.base) < 0.01, contador: g.save.statues };
+  // Si se le acaba el tiempo se la lleva el platillo, que la devuelve al irse
+  H.done = false; H.cd = 0; quiet(); window.sim(2.7, quiet);
+  H.left = 0.2; window.sim(1.5, quiet);
+  const seEscapa = H.where === 'gone' && !H.statue.visible;
+  g.env.night = g.env.target = 0; g.env.apply(); window.sim(3.5);
+  const devuelta = H.home && H.statue.visible;
+  g.env.night = g.env.target = 1; g.env.apply(); window.sim(3);
+  H.cd = 999;
+  return { robo, recuperada, seEscapa, devuelta };
 });
 await log('marcianos: robo del platillo', () => {
   const g = window.__game; const A = g.aliens; const p = g.player; const u = A.u;

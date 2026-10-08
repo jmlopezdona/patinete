@@ -9,8 +9,6 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
   para saltar y darle en la panza. Con el Mega Salto te cuelas dentro.
 - [ ] **Marcianos disfrazados.** De día hay vecinos a los que les asoma una antena. Si les das un
   culetazo se les cae el disfraz.
-- [ ] **El robo de la estatua dorada.** Un marciano se lleva la estatua del patinete de la fuente
-  de la Plaza de la Villa y hay que perseguirlo por todo el pueblo.
 
 ## Minijuegos en versión marciana
 
@@ -26,6 +24,12 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Lluvia de meteoritos.** Dejan cráteres que sirven de bowls.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `robo-estatua`)
+
+- [x] **El robo de la estatua dorada.** En plena invasión un marciano se lleva la estatua del
+  patinete de la fuente de la Plaza de la Villa y huye por las calles soltando baba: tres
+  culetazos antes de que se le acabe el tiempo y la estatua vuelve volando a su fuente.
 
 ## Ya hecho (rama `baba-verde`)
 

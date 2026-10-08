@@ -9,9 +9,10 @@ export class Hud {
       trick: $('trick'), results: $('results'), zone: $('zone'), studBox: $('studbox'),
       alienBox: $('alienbox'), aliens: $('aliens'), abduct: $('abduct'), abductFill: $('abductfill'), beam: $('beamwarn'),
       wantedBox: $('wantedbox'), wanted: $('wanted'), cop: $('copwarn'),
-      ufoBox: $('ufobox'), ufoHits: $('ufohits'), ride: $('ride'), rideFill: $('ridefill'), itemBox: $('itembox'), itemIcon: $('itemicon'), itemName: $('itemname'), itemTime: $('itemtime'), itemBtn: $('tb-item'),
+      ufoBox: $('ufobox'), ufoHits: $('ufohits'), heistBox: $('heistbox'), heist: $('heist'), ride: $('ride'), rideFill: $('ridefill'), itemBox: $('itembox'), itemIcon: $('itemicon'), itemName: $('itemname'), itemTime: $('itemtime'), itemBtn: $('tb-item'),
     };
     this.lastRide = null;
+    this.lastHeist = null;
     this.lastWanted = 0;
     this.lastEvading = false;
     this.lastCop = 0;
@@ -64,6 +65,23 @@ export class Hud {
     b.classList.toggle('hidden', n == null);
     if (n == null) return;
     this.el.ufoHits.textContent = `${n}/${total}`;
+    b.classList.remove('pop');
+    void b.offsetWidth;
+    b.classList.add('pop');
+  }
+
+  // El robo de la estatua: culetazos que lleva el ladrón y segundos que le quedan para escaparse (null lo esconde)
+  setHeist(n, total, secs) {
+    const b = this.el.heistBox;
+    const key = n == null ? null : `${n}/${total} · ${Math.ceil(secs)} s`;
+    if (key === this.lastHeist) return;
+    const pop = n != null && (this.lastHeist == null || !this.lastHeist.startsWith(`${n}/`));
+    this.lastHeist = key;
+    b.classList.toggle('hidden', n == null);
+    if (n == null) return;
+    this.el.heist.textContent = key;
+    b.classList.toggle('late', secs < 15);
+    if (!pop) return;
     b.classList.remove('pop');
     void b.offsetWidth;
     b.classList.add('pop');

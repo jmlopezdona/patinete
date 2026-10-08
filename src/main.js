@@ -41,6 +41,7 @@ import { Wanted } from './game/wanted.js';
 import { Photo } from './game/photo.js';
 import { Items } from './game/items.js';
 import { Slime } from './game/slime.js';
+import { Heist } from './game/heist.js';
 
 const SAVE_KEY = 'cobena-patinete-v1';
 const QUALITY_NAMES = ['Bajos', 'Medios', 'Altos'];
@@ -174,6 +175,7 @@ class Game {
     this.cows = new Cows(this);
     this.slime = new Slime(this);
     this.aliens = new Aliens(this);
+    this.heist = new Heist(this);
     this.items = new Items(this);
     this.folks = new Folks(this);
     this.dropoff = new Dropoff(this);
@@ -632,7 +634,7 @@ class Game {
       this.studs.update(dt, this.player);
       this.missions.update(dt, this.time);
     }
-    if (this.statue) this.statue.rotation.y += dt * 0.35;
+    if (this.heist.home) this.statue.rotation.y += dt * 0.35;
     this.env.update(dt, this.player.pos, this.camera3.cam);
     this.render(dt);
     this.input.endFrame();
@@ -700,6 +702,7 @@ class Game {
     this.traffic.update(dt, p, this.time);
     this.cows.update(dt, p, this.time);
     this.aliens.update(dt, p, this.time, inp);
+    this.heist.update(dt, p, this.time, inp);
     this.slime.update(dt, p, this.time);
     this.items.update(dt, p, this.time);
     this.wanted.update(dt, p, this.time);
@@ -747,6 +750,7 @@ class Game {
       const blips = this.blips;
       blips.length = 0;
       for (const b of this.aliens.blips) blips.push(b);
+      for (const b of this.heist.blips) blips.push(b);
       for (const b of this.wanted.blips) blips.push(b);
       for (const b of this.items.blips) blips.push(b);
       this.minimap.draw(p.pos.x, p.pos.z, this.camera3.yaw, p.heading, m.active ? [] : this.markers, m.goalPos, blips);

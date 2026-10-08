@@ -329,6 +329,12 @@ kbd {
 #ufobox {
   border-left: 4px solid var(--yellow);
 }
+#heistbox {
+  border-left: 4px solid #ffc233;
+}
+#heistbox.late span {
+  color: #ff6b5a;
+}
 /* El objeto que se lleva encima, encima del velocímetro */
 #itembox {
   position: absolute;
