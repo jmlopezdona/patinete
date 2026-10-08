@@ -500,11 +500,10 @@ check('un cartel para todos sale en todas las pantallas', [da, db, dc].every((d)
 check('sin el HTML que el juego no usa', !db.includes('<img') && db.includes('&lt;img'));
 check('uno para un jugador, solo en la suya', db.includes('Solo para uno') && !da.includes('Solo para uno') && !dc.includes('Solo para uno'));
 check('y lo que pasa en un sitio, a quien esté cerca', db.includes('Por aquí cerca') && da.includes('Por aquí cerca') === (await cerca(A)) && dc.includes('Por aquí cerca') === (await cerca(C)), `anfitrión ${await cerca(A)}, tercero ${await cerca(C)}`);
-// Y lo que el mundo le hace al personaje de otro lo cumple su dueño
-await A.evaluate(() => { const r = window.__game.party.remotes.get(1); r.bump(1, 0, 3, 1); r.skid(); });
+// Al personaje de otro no se le hace nada desde aquí: lo que le pasa lo decide su pantalla
+await A.evaluate(() => { const r = window.__game.party.remotes.get(1); r.bump(1, 0, 3, 1); r.skid(); r.crash(); });
 await wait(500);
-const b2 = await yo(B);
-check('un empujón del anfitrión mueve al invitado en su pantalla', Math.abs(b2.x - b1.x - 3) < 0.2 && (await B.evaluate(() => window.__game.player.slip > 0)) && lejos(b2, await otro(A, 1)) < 0.3, `${(b2.x - b1.x).toFixed(2)} unidades`);
+check('un empujón dado aquí al personaje de otro no lo mueve', lejos(b1, await yo(B)) < 0.05 && lejos(b1, await otro(A, 1)) < 0.05 && (await otro(A, 1)).visible);
 
 // Castañazo: los demás lo ven saltar en pedazos, pero ni cartel ni sacudida de cámara
 const antesCartel = await B.evaluate(() => document.getElementById('big').textContent);
@@ -517,9 +516,108 @@ const entero = await otro(B, 0);
 check('el castañazo de otro se ve', roto.visible === false && roto.tag === false && entero.visible === true, { roto: [roto.visible, roto.tag], luego: entero.visible });
 check('pero el cartel no le sale a quien mira', cartel === antesCartel, cartel);
 
+// ---------- La bolera y la pista las lleva quien juega en ellas ----------
+const sitio = (page, i) => page.evaluate((i) => { const s = window.__game.spots.list[i]; return { lleva: s.owner, mio: s.mine, jugando: s.lock }; }, i);
+const balon = (page) => page.evaluate(() => { const b = window.__game.ball.mesh.position; return { x: b.x, y: b.y, z: b.z }; });
+const studs = (page) => page.evaluate(() => window.__game.save.studs);
+const pon = (page, x, z, h = 0) => page.evaluate((x, z, h) => { const g = window.__game; g.player.place(x, z, h); g.camera3.snap = true; }, x, z, h);
+const L = await A.evaluate(() => { const p = window.__game.world.places; return { cx: p.soccer.cx, cz: p.soccer.cz, goalX: p.soccer.goalX, pinX: p.bowling.pinX, pinZ: p.bowling.pinZ }; });
+await espera(A, () => window.__game.env.target === 0, 8000);
+// Nadie por allí: la pista es del anfitrión. Llega un invitado y pasa a llevarla él
+await pon(A, L.cx - 90, L.cz);
+await pon(C, L.cx - 90, L.cz + 8);
+await wait(700);
+const pesoPista = await A.evaluate(() => window.__game.party.session.sent);
+await pon(B, L.cx - 14, L.cz + 9, Math.PI / 2);
+igual = (await espera(A, () => window.__game.spots.list[1].owner === 1)) && (await espera(B, () => window.__game.spots.list[1].mine && window.__game.spots.list[1].wait <= 0));
+check('la pista la lleva el invitado que anda por ella', igual && !(await sitio(A, 1)).mio && !(await sitio(C, 1)).mio, await sitio(A, 1));
+// Chuta: el balón lo calcula su pantalla y los demás lo ven rodar
+const q0 = await balon(B);
+await B.evaluate(() => window.__game.ball.vel.set(-9, 7, -4));
+let desfase = 0;
+for (let i = 0; i < 10; i++) {
+  await wait(100);
+  const [qb, qa, qc] = [await balon(B), await balon(A), await balon(C)];
+  desfase = Math.max(desfase, lejos(qb, qa), lejos(qb, qc));
+}
+const pesoBalon = await A.evaluate(() => window.__game.party.session.sent);
+await B.evaluate(() => window.__game.ball.vel.set(0, 0, 0));
+await wait(700);
+let [qa, qb, qc] = [await balon(A), await balon(B), await balon(C)];
+check('el balón que chuta un invitado lo ven rodar los demás', lejos(q0, qb) > 5 && lejos(qb, qa) < 0.05 && lejos(qb, qc) < 0.05 && desfase > 0.1 && desfase < 5, `${lejos(q0, qb).toFixed(1)} unidades, hasta ${desfase.toFixed(1)} por detrás`);
+check('y solo viaja cuando no está en su sitio', pesoBalon - pesoPista === 7, `${pesoPista} → ${pesoBalon} bytes`);
+// Otro lo toca: desde ese momento lo lleva su pantalla, sin esperar al anfitrión
+await C.evaluate((q) => { const g = window.__game; g.player.place(q.x + 1, q.z, 0); }, qb);
+igual = await espera(C, () => window.__game.spots.list[1].mine, 500);
+const alMomento = await sitio(C, 1);
+igual = igual && (await espera(A, () => window.__game.spots.list[1].owner === 2)) && (await espera(B, () => !window.__game.spots.list[1].mine));
+await wait(500);
+[qa, qb, qc] = [await balon(A), await balon(B), await balon(C)];
+check('el que toca el balón pasa a llevarlo él', igual && alMomento.mio && lejos(qc, qa) < 0.05 && lejos(qc, qb) < 0.05, `a ${lejos(qc, qb).toFixed(3)}`);
+await pon(C, L.cx - 20, L.cz + 14);
+await A.evaluate((q) => { const g = window.__game; g.player.place(q.x - 1, q.z + 0.5, 0); }, qc);
+igual = (await espera(A, () => window.__game.spots.list[1].owner === 0, 1000)) && (await espera(C, () => !window.__game.spots.list[1].mine));
+await wait(500);
+[qa, qb, qc] = [await balon(A), await balon(B), await balon(C)];
+check('también si es el anfitrión', igual && lejos(qa, qb) < 0.05 && lejos(qa, qc) < 0.05, `a ${lejos(qa, qc).toFixed(3)}`);
+// Gol de un invitado: los studs son suyos y los que andan cerca lo ven
+await pon(A, L.cx - 20, L.cz - 12);
+await C.evaluate((q) => { const g = window.__game; g.player.place(q.x + 1, q.z, 0); }, qa);
+await espera(A, () => window.__game.spots.list[1].owner === 2);
+await espera(C, () => window.__game.spots.list[1].wait <= 0);
+const [sa0, sc0] = [await studs(A), await studs(C)];
+await C.evaluate((L) => { const b = window.__game.ball; b.pos.set(L.goalX + 1.5, b.floor, L.cz); b.vel.set(0, 0, 0); }, L);
+await wait(700);
+check('el gol de un invitado es suyo, y lo ven los que andan cerca', (await studs(C)) - sc0 >= 500 && (await studs(A)) === sa0 && (await dicho(A)).includes('ha marcado un gol') && (await dicho(B)).includes('ha marcado un gol') && !(await dicho(C)).includes('ha marcado un gol'), `+${(await studs(C)) - sc0} studs`);
+await wait(1800);
+[qa, qb, qc] = [await balon(A), await balon(B), await balon(C)];
+check('y el balón vuelve al centro para todos', Math.hypot(qc.x - L.cx, qc.z - L.cz) < 0.05 && lejos(qc, qa) < 0.05 && lejos(qc, qb) < 0.05 && (await A.evaluate(() => window.__game.party.session.sent)) === pesoPista, `${await A.evaluate(() => window.__game.party.session.sent)} bytes`);
+
+// La bolera: mientras uno juega el minijuego es suya, y los demás ven caer sus bolos
+const bolos = (page) => page.evaluate(() => { const g = window.__game; return { caidos: g.pins.pins.filter((p) => p.down).length, quitados: g.pins.pins.filter((p) => !p.mesh.visible).length, de: g.pins.shown, marcianos: g.alienPins.shown, x: g.pins.pins[0].mesh.position.x, y: g.pins.pins[0].mesh.position.y, z: g.pins.pins[0].mesh.position.z }; });
+const juega = (page, id) => page.evaluate((id) => { const m = window.__game.missions; m.begin(m.defs.find((d) => d.id === id)); }, id);
+await juega(B, 'bowling');
+igual = (await espera(A, () => window.__game.spots.list[0].owner === 1 && window.__game.spots.list[0].lock)) && (await espera(C, () => window.__game.spots.list[0].lock));
+const quienJuega = await A.evaluate(() => window.__game.spots.player(0)?.char.id);
+check('quien empieza los bolos se queda la bolera', igual && quienJuega === 'adrian' && (await B.evaluate(() => window.__game.spots.player(0))) === null, quienJuega);
+// Los demás no pueden empezar ahí: el cartel les dice quién está jugando
+const marca = await A.evaluate(() => { const d = window.__game.missions.defs.find((d) => d.id === 'bowling'); return { x: d.x, z: d.z }; });
+await pon(A, marca.x, marca.z);
+await wait(400);
+const aviso = await A.evaluate(() => document.getElementById('prompt').textContent);
+await A.evaluate(() => window.__game.input.keys.add('KeyE'));
+await wait(200);
+await A.evaluate(() => window.__game.input.keys.delete('KeyE'));
+check('los demás no pueden empezar ahí mientras tanto', aviso.includes('está jugando') && !(await A.evaluate(() => window.__game.missions.active)), aviso);
+await B.evaluate(() => { const P = window.__game.pins; P.knock(P.pins[0], 3, -22); });
+await wait(1500);
+let [ba, bb, bc] = [await bolos(A), await bolos(B), await bolos(C)];
+check('los bolos que tira un invitado caen en todas las pantallas', bb.caidos > 0 && ba.caidos === bb.caidos && bc.caidos === bb.caidos && lejos(ba, bb) < 1 && lejos(bc, bb) < 1, `${bb.caidos} bolos, a ${lejos(ba, bb).toFixed(2)} y ${lejos(bc, bb).toFixed(2)}`);
+// Y nadie se los puede quitar metiéndose en medio
+const enPie = await A.evaluate(() => { const p = window.__game.pins.pins.find((p) => !p.down && !p.gone); return p && { x: p.x, z: p.z }; });
+if (enPie) await pon(A, enPie.x + 0.5, enPie.z);
+await wait(500);
+check('y nadie se los quita metiéndose en medio', (await sitio(A, 0)).lleva === 1 && !(await sitio(A, 0)).mio && (await sitio(B, 0)).mio, await sitio(A, 0));
+await pon(A, L.pinX - 60, L.pinZ);
+// Al dejarlo, la bolera queda libre y los bolos vuelven a su sitio
+await B.evaluate(() => window.__game.missions.abort());
+igual = (await espera(A, () => !window.__game.spots.list[0].lock)) && (await espera(A, () => !window.__game.pins.pins.some((p) => p.down || p.gone))) && (await espera(C, () => !window.__game.spots.list[0].lock && !window.__game.pins.pins.some((p) => p.down || p.gone)));
+check('al acabar queda libre y los bolos vuelven a su sitio', igual && (await bolos(C)).caidos === 0 && (await A.evaluate(() => window.__game.spots.player(0))) === null);
+// De noche son marcianos: lo dice quien juega, no la hora de cada pantalla
+await juega(B, 'alienbowl');
+igual = await espera(A, () => window.__game.alienPins.shown && !window.__game.pins.shown);
+await B.evaluate(() => { const P = window.__game.alienPins; P.knock(P.pins[0], 3, -22); });
+igual = igual && (await espera(A, () => window.__game.alienPins.pins[0].down || window.__game.alienPins.pins[0].gone)) && (await espera(C, () => window.__game.alienPins.pins[0].gone, 5000));
+check('con los bolos marcianos, los demás ven marcianos', igual && (await bolos(C)).marcianos);
+await B.evaluate(() => window.__game.missions.abort());
+await espera(A, () => window.__game.pins.shown);
+await juega(B, 'bowling');
+await espera(A, () => window.__game.spots.list[0].lock);
+
 // El invitado se va: los demás dejan de verlo
 await B.close();
 check('el que se va desaparece', (await sala(A, 1)) && (await sala(C, 1)), `${await quien(A)} | ${await quien(C)}`);
+check('y la bolera en la que jugaba queda libre', (await espera(A, () => !window.__game.spots.list[0].lock && window.__game.spots.list[0].owner !== 1, 3000)) && (await espera(C, () => !window.__game.spots.list[0].lock, 3000)), await sitio(A, 0));
 
 // Entrar donde no hay partida
 const D = await abrir('perdido', 'sala=NOHAY');

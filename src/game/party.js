@@ -1,5 +1,5 @@
 import { CHARACTERS, characterById } from './characters.js';
-import { RemotePlayer, readState, ORDERS } from './remote-player.js';
+import { RemotePlayer, readState } from './remote-player.js';
 import { echo, play, run, NEAR } from './fx.js';
 import { createTransport } from '../net/transport.js';
 import { Session } from '../net/session.js';
@@ -29,7 +29,7 @@ const ASKS = {
 // Lo que el anfitrión cuenta a todos una sola vez, y el sistema que lo apunta (`heard(k, v)`)
 const NEWS = { baba: 'slime', bomba: 'boss' };
 // Los avisos que llevan una ristra de números en vez de uno
-const LISTS = new Set(['lluvia', 'culetazo', 'baba', 'bomba', 'ladron']);
+const LISTS = new Set(['lluvia', 'culetazo', 'baba', 'bomba', 'ladron', 'sitio']);
 
 // La pandilla: la partida en red vista desde el juego. Cuenta a los demás dónde está el jugador
 // local y pinta a los que llegan. El mundo es el mismo para todos: lo que se mueve solo lo lleva
@@ -45,7 +45,7 @@ export class Party {
     this.tmp = blankState();
     // Lo que se mueve solo y viaja en cada `foto`: el anfitrión lo escribe (`write(dv, o)`) y los
     // invitados lo leen entre dos fotos (`read(a, b, o, k)`), cada sistema su trozo y en este orden
-    this.shared = [game.traffic, game.wanted, game.items, game.hens, game.aliens, game.boss, game.heist, game.disguise];
+    this.shared = [game.traffic, game.wanted, game.items, game.hens, game.aliens, game.boss, game.heist, game.disguise, game.spots];
     // Lo que ocupa cambia de una foto a otra: hay sistemas que solo viajan cuando tienen algo que
     // contar. Por eso delante va lo que ocupa cada uno, y dos fotos solo se mezclan si coinciden
     const shared = this.shared;
@@ -65,6 +65,7 @@ export class Party {
       },
     };
     this.snap = { a: null, b: null, k: 0 };
+    this.carry = { a: null, b: null, k: 0 };
     this.fed = false; // invitado: ya le llega del anfitrión lo que se mueve solo
     this.crew = [];
     this.el = document.getElementById('net');
@@ -120,15 +121,17 @@ export class Party {
       else if (k === 'cogido' && pl.slot === 0) game.meteors.collect(v);
       else if (this.hosting && k === 'meteorito') game.meteors.grant(v, this.remotes.get(pl.slot));
       else if (k === 'arregla' && pl.slot === 0) game.props.fix(v);
+      // La bolera y la pista las lleva quien juega en ellas: el anfitrión dice quién
+      else if (k === 'sitio') {
+        if (this.hosting && r) game.spots.asked(v, r);
+      } else if (k === 'gol' && game.spots.scored()) this.say(pl, v ? 'ha marcado un gol ⚽' : 'ha marcado en propia puerta 🙈');
       if (k !== 'noche' && k !== 'alba') return;
       if (this.hosting) game.env.target = k === 'noche' && v ? 1 : 0;
       if (k === 'noche') this.say(pl, v ? 'ha hecho de noche 🌙' : 'ha hecho de día ☀️');
     };
     S.onTell = (m) => {
       if (m.t === 'efecto') play(game, m.s, m.m, m.a);
-      else if (m.t === 'orden') {
-        if (ORDERS.includes(m.m) && Array.isArray(m.a)) game.player[m.m](...m.a.map((v) => (typeof v === 'number' || typeof v === 'boolean' ? v : null)));
-      } else {
+      else {
         if (Array.isArray(m.props)) game.props.restore(m.props);
         if (m.meteors && typeof m.meteors === 'object') game.meteors.load(m.meteors);
         if (Array.isArray(m.slime)) game.slime.load(m.slime);
@@ -246,11 +249,6 @@ export class Party {
     return this.isMe(slot) ? this.game.player : this.remotes.get(slot) || null;
   }
 
-  // Anfitrión: el mundo le hace algo al personaje de otro, que es quien lo cumple
-  order(r, m, a) {
-    if (this.hosting) this.session.tell(r.slot, 'orden', { m, a });
-  }
-
   // Anfitrión: todos a la calle
   start() {
     if (this.hosting && !this.session.started) this.session.start();
@@ -311,12 +309,13 @@ export class Party {
         this.shared.reduce((o, s) => s.read(w.a, same ? w.b : w.a, o, w.k), n);
       }
     }
-    S.update(now, this.state, this.world);
+    S.update(now, this.state, this.world, this.hosting ? null : g.spots.tail);
     this.blips.length = 0;
     for (const [slot, r] of this.remotes) {
       const s = S.sample(S.players.get(slot), now, this.tmp);
       if (!s) continue;
       r.apply(s, dt);
+      if (this.hosting) g.spots.from(slot, S.players.get(slot).tail, S.carried(S.players.get(slot), now, this.carry));
       if (r.hidden) continue;
       // En el minimapa, cada amigo con el icono de su personaje, también cuando queda lejos
       r.blip ??= { x: 0, z: 0, icon: '' };
@@ -325,6 +324,7 @@ export class Party {
       r.blip.icon = r.char.icon;
       this.blips.push(r.blip);
     }
+    if (this.hosting) g.spots.referee(dt);
     // Dos segundos sin saber del anfitrión: se le ha dormido el móvil o se ha cortado la red
     this.stalled = !this.hosting && S.heard > 0 && now - S.heard > 2000;
     // La pastilla solo se repinta cuando cambia algo de lo que enseña

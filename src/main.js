@@ -30,6 +30,7 @@ import { Studs, STUD_VALUE } from './game/studs.js';
 import { Props } from './game/props.js';
 import { Traffic } from './game/traffic.js';
 import { Pins, AlienPins, Ball } from './game/minigames.js';
+import { Spots } from './game/spots.js';
 import { Missions } from './game/missions.js';
 import { Environment } from './game/env.js';
 import { Hud } from './game/hud.js';
@@ -188,6 +189,7 @@ class Game {
     this.pins = new Pins(this, this.world.places.bowling);
     this.alienPins = new AlienPins(this, this.world.places.bowling);
     this.ball = new Ball(this, this.world.places.soccer);
+    this.spots = new Spots(this);
     this.missions = new Missions(this);
     this.env = new Environment(this, this.world.lamps);
     this.cows = new Cows(this);
@@ -551,6 +553,7 @@ class Game {
 
   openParty(code, hosting) {
     this.closeParty();
+    this.spots.clear();
     this.party = new Party(this, code, hosting, params.get('red'), params.get('ice') === 'relay');
     document.body.classList.add('net'); // esconde lo que en red no se puede usar: modo foto y seguir a las mamás
     this.lobby.refresh();
@@ -917,16 +920,7 @@ class Game {
     this.wanted.update(dt, p, this.time);
     this.folks.update(dt, p, this.time, true);
     this.dropoff.update(dt, true);
-    // De noche los bolos de la bolera y el portero son marcianos, salvo que se esté jugando a los de siempre
-    const mini = this.missions.active && this.missions.def ? this.missions.def.id : null;
-    const night = this.env.target > 0.5;
-    const martian = mini === 'alienbowl' || (mini !== 'bowling' && night);
-    this.pins.show(!martian);
-    this.alienPins.show(martian);
-    this.pins.update(dt, p, mini === 'bowling');
-    this.alienPins.update(dt, p, mini === 'alienbowl', this.time);
-    this.ball.setAlien(mini === 'aliensoccer' || (mini !== 'soccer' && night));
-    this.ball.update(dt, p, this.time, (side) => this.missions.goal(side));
+    this.spots.update(dt, p, this.time);
     this.missions.update(dt, this.time);
     this.bits.update(dt);
 

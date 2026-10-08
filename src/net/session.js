@@ -9,7 +9,7 @@ const KEEP = 12;
 // Si el anfitrión deja de mandar, su reloj no se da por avanzado más que esto: el mundo se para con él
 const AHEAD = 250;
 // Lo que el anfitrión les dice a los invitados y la sesión entrega sin mirar
-const TOLD = ['mundo', 'efecto', 'orden'];
+const TOLD = ['mundo', 'efecto'];
 
 export class Session {
   // me: { v, char, color }. chars: los personajes que hay; no se repiten, así que caben tantos como haya
@@ -20,7 +20,7 @@ export class Session {
     this.started = false; // el anfitrión ya ha dado la salida
     this.hosting = false;
     this.slot = -1; // mi sitio en la sala: 0 es el anfitrión; -1, todavía fuera
-    this.players = new Map(); // los demás, por sitio: { slot, char, color, peer, buf, off, seq, last }
+    this.players = new Map(); // los demás, por sitio: { slot, char, color, peer, buf, off, seq, last, tail }
     this.seq = 0;
     this.fotoSeq = -1;
     this.heard = 0;
@@ -108,7 +108,7 @@ export class Session {
   }
 
   add(slot, char, color, peer, fresh) {
-    const pl = { slot, char, color, peer, buf: [], off: null, seq: -1, last: null };
+    const pl = { slot, char, color, peer, buf: [], off: null, seq: -1, last: null, tail: null };
     this.players.set(slot, pl);
     this.onJoin(pl, fresh);
     return pl;
@@ -231,7 +231,7 @@ export class Session {
     const now = performance.now();
     if (m.type === 'yo' && this.hosting) {
       const pl = this.byPeer(id);
-      if (pl && this.inOrder(pl, m.seq)) this.push(pl, m.t, m.state, now);
+      if (pl && this.inOrder(pl, m.seq)) this.push(pl, m.t, m.state, now, m.tail);
     } else if (m.type === 'foto' && id === this.hostId) {
       if (!this.inOrder(this, m.seq, 'fotoSeq')) return;
       this.heard = now; // la última vez que se supo del anfitrión
@@ -281,10 +281,27 @@ export class Session {
     return out;
   }
 
-  push(pl, t, state, now) {
+  // Anfitrión: la cola de los `yo` de un invitado (lo que lleva él del mundo) en el momento que
+  // toca pintar, como en `moving`. Deja en `out` { a, b, k } o devuelve null si aún no ha llegado nada
+  carried(pl, now, out) {
+    const B = pl.buf;
+    if (!B.length) return null;
+    const t = now - pl.off - DELAY;
+    let i = B.length - 1;
+    while (i > 0 && B[i].t > t) i--;
+    const b = B[i + 1];
+    out.a = B[i].x;
+    out.b = b && t > B[i].t ? b.x : out.a;
+    out.k = out.b === out.a ? 0 : (t - B[i].t) / (b.t - B[i].t);
+    return out;
+  }
+
+  // tail: lo que venía detrás del estado en su `yo`
+  push(pl, t, state, now, tail = null) {
     pl.off = this.lag(pl.off, now - t);
     pl.last = state;
-    pl.buf.push({ t, s: state });
+    pl.tail = tail;
+    pl.buf.push({ t, s: state, x: tail });
     if (pl.buf.length > KEEP) pl.buf.shift();
   }
 
@@ -302,13 +319,14 @@ export class Session {
   }
 
   // Una vez por fotograma, con el estado del jugador local y, en el anfitrión, el del mundo
-  // ({ time, night, bytes, write }). Los envíos llevan su propia cadencia
-  update(now, state, world) {
+  // ({ time, night, bytes, write }); en un invitado, lo que lleve él del mundo ({ bytes, write }).
+  // Los envíos llevan su propia cadencia
+  update(now, state, world, tail) {
     if (this.slot < 0 || this.closed || now < this.next) return;
     this.next = Math.max(now, this.next) + 1000 / (this.hosting ? RATE_FOTO : RATE_YO);
     this.seq = (this.seq + 1) & 0xffff;
     if (!this.hosting) {
-      this.tr.send(this.hostId, packYo(this.seq, now, state));
+      this.tr.send(this.hostId, packYo(this.seq, now, state, tail));
       return;
     }
     // A cada invitado, el anfitrión y los demás invitados de los que ya se sabe algo

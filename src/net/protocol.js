@@ -7,10 +7,9 @@
 //                                            (v: un número o una ristra de números)
 //   mundo  anfitrión → invitado   { t, … }            al entrar: cómo está lo que no viaja en la `foto`
 //   efecto anfitrión → invitado   { t, s, m, a }      algo que se ve o se oye: sistema, método y argumentos
-//   orden  anfitrión → invitado   { t, m, a }         algo que el mundo le hace a su personaje
 //   adios  cualquiera             { t, why }
 // Por el canal sin garantías va binario, que caduca enseguida:
-//   yo     invitado → anfitrión   el estado de su personaje
+//   yo     invitado → anfitrión   el estado de su personaje y, detrás, lo que lleve él del mundo (que aquí no se mira)
 //   foto   anfitrión → invitado   el reloj del mundo, si es de noche, lo que se mueve solo (que aquí no se
 //                                 mira: lo escribe y lo lee el juego) y el estado de todos los demás
 const T_YO = 1;
@@ -74,9 +73,14 @@ function head(type, seq, t, size) {
   return dv;
 }
 
-export function packYo(seq, t, state) {
-  const dv = head(T_YO, seq, t, HEAD + STATE);
+const TAIL = 255; // lo más que puede ocupar la cola de un `yo`
+
+// tail: lo que este jugador lleva del mundo, si lleva algo: cuánto ocupa y quién lo escribe ({ bytes, write })
+export function packYo(seq, t, state, tail) {
+  const n = tail ? tail.bytes : 0;
+  const dv = head(T_YO, seq, t, HEAD + STATE + n);
   putState(dv, HEAD, state);
+  if (n) tail.write(dv, HEAD + STATE);
   return dv.buffer;
 }
 
@@ -98,15 +102,15 @@ export function packFoto(seq, t, world, list) {
   return dv.buffer;
 }
 
-// Devuelve { type: 'yo', seq, t, state }, { type: 'foto', seq, t, time, night, moving, players } o null si el
-// paquete no cuadra. moving: un `DataView` con lo que se mueve solo
+// Devuelve { type: 'yo', seq, t, state, tail }, { type: 'foto', seq, t, time, night, moving, players } o null si el
+// paquete no cuadra. moving: un `DataView` con lo que se mueve solo; tail: otro con la cola del `yo`
 export function unpack(buf) {
   const dv = new DataView(buf);
   if (dv.byteLength < HEAD) return null;
   const type = dv.getUint8(0);
   const seq = dv.getUint16(1, true);
   const t = dv.getUint32(3, true);
-  if (type === T_YO && dv.byteLength === HEAD + STATE) return { type: 'yo', seq, t, state: getState(dv, HEAD) };
+  if (type === T_YO && dv.byteLength >= HEAD + STATE && dv.byteLength <= HEAD + STATE + TAIL) return { type: 'yo', seq, t, state: getState(dv, HEAD), tail: new DataView(buf, HEAD + STATE) };
   if (type === T_FOTO && dv.byteLength > HEAD + WORLD) {
     const size = dv.getUint16(HEAD + 5, true);
     const at = HEAD + WORLD + size;

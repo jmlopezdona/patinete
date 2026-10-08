@@ -21,6 +21,65 @@ const CHEER = 1.1; // lo que se pasa celebrando cada parada, sin moverse
 const PUNCH = 26; // y con qué fuerza despeja el balón
 const SPAN = 2.6; // y hasta dónde llega a cada lado del centro de la portería
 
+// En red la bolera y la pista las lleva el juego de un jugador y los demás las pintan (ver
+// game/spots.js). De cada bolo viaja qué le pasa (1 byte), dónde está en centésimas desde el
+// triángulo (4), lo caído que está o lo alto que vuela (1) y hacia dónde (1)
+const PIN = 7;
+export const PINS = 10 * PIN;
+// Del balón, dónde está en centésimas desde el centro del campo (6) y por dónde anda el portero marciano (1)
+export const BALL = 7;
+const DOWN = 1;
+const GONE = 2;
+const RUN = 4;
+const TURN = 256 / (Math.PI * 2);
+const SPIN = 14; // lo que gira por los aires un bolo marciano que lleva otro
+
+function putPin(dv, o, f, x, z, h, ang) {
+  dv.setUint8(o, f);
+  dv.setInt16(o + 1, Math.round(x * 100), true);
+  dv.setInt16(o + 3, Math.round(z * 100), true);
+  dv.setUint8(o + 5, Math.max(0, Math.min(255, Math.round(h * 255))));
+  dv.setUint8(o + 6, Math.round(ang * TURN) & 255);
+  return o + PIN;
+}
+
+// Los diez bolos entre dos fotos, en `net` de cada uno. El que en la siguiente ya está en otra
+// cosa (derribado, retirado) no se mezcla
+function getPins(pins, x0, z0, a, oa, b, ob, k) {
+  for (const p of pins) {
+    const n = (p.net ??= { f: 0, x: 0, z: 0, h: 0, ang: 0 });
+    n.f = a.getUint8(oa);
+    const j = ((b.getUint8(ob) ^ n.f) & (DOWN | GONE)) === 0 ? k : 0;
+    const mix = (at) => a.getInt16(oa + at, true) + (b.getInt16(ob + at, true) - a.getInt16(oa + at, true)) * j;
+    n.x = x0 + mix(1) / 100;
+    n.z = z0 + mix(3) / 100;
+    n.h = (a.getUint8(oa + 5) + (b.getUint8(ob + 5) - a.getUint8(oa + 5)) * j) / 255;
+    const turn = ((b.getUint8(ob + 6) - a.getUint8(oa + 6) + 384) & 255) - 128;
+    n.ang = (a.getUint8(oa + 6) + turn * j) / TURN;
+    oa += PIN;
+    ob += PIN;
+  }
+}
+
+// Lo que se ha movido de un fotograma a otro, hecho velocidad: por si toca seguir con ello. Un
+// salto de golpe es que lo han recolocado
+const speed = (to, from, dt) => (Math.abs(to - from) < 3 ? (to - from) / dt : 0);
+
+// ¿Toca el jugador algún bolo en pie? push: además lo aparta, que no es quien juega
+function touchPins(pins, y, player, push) {
+  if (player.crashT > 0 || player.pos.y >= y + 5) return false;
+  for (const p of pins) {
+    if (p.down || p.gone) continue;
+    const dx = p.x - player.pos.x;
+    const dz = p.z - player.pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d >= 2.25) continue;
+    if (push) player.bump(-dx / (d || 1), -dz / (d || 1), 2.25 - d, 0.8);
+    return true;
+  }
+  return false;
+}
+
 // Bolos gigantes: el patinete hace de bola.
 export class Pins {
   constructor(game, place) {
@@ -85,8 +144,60 @@ export class Pins {
     p.vz = vz;
     p.dx = vx / sp;
     p.dz = vz / sp;
-    this.game.sfx.tone(520 + Math.random() * 200, 0.12, 'triangle', 0.25, 0.5);
-    this.game.sfx.noise(0.05, 0.3, 2400, 4);
+    this.clack(this.game.sfx);
+  }
+
+  clack(sfx) {
+    sfx.tone(520 + Math.random() * 200, 0.12, 'triangle', 0.25, 0.5);
+    sfx.noise(0.05, 0.3, 2400, 4);
+  }
+
+  // El bolo, todo lo caído que esté hacia donde lo han tirado
+  lay(p) {
+    _a.set(p.dz, 0, -p.dx);
+    _q.setFromAxisAngle(_a, p.tilt);
+    p.mesh.quaternion.copy(_q);
+    p.mesh.position.set(p.x, this.y + Math.sin(p.tilt) * 1.05 * PIN_S, p.z);
+  }
+
+  // ---------- En red (ver game/spots.js) ----------
+  // ¿Hay algo que contar, o están todos en su sitio?
+  get live() {
+    return this.pins.some((p) => p.down || p.gone);
+  }
+
+  put(dv, o) {
+    const pl = this.place;
+    for (const p of this.pins) o = putPin(dv, o, (p.down ? DOWN : 0) | (p.gone ? GONE : 0), p.x - pl.pinX, p.z - pl.pinZ, p.tilt / (Math.PI / 2), Math.atan2(p.dx, p.dz));
+    return o;
+  }
+
+  get(a, oa, b, ob, k) {
+    getPins(this.pins, this.place.pinX, this.place.pinZ, a, oa, b, ob, k);
+  }
+
+  // Los bolos que lleva el juego de otro: cada uno donde dice, y suena el que cae
+  paint(dt) {
+    for (const p of this.pins) {
+      const n = p.net;
+      const down = !!(n.f & DOWN);
+      if (down && !p.down) this.clack(this.game.here(n.x, n.z).sfx);
+      p.vx = speed(n.x, p.x, dt);
+      p.vz = speed(n.z, p.z, dt);
+      p.x = n.x;
+      p.z = n.z;
+      p.down = down;
+      p.gone = !!(n.f & GONE);
+      p.tilt = down ? (n.h * Math.PI) / 2 : 0;
+      p.dx = Math.sin(n.ang);
+      p.dz = Math.cos(n.ang);
+      p.mesh.visible = this.shown && !p.gone;
+      this.lay(p);
+    }
+  }
+
+  touch(player, push) {
+    return this.shown && touchPins(this.pins, this.y, player, push);
   }
 
   update(dt, player, inMission) {
@@ -147,10 +258,7 @@ export class Pins {
         }
       }
       p.tilt = Math.min(Math.PI / 2, p.tilt + dt * 6.5);
-      _a.set(p.dz, 0, -p.dx);
-      _q.setFromAxisAngle(_a, p.tilt);
-      p.mesh.quaternion.copy(_q);
-      p.mesh.position.set(p.x, this.y + Math.sin(p.tilt) * 1.05 * PIN_S, p.z);
+      this.lay(p);
     }
     // En modo libre los bolos se recolocan al rato
     if (!inMission && this.pins.some((p) => p.down)) {
@@ -182,7 +290,7 @@ export class AlienPins {
         const x0 = place.pinX + (i - r / 2) * 2.9;
         const z0 = place.pinZ - r * 2.55;
         // Cada uno tarda lo suyo en reaccionar, y los del centro echan cada uno para un lado
-        this.pins.push({ fig, x0, z0, x: x0, y: 0, z: z0, vx: 0, vy: 0, vz: 0, rot: 0, spin: 0, heading: 0, walk: n * 1.7, slow: 0.1 + (n % 3) * 0.07, side: n % 2 ? 1 : -1, seen: 0, down: false, gone: false });
+        this.pins.push({ fig, x0, z0, x: x0, y: 0, z: z0, vx: 0, vy: 0, vz: 0, rot: 0, spin: 0, heading: 0, walk: n * 1.7, slow: 0.1 + (n % 3) * 0.07, side: n % 2 ? 1 : -1, seen: 0, run: false, face: 0, down: false, gone: false });
       }
     }
     this.y = BASE + 0.1;
@@ -205,7 +313,8 @@ export class AlienPins {
       a.z = a.z0;
       a.y = this.y;
       a.vx = a.vy = a.vz = 0;
-      a.rot = a.seen = 0;
+      a.rot = a.seen = a.face = 0;
+      a.run = false;
       a.down = false;
       a.gone = false;
       a.fig.group.visible = this.shown;
@@ -247,14 +356,89 @@ export class AlienPins {
     this.game.bits.burst(a.x, a.y + 1.5, a.z, [0xfff27a, 0xffffff, SKIN], 6, 8, this.y, 0.5);
   }
 
-  // Revienta en ladrillos al caer
-  pop(a) {
-    const g = this.game;
+  // Revienta en ladrillos al caer. mine: lo ha tirado el jugador de esta pantalla, y los studs son suyos
+  pop(a, mine = true) {
+    const g = mine ? this.game : this.game.here(a.x, a.z);
     g.bits.burst(a.x, this.y + 1.5, a.z, [SKIN, 0xb6ff5a, C.white, C.red], 16, 10, this.y);
-    g.studs.burst(a.x, this.y + 1, a.z, 2, 0, this.y, 7);
+    if (mine) g.studs.burst(a.x, this.y + 1, a.z, 2, 0, this.y, 7);
     g.sfx.alienPop();
     a.gone = true;
     a.fig.group.visible = false;
+  }
+
+  // En pie: corre apartándose, se ríe de ti o se queda mirando
+  stand(a, run, moving, time) {
+    const f = a.fig;
+    const laugh = this.laugh > 0 && !run;
+    const hop = laugh ? Math.abs(Math.sin(time * 9 + a.walk)) * 0.7 : run ? Math.abs(Math.sin(a.walk)) * 0.25 : 0;
+    f.legL.rotation.x = moving ? Math.sin(a.walk) * 0.6 : 0;
+    f.legR.rotation.x = -f.legL.rotation.x;
+    f.armL.rotation.x = f.armR.rotation.x = run || laugh ? -2.8 : 0;
+    f.group.position.set(a.x, this.y + hop, a.z);
+    f.group.rotation.set(0, a.face, 0);
+  }
+
+  // ---------- En red (ver game/spots.js) ----------
+  get live() {
+    return this.laugh > 0 || this.pins.some((a) => a.down || a.gone || Math.abs(a.x - a.x0) + Math.abs(a.z - a.z0) > 0.02);
+  }
+
+  put(dv, o) {
+    const pl = this.place;
+    for (const a of this.pins) o = putPin(dv, o, (a.down ? DOWN : 0) | (a.gone ? GONE : 0) | (a.run ? RUN : 0), a.x - pl.pinX, a.z - pl.pinZ, (a.y - this.y) / 10, a.down ? a.heading : a.face);
+    return o;
+  }
+
+  get(a, oa, b, ob, k) {
+    getPins(this.pins, this.place.pinX, this.place.pinZ, a, oa, b, ob, k);
+  }
+
+  // Los marcianos que lleva el juego de otro. laugh: los que quedan en pie se están riendo
+  paint(dt, time, laugh) {
+    this.laugh = laugh ? 1 : 0;
+    for (const a of this.pins) {
+      const n = a.net;
+      const f = a.fig;
+      const down = !!(n.f & DOWN);
+      if (n.f & GONE) {
+        // Solo revienta el que se ha visto volar: al resto los han retirado sin más
+        if (!a.gone && a.down) this.pop(a, false);
+        a.gone = true;
+        a.down = down;
+        f.group.visible = false;
+        continue;
+      }
+      if (down && !a.down) this.game.here(n.x, n.z).bits.burst(n.x, a.y + 1.5, n.z, [0xfff27a, 0xffffff, SKIN], 6, 8, this.y, 0.5);
+      const y = this.y + n.h * 10;
+      const moving = Math.hypot(n.x - a.x, n.z - a.z) > 0.001;
+      a.vx = speed(n.x, a.x, dt);
+      a.vy = speed(y, a.y, dt);
+      a.vz = speed(n.z, a.z, dt);
+      a.x = n.x;
+      a.y = y;
+      a.z = n.z;
+      a.down = down;
+      a.gone = false;
+      f.group.visible = this.shown;
+      if (down) {
+        a.spin = SPIN;
+        a.rot += SPIN * dt;
+        a.heading = n.ang;
+        f.armL.rotation.x = f.armR.rotation.x = -2.8;
+        f.group.position.set(a.x, a.y, a.z);
+        f.group.rotation.set(a.rot, a.heading, 0);
+        continue;
+      }
+      a.rot = 0;
+      a.run = !!(n.f & RUN);
+      a.face = n.ang;
+      if (moving) a.walk += dt * (a.run ? 18 : 9);
+      this.stand(a, a.run, moving, time);
+    }
+  }
+
+  touch(player, push) {
+    return this.shown && touchPins(this.pins, this.y, player, push);
   }
 
   update(dt, player, inMission, time) {
@@ -357,13 +541,9 @@ export class AlienPins {
         a.z = Math.max(pl.backZ + 1.4, Math.min(pl.pinZ + 4, a.z + (wz / w) * step));
         a.walk += dt * (run ? 18 : 9);
       }
-      const laugh = this.laugh > 0 && !run;
-      const hop = laugh ? Math.abs(Math.sin(time * 9 + a.walk)) * 0.7 : run ? Math.abs(Math.sin(a.walk)) * 0.25 : 0;
-      f.legL.rotation.x = moving ? Math.sin(a.walk) * 0.6 : 0;
-      f.legR.rotation.x = -f.legL.rotation.x;
-      f.armL.rotation.x = f.armR.rotation.x = run || laugh ? -2.8 : 0;
-      f.group.position.set(a.x, this.y + hop, a.z);
-      f.group.rotation.set(0, run ? Math.atan2(wx, wz) : Math.atan2(-dx, -dz), 0);
+      a.run = run;
+      a.face = run ? Math.atan2(wx, wz) : Math.atan2(-dx, -dz);
+      this.stand(a, run, moving, time);
     }
     // En modo libre vuelven a formar al rato
     if (!inMission && this.pins.some((a) => a.down)) {
@@ -419,6 +599,7 @@ export class Ball {
     this.teo = true;
     this.alien = false;
     this.cheer = 0;
+    this.net = { x: 0, y: 0, z: 0, kz: 0 };
     this.pick();
     this.kz = place.cz;
     this.kx = place.goalX - 1.6;
@@ -457,21 +638,18 @@ export class Ball {
     const far = Math.abs(player.pos.x - pl.cx) > 120 || Math.abs(player.pos.z - pl.cz) > 120;
     if (far) return;
     // Portero: Teo y el suplente se pasean bajo los palos; el marciano va a por el balón
-    let hop = Math.abs(Math.sin(time * 6)) * 0.25;
     if (this.alien) {
       const b = this.pos;
       this.cheer -= dt;
-      const cheer = this.cheer > 0;
       // Cada parada la celebra un rato sin moverse
-      if (!cheer) {
+      if (this.cheer <= 0) {
         let aim = pl.cz;
         if (this.wait <= 0 && b.x > pl.cx - 10) aim = this.vel.x > 3 ? b.z + (this.vel.z * (this.kx - b.x)) / this.vel.x : b.z;
         aim = Math.max(pl.cz - SPAN, Math.min(pl.cz + SPAN, aim));
         this.kz += Math.max(-KEEP * dt, Math.min(KEEP * dt, aim - this.kz));
-      } else hop = Math.abs(Math.sin(time * 13)) * 1.1;
-      this.keeper.arms.forEach((a, i) => (a.rotation.z = (i % 2 ? -1 : 1) * (cheer ? 2.7 - (i >> 1) * 0.5 : (i < 2 ? 1.75 : 0.95) + Math.sin(time * 7 + i) * 0.22)));
+      }
     } else this.kz = pl.cz + Math.sin(time * 1.7) * 4.4;
-    this.keeper.group.position.set(this.kx, BASE + 0.1 + hop, this.kz);
+    this.pose(time);
     if (this.wait > 0) {
       this.wait -= dt;
       if (this.wait <= 0) this.reset();
@@ -538,13 +716,7 @@ export class Ball {
       p.x = this.kx + dx * reach;
       p.z = this.kz + dz * reach;
     }
-    // Al marciano no se le atropella: con cuatro brazos te para a ti también
-    if (this.alien && player.crashT <= 0 && player.pos.y < BASE + 5) {
-      dx = player.pos.x - this.kx;
-      dz = player.pos.z - this.kz;
-      d = Math.hypot(dx, dz);
-      if (d < 2.6) player.bump(dx / d, dz / d, 2.6 - d, 0.3);
-    }
+    this.block(player);
     // Patinete
     dx = p.x - player.pos.x;
     dz = p.z - player.pos.z;
@@ -574,11 +746,95 @@ export class Ball {
         p.z = this.kz + (dz / d) * reach;
       }
     }
+    this.roll(dt);
+  }
+
+  // El portero en su sitio: dando saltitos, y el marciano moviendo los cuatro brazos o celebrando la parada
+  pose(time) {
+    const cheer = this.alien && this.cheer > 0;
+    if (this.alien) this.keeper.arms.forEach((a, i) => (a.rotation.z = (i % 2 ? -1 : 1) * (cheer ? 2.7 - (i >> 1) * 0.5 : (i < 2 ? 1.75 : 0.95) + Math.sin(time * 7 + i) * 0.22)));
+    this.keeper.group.position.set(this.kx, BASE + 0.1 + (cheer ? Math.abs(Math.sin(time * 13)) * 1.1 : Math.abs(Math.sin(time * 6)) * 0.25), this.kz);
+  }
+
+  // Al marciano no se le atropella: con cuatro brazos te para a ti también
+  block(player) {
+    if (!this.alien || player.crashT > 0 || player.pos.y >= BASE + 5) return;
+    const dx = player.pos.x - this.kx;
+    const dz = player.pos.z - this.kz;
+    const d = Math.hypot(dx, dz);
+    if (d < 2.6) player.bump(dx / d, dz / d, 2.6 - d, 0.3);
+  }
+
+  // El balón rueda lo que avanza
+  roll(dt) {
+    const v = this.vel;
     const sp = Math.hypot(v.x, v.z);
     if (sp > 0.05) {
       _a.set(v.z / sp, 0, -v.x / sp);
-      this.mesh.rotateOnWorldAxis(_a, (sp * dt) / r);
+      this.mesh.rotateOnWorldAxis(_a, (sp * dt) / this.r);
     }
-    this.mesh.position.copy(p);
+    this.mesh.position.copy(this.pos);
+  }
+
+  // ---------- En red (ver game/spots.js) ----------
+  // ¿Hay algo que contar, o el balón está en el centro y el portero en su sitio?
+  get live() {
+    const pl = this.place;
+    const p = this.pos;
+    return this.wait > 0 || Math.abs(p.x - pl.cx) + Math.abs(p.y - this.floor) + Math.abs(p.z - pl.cz) > 0.02 || (this.alien && (this.cheer > 0 || Math.abs(this.kz - pl.cz) > 0.05));
+  }
+
+  put(dv, o) {
+    const pl = this.place;
+    const i16 = (v) => Math.max(-32767, Math.min(32767, Math.round(v * 100)));
+    dv.setInt16(o, i16(this.pos.x - pl.cx), true);
+    dv.setInt16(o + 2, i16(this.pos.y - this.floor), true);
+    dv.setInt16(o + 4, i16(this.pos.z - pl.cz), true);
+    dv.setInt8(o + 6, Math.max(-127, Math.min(127, Math.round((this.kz - pl.cz) * 40))));
+    return o + BALL;
+  }
+
+  // El balón entre dos fotos, en `net`. Si de una a otra vuelve al centro, no cruza el campo volando
+  get(a, oa, b, ob, k) {
+    const pl = this.place;
+    const far = Math.abs(b.getInt16(ob, true) - a.getInt16(oa, true)) + Math.abs(b.getInt16(ob + 4, true) - a.getInt16(oa + 4, true)) > 800;
+    const mix = (at) => a.getInt16(oa + at, true) + (far ? 0 : (b.getInt16(ob + at, true) - a.getInt16(oa + at, true)) * k);
+    this.net.x = pl.cx + mix(0) / 100;
+    this.net.y = this.floor + mix(2) / 100;
+    this.net.z = pl.cz + mix(4) / 100;
+    this.net.kz = pl.cz + (a.getInt8(oa + 6) + (b.getInt8(ob + 6) - a.getInt8(oa + 6)) * k) / 40;
+  }
+
+  // En el centro y con el portero en su sitio: lo que hay cuando no llega nada que contar
+  home() {
+    this.net.x = this.place.cx;
+    this.net.y = this.floor;
+    this.net.z = this.place.cz;
+    this.net.kz = this.place.cz;
+  }
+
+  // El balón que lleva el juego de otro: donde dice, con la velocidad que se le ve. cheer: el
+  // portero marciano celebra una parada
+  paint(dt, player, time, cheer) {
+    const pl = this.place;
+    const n = this.net;
+    this.cheer = cheer ? 1 : 0;
+    this.wait = 0;
+    this.kz = this.alien ? n.kz : pl.cz + Math.sin(time * 1.7) * 4.4;
+    this.pose(time);
+    this.block(player);
+    this.vel.set(speed(n.x, this.pos.x, dt), speed(n.y, this.pos.y, dt), speed(n.z, this.pos.z, dt));
+    this.pos.set(n.x, n.y, n.z);
+    this.roll(dt);
+  }
+
+  touch(player, push) {
+    const dx = this.pos.x - player.pos.x;
+    const dz = this.pos.z - player.pos.z;
+    const d = Math.hypot(dx, dz);
+    const reach = this.r + 1.3;
+    if (d >= reach || player.crashT > 0 || Math.abs(player.pos.y + 1.5 - this.pos.y) >= 3.2) return false;
+    if (push) player.bump(-dx / (d || 1), -dz / (d || 1), reach - d, 0.5);
+    return true;
   }
 }
