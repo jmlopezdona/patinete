@@ -29,7 +29,7 @@ import { Bits } from './game/bits.js';
 import { Studs, STUD_VALUE } from './game/studs.js';
 import { Props } from './game/props.js';
 import { Traffic } from './game/traffic.js';
-import { Pins, Ball } from './game/minigames.js';
+import { Pins, AlienPins, Ball } from './game/minigames.js';
 import { Missions } from './game/missions.js';
 import { Environment } from './game/env.js';
 import { Hud } from './game/hud.js';
@@ -179,6 +179,7 @@ class Game {
     this.traffic = new Traffic(this, this.world.pedPaths);
     this.traffic.addStatic(this.world.spectators);
     this.pins = new Pins(this, this.world.places.bowling);
+    this.alienPins = new AlienPins(this, this.world.places.bowling);
     this.ball = new Ball(this, this.world.places.soccer);
     this.missions = new Missions(this);
     this.env = new Environment(this, this.world.lamps);
@@ -505,7 +506,7 @@ class Game {
   refreshHud(instant = false) {
     this.hud.setStuds(this.save.studs, instant);
     this.hud.setBricks(this.save.bricks.length, this.world.bricks.length);
-    this.hud.setStars(Object.values(this.save.stars).reduce((a, b) => a + b, 0), 15);
+    this.hud.setStars(Object.values(this.save.stars).reduce((a, b) => a + b, 0), this.missions.defs.length * 3);
   }
 
   // ---------- Eventos de juego ----------
@@ -780,8 +781,13 @@ class Game {
     this.wanted.update(dt, p, this.time);
     this.folks.update(dt, p, this.time, true);
     this.dropoff.update(dt, true);
-    const inBowl = this.missions.active && this.missions.def && this.missions.def.id === 'bowling';
-    this.pins.update(dt, p, inBowl);
+    // De noche los bolos de la bolera son marcianos, salvo que se esté jugando a los de siempre
+    const bowl = this.missions.active && this.missions.def ? this.missions.def.id : null;
+    const martian = bowl === 'alienbowl' || (bowl !== 'bowling' && this.env.target > 0.5);
+    this.pins.show(!martian);
+    this.alienPins.show(martian);
+    this.pins.update(dt, p, bowl === 'bowling');
+    this.alienPins.update(dt, p, bowl === 'alienbowl', this.time);
     this.ball.update(dt, p, this.time, (side) => this.missions.goal(side));
     this.missions.update(dt, this.time);
     this.bits.update(dt);
@@ -848,7 +854,7 @@ class Game {
     const s = Object.values(this.save.stars).reduce((a, b) => a + b, 0);
     if (s !== this.starCount) {
       this.starCount = s;
-      this.hud.setStars(s, 15);
+      this.hud.setStars(s, this.missions.defs.length * 3);
     }
   }
 }

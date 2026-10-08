@@ -327,6 +327,7 @@ queda libre para buscar el encuadre.
 | 🏁 | Gran Premio de Cobeña | Calle Río Júcar, delante del 44 | Vuelta al barrio de los ríos contrarreloj |
 | 🛹 | Rey del Skatepark | Skatepark nuevo | 75 segundos encadenando trucos |
 | 🎳 | Bolos Gigantes | Recinto Ferial | Tú eres la bola: 10 bolos en dos tiradas |
+| 👽 | Bolos Marcianos | Recinto Ferial, de noche | Los bolos son marcianos y se apartan al verte venir: 10 en dos tiradas |
 | 🍕 | Pizza Exprés | Plaza de la Villa | Repartir 5 pizzas antes de que se enfríen |
 | ⚽ | Chut a Puerta | Pista Polideportiva | Meter goles empujando el balón |
 

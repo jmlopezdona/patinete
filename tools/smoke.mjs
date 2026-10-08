@@ -108,6 +108,34 @@ await log('bolos fin', () => {
 await shot('s_bolos_fin');
 await page.evaluate(() => { window.sim(1.2, (t) => (t > 1 ? { keys: ['KeyE'] } : {})); });
 
+// De noche los bolos son marcianos y se apartan: sin turbo no cae ninguno; con turbo y una finta, pleno
+await log('bolos marcianos', () => {
+  const g = window.__game; const m = g.missions; const A = g.alienPins;
+  const vis = () => `${m.defs.filter((d) => !d.hidden && /bowl/.test(d.id)).map((d) => d.id)} bolos:${g.pins.pins[0].mesh.visible} marcianos:${A.pins[0].fig.group.visible}`;
+  const dia = vis();
+  g.env.night = g.env.target = 1; g.env.apply(); window.sim(0.3);
+  const noche = vis();
+  window.startMission('alienbowl');
+  window.sim(2.2, () => ({ throttle: 1 })); window.sim(1);
+  const sinTurbo = A.downCount;
+  window.startMission('alienbowl');
+  window.sim(2.2, () => ({ throttle: 1, boost: true })); window.sim(1);
+  const turbo = A.downCount;
+  window.startMission('alienbowl');
+  window.sim(1.16, (t) => ({ throttle: 1, boost: true, steer: t > 0.8 && t < 0.92 ? 1 : 0 }));
+  return { dia, noche, sinTurbo, turbo };
+});
+await shot('s_bolos_marcianos');
+await log('bolos marcianos fin', () => {
+  const g = window.__game; const m = g.missions;
+  window.sim(6);
+  const r = { down: g.alienPins.downCount, st: m.state, stars: g.save.stars.alienbowl, best: g.save.best.alienbowl };
+  g.env.night = g.env.target = 0; g.env.apply();
+  return r;
+});
+await shot('s_bolos_marcianos_fin');
+await page.evaluate(() => { window.sim(1.2, (t) => (t > 1 ? { keys: ['KeyE'] } : {})); });
+
 await log('pizza', () => {
   const g = window.__game; const m = g.missions;
   window.startMission('pizza');

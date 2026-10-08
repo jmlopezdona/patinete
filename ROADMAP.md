@@ -9,7 +9,6 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 
 ## Minijuegos en versión marciana
 
-- [ ] **Bolos marcianos.** Los bolos de la bolera son marcianos que intentan esquivarte.
 - [ ] **Pizza Exprés galáctica.** El pedido es para el platillo y hay que entregarlo saltando.
 - [ ] **Chut a Puerta contra los marcianos.** El portero es un marciano con cuatro brazos (Teo se
   toma la noche libre).
@@ -18,6 +17,12 @@ Ideas locas para seguir ampliando el juego. Salen de la lluvia de ideas con la q
 
 - [ ] **Patinete gigante.** Aplastas coches.
 - [ ] **Dos jugadores.** Uno lleva el patinete y otro pilota el platillo.
+
+## Ya hecho (rama `bolos-marcianos`)
+
+- [x] **Bolos marcianos.** De noche los bolos de la bolera son marcianos vestidos de bolo que se
+  apartan al verte venir: con turbo no les da tiempo, y con una finta a última hora se amontonan y
+  caen todos. Minijuego propio, con sus estrellas, en el mismo sitio que los Bolos Gigantes.
 
 ## Ya hecho (rama `meteoritos`)
 
