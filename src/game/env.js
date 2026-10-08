@@ -8,6 +8,10 @@ const SUN = new THREE.Vector3(0.52, 0.74, 0.42).normalize();
 const DAY = { top: new THREE.Color(0x2f86e6), hor: new THREE.Color(0xc4e6ff), sun: new THREE.Color(0xfff0d8), hemiS: new THREE.Color(0xd4ebff), hemiG: new THREE.Color(0xa09680) };
 const NIGHT = { top: new THREE.Color(0x050919), hor: new THREE.Color(0x1d2c58), sun: new THREE.Color(0x9db8ff), hemiS: new THREE.Color(0x3c4c86), hemiG: new THREE.Color(0x1c2033) };
 
+// Cuánto alumbra el entorno de reflejos de día y de noche
+const ENV_DAY = 1.4;
+const ENV_NIGHT = 5.0;
+
 // Cielo, luces, nubes de ladrillo y ciclo día/noche.
 export class Environment {
   constructor(game, lamps) {
@@ -53,6 +57,35 @@ export class Environment {
     this.sky.frustumCulled = false;
     this.sky.renderOrder = -10;
     scene.add(this.sky);
+
+    // Lo que refleja el plástico: este mismo cielo, con el suelo por debajo del horizonte y sin el disco del
+    // sol (ese brillo ya lo pone la luz del sol). Se vuelve a generar a trozos mientras anochece o amanece
+    this.envU = { uTop: this.skyU.uTop, uHor: this.skyU.uHor, uSun: this.skyU.uSun, uNight: this.skyU.uNight, uGround: { value: DAY.hemiG.clone() } };
+    this.envScene = new THREE.Scene();
+    this.envScene.add(
+      new THREE.Mesh(
+        new THREE.SphereGeometry(10, 32, 16),
+        new THREE.ShaderMaterial({
+          uniforms: this.envU,
+          side: THREE.BackSide,
+          vertexShader: `varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+          fragmentShader: `
+          uniform vec3 uTop; uniform vec3 uHor; uniform vec3 uSun; uniform vec3 uGround; uniform float uNight;
+          varying vec3 vDir;
+          void main(){
+            vec3 d = normalize(vDir);
+            vec3 col = mix(uHor, uTop, pow(clamp(d.y, 0.0, 1.0), 0.5));
+            col += vec3(1.0, 0.92, 0.75) * pow(max(dot(d, uSun), 0.0), 14.0) * 0.22 * (1.0 - uNight);
+            col = mix(col, uGround, smoothstep(0.04, -0.12, d.y));
+            // Algo desaturado: con el azul entero del cielo las sombras se enfrían demasiado
+            col = mix(col, vec3(dot(col, vec3(0.2126, 0.7152, 0.0722))), 0.5);
+            gl_FragColor = vec4(col, 1.0);
+          }`,
+        })
+      )
+    );
+    this.pmrem = new THREE.PMREMGenerator(game.renderer);
+    this.envAt = -1;
 
     scene.fog = new THREE.Fog(DAY.hor.clone(), 280, 1250);
     this.hemi = new THREE.HemisphereLight(DAY.hemiS.clone(), DAY.hemiG.clone(), 0.8);
@@ -147,7 +180,9 @@ export class Environment {
     this.hemi.intensity = 0.8 - n * 0.3;
     this.sun.color.lerpColors(DAY.sun, NIGHT.sun, n);
     this.sun.intensity = 2.7 - n * 2.1;
-    g.scene.environmentIntensity = 0.45 - n * 0.3;
+    this.envU.uGround.value.lerpColors(DAY.hemiG, NIGHT.hemiG, n);
+    if (n !== this.envAt && (n === this.target || Math.abs(n - this.envAt) > 0.12)) this.reflect();
+    g.scene.environmentIntensity = ENV_DAY + (ENV_NIGHT - ENV_DAY) * n;
     legoUniforms.uNight.value = n;
     this.poolMat.opacity = n * 0.3;
     this.pools.visible = n > 0.02;
@@ -157,6 +192,15 @@ export class Environment {
       g.bloom.strength = 0.1 + n * 0.2;
       g.bloom.threshold = 1.0 - n * 0.25;
     }
+  }
+
+  // Genera el entorno de reflejos para la hora que es
+  reflect() {
+    const old = this.envMap;
+    this.envMap = this.pmrem.fromScene(this.envScene, 0.02);
+    this.game.scene.environment = this.envMap.texture;
+    if (old) old.dispose();
+    this.envAt = this.night;
   }
 
   update(dt, focus, camera) {

@@ -90,6 +90,15 @@ hoy salvo que se le aplique el mismo tratamiento, y conviene decidirlo para que 
 
 ### T2 · Reflejos del cielo del juego
 
+**Estado.** Hecho. El `RoomEnvironment` desaparece y `Environment.reflect()` (`src/game/env.js`)
+genera el entorno a partir del cielo del juego: mismo degradado, el suelo por debajo del
+horizonte, sin el disco del sol (ese brillo ya lo pone la luz del sol) y desaturado a la mitad
+para no enfriar demasiado las sombras. Se regenera cada vez que la noche avanza 0,12: ocho
+veces por anochecer o amanecer, a unos 0,8 ms cada una (la primera de la medida tardó 34 ms),
+sin texturas de más al terminar. La intensidad (`ENV_DAY` 1,4 y `ENV_NIGHT` 5) está ajustada
+para acercarse al brillo medio de antes; aun así el día queda algo más frío (en la calle, el
+rojo medio baja de 139 a 128 y el azul sube de 117 a 133) y la noche algo más oscura.
+
 **Qué.** Sustituir el `RoomEnvironment` por un entorno generado con `PMREMGenerator.fromScene`
 a partir del propio cielo (`this.sky`), y regenerarlo cuando cambia la hora.
 
@@ -196,7 +205,7 @@ Nada de esto se ha probado en móvil ni en tableta, igual que el resto de medida
 | 1 | T3 · Nitidez (hecho) | Rápido, sin riesgo y sin coste. Se valida con una captura |
 | 2 | T4 · Suelo (hecho) | Pequeño y aislado; sirve para ensayar cambios en el shader antes de T1 |
 | 3 | T1 · Plástico (hecho en parte) | El de más efecto. Con medida antes y después y el interruptor de calidad |
-| 4 | T2 · Reflejos | Después de T1, porque los reflejos lucen sobre el plástico ya tratado y obligan a reajustar la luz una sola vez |
+| 4 | T2 · Reflejos (hecho) | Después de T1, porque los reflejos lucen sobre el plástico ya tratado y obligan a reajustar la luz una sola vez |
 | 5 | T5 · Sprites | Opcional |
 
 Cada paso cabe en una PR propia. T1 y T2 cambian el aspecto de todo el juego: conviene verlas

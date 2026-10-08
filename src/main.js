@@ -5,7 +5,6 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 import { makeRng } from './core/rng.js';
 import { Input } from './core/input.js';
@@ -164,9 +163,6 @@ class Game {
     renderer.toneMappingExposure = 1.0;
     renderer.shadowMap.enabled = true;
     const scene = (this.scene = new THREE.Scene());
-    const pm = new THREE.PMREMGenerator(renderer);
-    scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
-    pm.dispose();
 
     try {
       await Promise.race([document.fonts.load('700 40px Fredoka'), new Promise((r) => setTimeout(r, 1500))]);
