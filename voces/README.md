@@ -9,7 +9,7 @@ un audio de unos diez segundos diseñado con Qwen3-TTS VoiceDesign a partir de u
 | `*.wav` | Las voces de referencia. Las nuevas tienen dos candidatas (`-s1` y `-s2`): la misma descripción con dos semillas, para elegir de oído |
 | `voces.json` | De dónde sale cada voz: su descripción, su semilla y el texto que dice |
 | `guion.json` | Qué frase dice cada voz y con qué tono |
-| `escucha.html` | Todas las voces y todas las locuciones en una página, para oírlas sin jugar. Se abre tal cual, sin servidor |
+| `escucha.html` | Todas las voces y todas las locuciones en una página, para oírlas sin jugar. Se abre tal cual, sin servidor. No está en git: se genera con `node tools/voz.mjs pagina` |
 
 ## El guion
 
