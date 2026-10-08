@@ -28,7 +28,8 @@ const RIDE_H = 17;
 const RIG = { dist: 36, height: 17 };
 const DAZE = 5.5; // lo que dura el aturdimiento del timbre sónico
 const SLIDE = 2.5; // y lo que dura el de resbalar en su propia baba
-const AFOOT = new Set(['wander', 'alert', 'chase', 'tired', 'flee', 'laugh', 'dazed']);
+const BOLT = 14; // segundos que corre un marciano desenmascarado de día antes de esfumarse
+const AFOOT = new Set(['wander', 'alert', 'chase', 'tired', 'flee', 'laugh', 'dazed', 'bolt']);
 const CAR_NAMES = { car: 'un coche', taxi: 'un taxi', bus: 'el autobús', police: 'el coche patrulla', truck: 'un camión', icecream: 'el camión de los helados' };
 
 const _v = new THREE.Vector3();
@@ -44,6 +45,7 @@ function glowMaterial(color, opacity) {
 // Cuando el platillo se queda atontado baja mucho: con tres coscorrones el piloto sale por los
 // aires y el platillo es tuyo un rato, con su rayo y todo. El ladrón de la estatua va aparte, en
 // heist.js, y la nave nodriza que baja cuando ya no quedan marcianos de la oleada, en boss.js.
+// De día algunos se pasean disfrazados de vecino (disguise.js): al caérseles el disfraz salen de aquí.
 export class Aliens {
   constructor(game) {
     this.game = game;
@@ -101,7 +103,7 @@ export class Aliens {
     fig.group.rotation.order = 'YXZ';
     fig.group.visible = false;
     this.game.scene.add(fig.group);
-    return { fig, i, state: 'off', x: 0, y: 0, z: 0, gy: 0, heading: 0, vx: 0, vy: 0, vz: 0, spin: 0, rot: 0, t: 0, cd: 0, far: 0, walk: i * 1.7, stuck: 0, detour: 0, detourDir: 0, dirT: 0, fx: 0, slick: 0, blip: { x: 0, z: 0 } };
+    return { fig, i, state: 'off', spy: false, x: 0, y: 0, z: 0, gy: 0, heading: 0, vx: 0, vy: 0, vz: 0, spin: 0, rot: 0, t: 0, cd: 0, far: 0, walk: i * 1.7, stuck: 0, detour: 0, detourDir: 0, dirT: 0, fx: 0, slick: 0, blip: { x: 0, z: 0 } };
   }
 
   buildUfo() {
@@ -161,12 +163,15 @@ export class Aliens {
   startWave() {
     const g = this.game;
     const level = g.save.invasions || 0;
-    this.wave = { level, goal: Math.min(28, 8 + level * 4), count: 0, saved: 0 };
+    // Los disfrazados que hayas echado de día ya no bajan esta noche
+    const full = Math.min(28, 8 + level * 4);
+    const goal = Math.max(4, full - g.disguise.discount());
+    this.wave = { level, goal, count: 0, saved: 0 };
     this.combo = 0;
     g.hud.big('¡Invasión!', GREEN, 1.8);
     g.sfx.invasion();
     this.hints = [
-      [0.3, `🛸 ¡Los marcianos invaden Cobeña! Oleada <b>${level + 1}</b>: échalos a <b>culetazos</b>, embistiéndolos por la espalda.`],
+      [0.3, `🛸 ¡Los marcianos invaden Cobeña! Oleada <b>${level + 1}</b>${goal < full ? `, con <b>${full - goal}</b> menos por los disfrazados que echaste de día` : ''}: échalos a <b>culetazos</b>, embistiéndolos por la espalda.`],
       [7, '💨 Con el <b>turbo</b> se asustan y salen huyendo: ¡es el momento de darles en el culo!'],
       [14, '🔦 No te quedes bajo el <b>rayo del platillo</b>. Si te atrapa, machaca <b>Espacio</b> para soltarte.'],
       [22, '🛸 Cuando el platillo se queda <b>atontado</b> (al soltarte del rayo o al rescatar a alguien) baja mucho: <b>salta</b> y dale un coscorrón. ¡Al tercero es tuyo!'],
@@ -626,6 +631,7 @@ export class Aliens {
     a.z = z;
     a.y = y;
     a.state = 'fly';
+    a.spy = false;
     a.t = a.rot = a.fx = 0;
     a.vx = Math.sin(ang) * 16;
     a.vz = Math.cos(ang) * 16;
@@ -952,6 +958,7 @@ export class Aliens {
       a.y = h + 30;
       a.heading = Math.random() * TAU;
       a.state = 'drop';
+      a.spy = false;
       a.cd = 0;
       a.far = a.stuck = a.detour = a.slick = 0;
       a.fig.group.scale.setScalar(1);
@@ -959,6 +966,25 @@ export class Aliens {
       return true;
     }
     return false;
+  }
+
+  // A un vecino se le ha caído el disfraz (disguise.js): el marciano que iba debajo pega un bote
+  // del susto y echa a correr. Devuelve null si no queda ninguno libre.
+  bolt(x, z, heading) {
+    const a = this.aliens.find((o) => o.state === 'off');
+    if (!a) return null;
+    a.x = x;
+    a.z = z;
+    a.y = a.gy = this.T.height(x, z);
+    a.heading = heading;
+    a.state = 'bolt';
+    a.spy = true;
+    a.t = BOLT;
+    a.cd = 0.6;
+    a.far = a.stuck = a.detour = a.slick = a.fx = 0;
+    a.fig.group.scale.setScalar(1);
+    a.fig.group.visible = true;
+    return a;
   }
 
   beamUp(a) {
@@ -1079,7 +1105,7 @@ export class Aliens {
 
       // Se quedó atrás: el platillo lo recoge y lo suelta más cerca
       a.far = d > 80 ? a.far + dt : 0;
-      if (a.far > 3) {
+      if (a.far > 3 || (a.state === 'bolt' && a.t <= 0)) {
         this.beamUp(a);
         continue;
       }
@@ -1163,10 +1189,19 @@ export class Aliens {
             g.bits.spawn(a.x + Math.sin(s) * 0.9, a.y + 4.7, a.z + Math.cos(s) * 0.9, Math.cos(s) * 2, 1.5, -Math.sin(s) * 2, 0xfff27a, 0.26, 0.45, a.y);
           }
           a.t -= dt;
-          if (a.t <= 0) {
-            a.state = 'chase';
-            a.t = 6;
-          }
+          if (a.t <= 0) this.recover(a);
+          break;
+        case 'bolt':
+          // Desenmascarado de día y sin platillo que lo ampare: solo sabe correr, y si aguanta se esfuma
+          if (a.detour > 0) {
+            a.detour -= dt;
+            dir = a.detourDir;
+          } else dir = toP + Math.PI;
+          turn = 10;
+          tilt = 0.25;
+          a.t -= dt;
+          if (a.t > BOLT - 0.5) hop = Math.sin(((BOLT - a.t) / 0.5) * Math.PI) * 1.6;
+          else speed = 17;
           break;
         case 'laugh':
           dir = toP;
@@ -1209,7 +1244,7 @@ export class Aliens {
         // Brazos por delante, a lo zombi
         f.armL.rotation.x = -1.5 + sw * 0.2;
         f.armR.rotation.x = -1.5 - sw * 0.2;
-      } else if (st === 'flee' || st === 'laugh' || st === 'alert') {
+      } else if (st === 'flee' || st === 'laugh' || st === 'alert' || st === 'bolt') {
         f.armL.rotation.x = -2.7 + Math.sin(time * 18 + a.i) * 0.35;
         f.armR.rotation.x = -2.7 - Math.sin(time * 18 + a.i) * 0.35;
       } else if (st === 'tired') {
@@ -1247,7 +1282,7 @@ export class Aliens {
       const coming = _v.x * dx + _v.z * dz < 0;
       const behind = Math.cos(toP - a.heading) < 0.15;
       const dazed = st === 'dazed';
-      if (sp > (dazed ? 3 : 8) && coming && (behind || dazed || st === 'flee')) {
+      if (sp > (dazed ? 3 : 8) && coming && (behind || dazed || st === 'flee' || st === 'bolt')) {
         this.kick(a, p, time, null, 500);
       } else if (st === 'chase' && p.invuln <= 0 && this.grabCd <= 0) {
         this.grab(a, p);
@@ -1297,6 +1332,12 @@ export class Aliens {
         if (a && this.spawn(a, p)) this.spawnT = 0.9;
       }
     }
+  }
+
+  // Se le pasa el mareo: el de la oleada vuelve a por ti, el desenmascarado sigue huyendo
+  recover(a) {
+    a.state = a.spy ? 'bolt' : 'chase';
+    a.t = 6;
   }
 
   kick(a, p, time, label, base) {

@@ -36,6 +36,7 @@ import { Minimap } from './game/minimap.js';
 import { Aliens } from './game/aliens.js';
 import { Cows } from './game/cows.js';
 import { Folks } from './game/folks.js';
+import { Disguise } from './game/disguise.js';
 import { Dropoff } from './game/dropoff.js';
 import { Wanted } from './game/wanted.js';
 import { Photo } from './game/photo.js';
@@ -177,6 +178,7 @@ class Game {
     this.cows = new Cows(this);
     this.slime = new Slime(this);
     this.aliens = new Aliens(this);
+    this.disguise = new Disguise(this);
     this.heist = new Heist(this);
     this.boss = new Boss(this);
     this.items = new Items(this);
@@ -709,6 +711,7 @@ class Game {
     this.traffic.update(dt, p, this.time);
     this.cows.update(dt, p, this.time);
     this.aliens.update(dt, p, this.time, inp);
+    this.disguise.update(dt, p, this.time);
     this.boss.update(dt, p, this.time);
     this.heist.update(dt, p, this.time, inp);
     this.slime.update(dt, p, this.time);

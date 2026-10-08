@@ -214,7 +214,8 @@ kbd {
   text-align: center;
   text-shadow: none;
 }
-#alienbox {
+#alienbox,
+#spybox {
   border-left: 4px solid #8dff6a;
 }
 #wantedbox {

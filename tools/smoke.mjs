@@ -170,6 +170,44 @@ await log('vecinos', () => {
   return { marcadores: F.markers.map((m) => m.icon).join(''), yagoSalta: jumped, joseTiros: J.n, joseCanastas: J.made, corredorasJuntas: +spread.toFixed(1), bateriaALaEscuela: +Math.hypot(P.drummer.x - P.drummer.door.x, P.drummer.z - P.drummer.door.z).toFixed(0), teo: g.ball.keeper.group.children.some((c) => c.isSprite) };
 });
 await shot('s_vecinos');
+await log('disfrazados', () => {
+  const g = window.__game; const D = g.disguise; const A = g.aliens; const p = g.player; const W = g.wanted;
+  const sp = g.world.places.spawn;
+  g.env.night = g.env.target = 0; g.env.apply();
+  window.sim(1);
+  W.reset(true);
+  const ram = (ped) => {
+    const hd = ped.fig.group.rotation.y;
+    p.place(ped.x - Math.sin(hd) * 9, ped.z - Math.cos(hd) * 9, hd); p.v = 20; p.invuln = 0;
+    window.sim(0.5, () => ({ throttle: 1 }));
+  };
+  const colados = `${D.list.length} (${document.getElementById('spies').textContent})`;
+  // Al primero se le cae el disfraz y se va de un culetazo
+  const s = D.list[0];
+  ram(s.ped);
+  const a = s.alien;
+  const cae = { marciano: a.state, vecinoEscondido: !s.ped.fig.group.visible, estrellas: W.stars };
+  window.sim(0.6);
+  p.place(a.x - Math.sin(a.heading) * 8, a.z - Math.cos(a.heading) * 8, a.heading); p.v = 30;
+  window.sim(0.7, () => ({ throttle: 1, boost: true }));
+  const culetazo = { vuela: a.state === 'fly', contador: document.getElementById('spies').textContent };
+  window.sim(4);
+  // El segundo se escapa si no le sigues
+  const s2 = D.list[1];
+  ram(s2.ped);
+  p.place(sp.x, sp.z, sp.heading);
+  let n = 0; while (s2.state === 'run' && n++ < 1200) window.sim(1 / 60);
+  window.sim(2);
+  const fuga = { seEsfuma: s2.state !== 'run', echados: D.caught, vuelvenLosVecinos: !s.ped.taken };
+  // Por la noche se quitan la antena y la oleada llega con menos
+  g.save.invasions = 0;
+  g.env.night = g.env.target = 1; g.env.apply();
+  window.sim(1);
+  const noche = { oleada: A.wave.goal, disfrazados: D.list.length, contador: document.getElementById('spybox').classList.contains('hidden') ? 'oculto' : 'visible' };
+  g.env.night = g.env.target = 0; g.env.apply();
+  window.sim(1);
+  return { colados, cae, culetazo, fuga, noche, otroDia: `${D.list.length} nuevos, ${D.caught} echados` };
+});
 await log('marcianos: culetazo', () => {
   const g = window.__game; const A = g.aliens; const p = g.player;
   const sp = g.world.places.spawn;

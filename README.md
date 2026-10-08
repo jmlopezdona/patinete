@@ -139,6 +139,21 @@ cada vehículo se cambia con `V` y se guarda por separado.
 - **Cuestas**: cuesta abajo el patinete coge velocidad sin empujar (y pasa de su punta), cuesta
   arriba le cuesta más y corre menos; el turbo ayuda. Parado no se va solo: se aguanta con el pie.
 
+### Marcianos disfrazados
+
+De día no hay platillo, pero algunos marcianos se han quedado en Cobeña **disfrazados de vecino**:
+cada mañana se cuelan tres entre los peatones (el contador 🥸 lleva la cuenta). Se les reconoce
+porque les asoma una **antena** por encima del pelo, que no saben tener quieta.
+
+- **Embístelos** como a cualquier peatón y se les cae el disfraz en ladrillos: debajo iba un
+  marciano, que pega un bote del susto y **sale corriendo**. Tienes unos segundos para darle un
+  **culetazo** (por cualquier lado, o un pisotón, o el truco) antes de que se esfume.
+- Cada disfrazado que eches son **dos marcianos menos** en la oleada de esa noche, además de sus
+  studs. Si echas a los tres, premio extra.
+- Ojo con equivocarse: atropellar a un vecino de verdad sigue sumando para el **policía municipal**.
+- Al anochecer los que queden se quitan la antena y se unen a los suyos; al día siguiente se cuelan
+  otros tres. El vecino de verdad vuelve a su paseo en cuanto dejas de mirar.
+
 ### La noche de los marcianos
 
 Pulsa `N` (o «Día / noche» en la pausa) y, en cuanto oscurece, un platillo baja por el lado del
@@ -310,7 +325,7 @@ se guarda en el navegador.
   skatepark funcionan igual que en llano.
 - `src/game/` — jugador y física arcade, cámara, studs, escombros, tráfico, minijuegos,
   entorno día/noche, HUD y minimapa. `aliens.js` lleva la invasión (marcianos, platillo, rayo,
-  rescates y el robo del platillo), `heist.js`, el ladrón de la estatua dorada, `boss.js`, la nave nodriza, `items.js`, los objetos que se recogen por la calle y se gastan
+  rescates y el robo del platillo), `disguise.js`, los que se pasean de día disfrazados de vecino, `heist.js`, el ladrón de la estatua dorada, `boss.js`, la nave nodriza, `items.js`, los objetos que se recogen por la calle y se gastan
   con `Q` (el timbre sónico, el gorro de aluminio, el cohete y la gravedad lunar), `slime.js`, los charcos de baba
   verde, `cows.js`, las vacas que pastan junto al Mega Salto,
   `folks.js`, los vecinos con nombre, y `wanted.js`, el nivel de búsqueda (el municipal, la abuela
