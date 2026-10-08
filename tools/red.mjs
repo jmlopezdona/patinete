@@ -300,6 +300,18 @@ const [corrA, corrB] = [await mamas(A), await mamas(B)];
 // Cada pestaña se mira en un instante distinto: se descuenta lo que corren entre uno y otro
 const aLaPar = Math.abs(((((corrA.s - corrB.s - 8.6 * (corrA.t - corrB.t)) % corrA.len) + corrA.len * 1.5) % corrA.len) - corrA.len / 2);
 check('las corredoras van a la par en las dos pantallas', aLaPar < 0.5 && Math.abs(corrA.t - corrB.t) < 1, `${aLaPar.toFixed(2)} de desfase`);
+// Y la que atropella uno sale por los aires en la pantalla de los demás, que también andan cerca
+const [aAntes, bAntes] = [await yo(A), await yo(B)];
+const alParque = (page) => page.evaluate(() => { const g = window.__game; const q = g.folks.pathAt(g.folks.joggers.s, {}); g.player.place(q.x, q.z, 0); });
+await alParque(A);
+await alParque(B);
+await espera(A, () => window.__game.folks.joggers.list[1].init, 3000);
+await espera(B, () => window.__game.folks.joggers.list[1].init, 3000);
+await B.evaluate(() => window.__game.folks.knock(1, true));
+await A.waitForFunction(() => window.__game.folks.joggers.list[1].fly > 0, { timeout: 3000, polling: 30 }).catch(() => {});
+check('una corredora atropellada vuela también en la pantalla de los demás', await A.evaluate(() => { const L = window.__game.folks.joggers.list; return L[1].fly > 0 && !(L[0].fly > 0) && !(L[2].fly > 0); }));
+await A.evaluate((p) => window.__game.player.place(p.x, p.z, 0), aAntes);
+await B.evaluate((p) => window.__game.player.place(p.x, p.z, 0), bAntes);
 
 // De noche: la oleada, los marcianos y el platillo son los del anfitrión
 const invasion = (page) => page.evaluate(() => { const g = window.__game; const A = g.aliens; const u = A.u; return { activa: A.active, guiada: A.led, oleada: A.wave ? `${A.wave.level + 1}ª ${A.wave.count}/${A.wave.goal}` : '', cuenta: A.wave ? A.wave.count : -1, contador: document.getElementById('alienbox').classList.contains('hidden') ? 'oculto' : document.getElementById('aliens').textContent, marcianos: A.aliens.map((a) => [a.x, a.z, a.state]), platillo: { x: u.x, y: u.y, z: u.z, estado: u.state, visible: A.ufo.visible, golpes: u.hits, rayo: u.beam }, modo: A.mode, cogido: g.player.held, oculto: g.player.hidden, studs: g.save.studs, nivel: g.save.invasions || 0, charcos: g.slime.list.map((s, i) => (s.t > 1 ? [s.x, s.z, i] : null)).filter(Boolean) }; });

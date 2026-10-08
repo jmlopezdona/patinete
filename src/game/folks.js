@@ -1215,6 +1215,22 @@ export class Folks {
     return out;
   }
 
+  // Una corredora sale por los aires (sin daños: son de plástico). mine: la ha atropellado el
+  // jugador de esta pantalla, que lo avisa (`corredora`) para que la vean volar los demás
+  knock(i, mine) {
+    const g = this.game;
+    const j = this.joggers?.list[i];
+    if (!j || !j.init || j.fly > 0) return;
+    j.fly = 1.4;
+    j.vy = 13;
+    j.cd = 2;
+    if (mine) {
+      g.sfx.ouch();
+      g.camera3.addShake(0.15);
+      g.party?.tell('corredora', i);
+    } else g.here(j.x, j.z).sfx.ouch();
+  }
+
   updateJoggers(dt, p, time, live) {
     const R = this.joggers;
     const T = this.T;
@@ -1295,13 +1311,8 @@ export class Folks {
       const dz = p.pos.z - nz;
       const d2 = dx * dx + dz * dz;
       if (d2 < 3.4 && Math.abs(p.pos.y - gy) < 3) {
-        if (p.speed > 7) {
-          j.fly = 1.4;
-          j.vy = 13;
-          j.cd = 2;
-          g.sfx.ouch();
-          g.camera3.addShake(0.15);
-        } else {
+        if (p.speed > 7) this.knock(R.list.indexOf(j), true);
+        else {
           const dd = Math.sqrt(d2) || 1;
           p.bump(dx / dd, dz / dd, 0.15, 0.9);
         }
