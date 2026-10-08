@@ -819,6 +819,11 @@
   {
    "papel": "marciano",
    "texto": "¡Vecino a bordo!"
+  },
+  {
+   "papel": "narrador",
+   "texto": "¡Los marcianos invaden Cobeña! Échalos a culetazos, embistiéndolos por la espalda.",
+   "tono": "alarma"
   }
  ]
 }

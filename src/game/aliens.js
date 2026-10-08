@@ -171,7 +171,7 @@ export class Aliens {
     g.hud.big('¡Invasión!', GREEN, 1.8);
     g.sfx.invasion();
     this.hints = [
-      [0.3, `🛸 ¡Los marcianos invaden Cobeña! Oleada <b>${level + 1}</b>${goal < full ? `, con <b>${full - goal}</b> menos por los disfrazados que echaste de día` : ''}: échalos a <b>culetazos</b>, embistiéndolos por la espalda.`],
+      [0.3, `🛸 ¡Los marcianos invaden Cobeña! Oleada <b>${level + 1}</b>${goal < full ? `, con <b>${full - goal}</b> menos por los disfrazados que echaste de día` : ''}: échalos a <b>culetazos</b>, embistiéndolos por la espalda.`, '¡Los marcianos invaden Cobeña! Échalos a culetazos, embistiéndolos por la espalda.'],
       [7, '💨 Con el <b>turbo</b> se asustan y salen huyendo: ¡es el momento de darles en el culo!'],
       [14, '🔦 No te quedes bajo el <b>rayo del platillo</b>. Si te atrapa, machaca <b>Espacio</b> para soltarte.'],
       [22, '🛸 Cuando el platillo se queda <b>atontado</b> (al soltarte del rayo o al rescatar a alguien) baja mucho: <b>salta</b> y dale un coscorrón. ¡Al tercero es tuyo!'],
@@ -265,7 +265,7 @@ export class Aliens {
     }
     if (this.active && this.hints.length) {
       for (const h of this.hints) h[0] -= dt;
-      if (this.hints[0][0] <= 0) g.hud.toast(this.hints.shift()[1]);
+      if (this.hints[0][0] <= 0) g.hud.toast(...this.hints.shift().slice(1));
     }
     this.grabCd -= dt;
     this.updateUfo(dt, p, time, inp);
