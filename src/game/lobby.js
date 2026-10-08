@@ -12,10 +12,11 @@ export class Lobby {
     this.game = game;
     this.error = null;
     const $ = (id) => document.getElementById(id);
-    this.el = { panel: $('friends'), buttons: $('menu-buttons'), start: $('fr-start'), room: $('fr-room'), code: $('fr-code'), name: $('fr-name'), players: $('fr-players'), go: $('fr-go'), msg: $('fr-msg'), back: $('fr-back'), share: $('fr-share') };
+    this.el = { panel: $('friends'), buttons: $('menu-buttons'), start: $('fr-start'), join: $('fr-join'), room: $('fr-room'), code: $('fr-code'), name: $('fr-name'), players: $('fr-players'), go: $('fr-go'), msg: $('fr-msg'), back: $('fr-back'), share: $('fr-share') };
     $('btn-friends').addEventListener('click', () => this.open());
     $('fr-create').addEventListener('click', () => this.create());
-    $('fr-join').addEventListener('submit', (e) => {
+    $('fr-ask').addEventListener('click', () => this.ask());
+    this.el.join.addEventListener('submit', (e) => {
       e.preventDefault();
       if (this.el.code.value.trim()) this.join(this.el.code.value);
     });
@@ -24,16 +25,26 @@ export class Lobby {
       game.start();
     });
     this.el.share.addEventListener('click', () => this.share());
-    this.el.back.addEventListener('click', () => (game.party ? game.closeParty() : this.close()));
+    this.el.back.addEventListener('click', () => (game.party ? game.closeParty() : this.asking ? this.open() : this.close()));
   }
 
+  // Crear o unirse: el código no se pide hasta que se elige unirse
   open() {
     this.on = true;
+    this.asking = false;
+    this.error = null;
     this.refresh();
   }
 
+  ask() {
+    this.asking = true;
+    this.error = null;
+    this.refresh();
+    this.el.code.focus();
+  }
+
   close() {
-    this.on = false;
+    this.on = this.asking = false;
     this.error = null;
     this.refresh();
   }
@@ -43,6 +54,7 @@ export class Lobby {
     const party = this.game.openParty(code, hosting);
     const why = await party.opened;
     if (why && this.game.party === party) this.game.closeParty(why);
+    if (!why) this.asking = false;
     return why;
   }
 
@@ -81,7 +93,8 @@ export class Lobby {
     const on = this.on || !!party;
     E.panel.classList.toggle('hidden', !on);
     E.buttons.classList.toggle('hidden', on);
-    E.start.classList.toggle('hidden', !!party);
+    E.start.classList.toggle('hidden', !!party || this.asking);
+    E.join.classList.toggle('hidden', !!party || !this.asking);
     E.room.classList.toggle('hidden', !party);
     E.msg.textContent = this.error ? WHY[this.error] || WHY.broker : '';
     E.back.textContent = party ? '← Salir de la sala' : '← Volver';

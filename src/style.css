@@ -1114,12 +1114,9 @@ body.net [data-act='photo'] {
   display: flex;
   gap: 10px;
 }
-#fr-create {
-  width: auto;
-  white-space: nowrap;
-}
-#fr-join {
+#fr-start .brick-btn {
   flex: 1;
+  width: auto;
 }
 #fr-join .brick-btn {
   width: auto;

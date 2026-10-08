@@ -131,11 +131,12 @@
         <div id="friends" class="hidden">
           <div id="fr-start">
             <button id="fr-create" class="brick-btn">🏠 Crear partida</button>
-            <form id="fr-join">
-              <input id="fr-code" maxlength="8" placeholder="Código" aria-label="Código de la sala" autocomplete="off" autocapitalize="characters" spellcheck="false" />
-              <button class="brick-btn">Unirse</button>
-            </form>
+            <button id="fr-ask" class="brick-btn">🔑 Unirse a una partida</button>
           </div>
+          <form id="fr-join" class="hidden">
+            <input id="fr-code" maxlength="8" placeholder="Código de la sala" aria-label="Código de la sala" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+            <button class="brick-btn">Entrar</button>
+          </form>
           <div id="fr-room" class="hidden">
             <div class="fr-head">
               <span>Sala <b id="fr-name"></b></span>
