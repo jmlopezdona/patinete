@@ -16,6 +16,7 @@ export class Voice {
     this.buffers = new Map();
     this.queue = [];
     this.playing = false;
+    this.src = this.current = this.stale = null;
     this.base = `${import.meta.env.BASE_URL}voz/`;
     fetch(`${this.base}index.json`)
       .then((r) => (r.ok ? r.json() : []))
@@ -24,9 +25,16 @@ export class Voice {
   }
 
   // urgent: los rótulos grandes cuentan lo que acaba de pasar y se cuelan delante de los avisos
-  say(text, urgent = false) {
+  // now: calla lo que esté sonando y lo que espere, para quien va pasando de una frase a otra
+  say(text, urgent = false, now = false) {
     const key = voiceKey(text);
-    if (!this.lines.has(key) || !this.sfx.ctx || this.queue.includes(key)) return;
+    if (!this.lines.has(key) || !this.sfx.ctx) return;
+    if (now) {
+      this.queue.length = 0;
+      this.stale = this.current;
+      this.src?.stop();
+    }
+    if (this.queue.includes(key)) return;
     if (urgent) this.queue.unshift(key);
     else this.queue.push(key);
     // Si se amontonan, se queda sin decir lo más viejo
@@ -37,7 +45,7 @@ export class Voice {
   async next() {
     if (this.playing || !this.queue.length) return;
     this.playing = true;
-    const key = this.queue.shift();
+    const key = (this.current = this.queue.shift());
     try {
       const ctx = this.sfx.ctx;
       let buf = this.buffers.get(key);
@@ -46,16 +54,20 @@ export class Voice {
         buf = await ctx.decodeAudioData(await res.arrayBuffer());
         this.buffers.set(key, buf);
       }
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(this.sfx.voiceBus);
-      await new Promise((done) => {
-        src.onended = done;
-        src.start();
-      });
+      // Si la han callado mientras cargaba, ya no se dice
+      if (this.stale !== key) {
+        const src = (this.src = ctx.createBufferSource());
+        src.buffer = buf;
+        src.connect(this.sfx.voiceBus);
+        await new Promise((done) => {
+          src.onended = done;
+          src.start();
+        });
+      }
     } catch (err) {
       // Una locución que no carga no para el juego
     }
+    this.src = this.current = this.stale = null;
     this.playing = false;
     this.next();
   }
