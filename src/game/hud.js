@@ -294,8 +294,13 @@ export class Hud {
 
   results(r) {
     const e = this.el.results;
+    // Una descarga puede seguir en marcha: las direcciones del álbum se sueltan más tarde
+    const old = this.albumUrls;
+    if (old?.length) setTimeout(() => old.forEach((u) => URL.revokeObjectURL(u)), 30000);
+    this.albumUrls = [];
     if (!r) {
       e.classList.add('hidden');
+      e.replaceChildren();
       return;
     }
     e.innerHTML = `
@@ -309,6 +314,61 @@ export class Hud {
         <div class="hint"><kbd>E</kbd> Continuar</div>
       </div>`;
     e.classList.remove('hidden');
+    if (r.photos?.length) this.album(e.querySelector('.hint'), r.photos);
+  }
+
+  // Álbum de la sesión con Emma: todas las fotos en fila y, en grande, la elegida (de entrada, la
+  // mejor), para guardarla o compartirla
+  album(before, photos) {
+    const box = document.createElement('div');
+    box.className = 'album';
+    box.innerHTML = '<div class="pola big"><img alt="La foto elegida"><span></span></div><div class="strip"></div><div class="row"><a class="brick-btn primary">⬇ Guardar</a><button class="brick-btn hidden">Compartir</button></div>';
+    const [big, strip, row] = box.children;
+    const [img, cap] = big.children;
+    const [save, share] = row.children;
+    const urls = this.albumUrls;
+    let file = null;
+    let cur = -1;
+    const pick = (i) => {
+      const f = photos[i];
+      cur = i;
+      [...strip.children].forEach((t, k) => t.classList.toggle('sel', k === i));
+      cap.textContent = `Foto ${i + 1} · ${f.hearts ? '♥'.repeat(f.hearts) + ` +${f.pts}` : 'no sales'}`;
+      const show = () => {
+        if (cur !== i) return;
+        img.src = save.href = f.url;
+        save.download = f.file.name;
+        file = f.file;
+        share.classList.toggle('hidden', !(navigator.canShare && navigator.canShare({ files: [file] })));
+      };
+      if (f.url) return show();
+      f.cv.toBlob((blob) => {
+        if (!blob) return;
+        f.file = new File([blob], `selfie-con-emma-${i + 1}.jpg`, { type: blob.type });
+        urls.push((f.url = URL.createObjectURL(blob)));
+        show();
+      }, 'image/jpeg', 0.92);
+    };
+    photos.forEach((f, i) => {
+      const t = document.createElement('button');
+      t.className = 'pola' + (f.hearts ? '' : ' out');
+      const s = document.createElement('span');
+      s.textContent = f.hearts ? '♥'.repeat(f.hearts) : '✕';
+      t.append(f.cv, s);
+      // Sin el foco, el teclado sigue siendo del juego
+      t.addEventListener('click', () => {
+        t.blur();
+        pick(i);
+      });
+      strip.appendChild(t);
+    });
+    save.addEventListener('click', () => save.blur());
+    share.addEventListener('click', () => {
+      share.blur();
+      if (file) navigator.share({ files: [file], title: 'Selfie con Emma · Los Panacotas' }).catch(() => {});
+    });
+    before.before(box);
+    pick(photos.reduce((b, f, i) => (f.pts > photos[b].pts ? i : b), 0));
   }
 
   update(dt, kmh, boost, boosting) {
