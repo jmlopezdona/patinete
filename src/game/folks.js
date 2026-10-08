@@ -1180,11 +1180,13 @@ export class Folks {
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     const len = cum[cum.length - 1];
     if (len < 60) return;
-    // Las tres con la camiseta rosa de su Camino de Santiago, y cada una con su pelo
+    // Las tres con la camiseta rosa de su Camino de Santiago, y cada una con su pelo. Corren en
+    // fila de a tres, hombro con hombro: Ana en medio (con el nombre más alto, para que no se
+    // pisen los tres) y las otras dos a cada lado.
     const LOOKS = [
       ['Ana', 0, { legs: C.black, hair: 'curls', hairColor: 0x2a1b14, hairTips: 0x4a3021, face: 'grin', brows: 0x2a1b14, earrings: C.lgray }],
-      ['Cintia', 1.5, { legs: 0x4a262b, hair: 'mane', hairColor: 0xb8935a, hairTips: 0xe8cb8a, face: 'grin', brows: 0x8a6a3e }],
-      ['Bea', -1.5, { legs: C.black, hair: 'bob', hairColor: 0x1d1512, face: 'smile', brows: 0x1d1512, earrings: C.white }],
+      ['Cintia', 2.6, { legs: 0x4a262b, hair: 'mane', hairColor: 0xb8935a, hairTips: 0xe8cb8a, face: 'grin', brows: 0x8a6a3e }],
+      ['Bea', -2.6, { legs: C.black, hair: 'bob', hairColor: 0x1d1512, face: 'smile', brows: 0x1d1512, earrings: C.white }],
     ];
     const list = LOOKS.map(([name, off, look], i) => {
       const fig = createMinifig({ torso: TEE, arms: TEE, lashes: true, shirt: { front: 'camino', long: true }, ...look });
@@ -1192,7 +1194,7 @@ export class Folks {
       shadows(fig.group);
       const tag = nameTag(name, '#f3a9c2');
       g.scene.add(fig.group, tag);
-      return { name, fig, tag, off, lag: i === 0 ? 0 : 2.8, s: 0, seg: 0, x: 0, z: 0, heading: 0, dodge: 0, fly: 0, vy: 0, y: 0, cd: 0, ph: i * 2.1, init: false };
+      return { name, fig, tag, off, tagY: off ? 6.6 : 7.8, s: 0, seg: 0, x: 0, z: 0, heading: 0, dodge: 0, fly: 0, vy: 0, y: 0, cd: 0, ph: i * 2.1, init: false };
     });
     this.joggers = { pts, cum, len, list, s: 0, marker: { x: pts[0][0], z: pts[0][1], icon: '🏃‍♀️' } };
     this.markers.push(this.joggers.marker);
@@ -1231,7 +1233,7 @@ export class Folks {
         j.init = false;
         continue;
       }
-      const want = R.s - j.lag;
+      const want = R.s;
       if (!j.init) {
         j.init = true;
         j.s = want;
@@ -1248,7 +1250,7 @@ export class Folks {
         f.group.rotation.x += dt * 12;
         f.armL.rotation.x = f.armR.rotation.x = -2.6;
         f.group.position.y = T.height(j.x, j.z) + j.y;
-        j.tag.position.set(j.x, f.group.position.y + 6.6, j.z);
+        j.tag.position.set(j.x, f.group.position.y + j.tagY, j.z);
         continue;
       }
       // Si se quedó atrás, aprieta el paso hasta volver al grupo
@@ -1279,7 +1281,7 @@ export class Folks {
       f.head.rotation.y = j.off ? Math.sin(time * 0.9 + j.ph) * 0.5 * Math.sign(-j.off) : 0;
       f.group.position.set(nx, gy + Math.abs(Math.cos(w)) * 0.28, nz);
       f.group.rotation.set(0.14, j.heading, 0);
-      j.tag.position.set(nx, gy + 6.6, nz);
+      j.tag.position.set(nx, gy + j.tagY, nz);
       // Atropello
       j.cd -= dt;
       if (!live || j.cd > 0 || p.crashT > 0) continue;
