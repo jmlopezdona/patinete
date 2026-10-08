@@ -239,11 +239,6 @@
   },
   {
    "papel": "narrador",
-   "texto": "¡El platillo se ha quedado atontado y pierde altura! Salta y dale un coscorrón.",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
    "texto": "¡El timbrazo le ha roto el escudo a la nave nodriza! Aprovecha y dale en la panza.",
    "tono": "triunfo"
   },
@@ -302,16 +297,6 @@
    "texto": "¡Zapatilla va!"
   },
   {
-   "papel": "narrador",
-   "texto": "¡Todos los meteoritos!",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Te has soltado!",
-   "tono": "triunfo"
-  },
-  {
    "papel": "marciano",
    "texto": "¡Te han pillado!",
    "dicho": "¡Te pillamos!"
@@ -323,52 +308,8 @@
   },
   {
    "papel": "narrador",
-   "texto": "¡Sin escudo!",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Se ha escapado!",
-   "tono": "pena"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Resbalón!",
-   "tono": "pena"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Por los aires!",
-   "tono": "alarma"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Picotazo!",
-   "tono": "pena"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Patinete oficial!",
-   "tono": "alarma"
-  },
-  {
-   "papel": "narrador",
    "texto": "¡Nodriza derribada!",
    "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Ni un disfrazado!",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "municipal",
-   "texto": "¡Multa!"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Meteorito!",
-   "tono": "alarma"
   },
   {
    "papel": "narrador",
@@ -382,46 +323,8 @@
   },
   {
    "papel": "narrador",
-   "texto": "¡Ladrillo dorado!",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡La nave nodriza!",
-   "tono": "alarma"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡La abuela!",
-   "tono": "alarma"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Invisible!"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Invasión!",
-   "tono": "alarma"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Gravedad lunar!"
-  },
-  {
-   "papel": "narrador",
    "texto": "¡Estatua recuperada!",
    "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Escudo!",
-   "tono": "alarma"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Era un marciano!",
-   "tono": "alarma"
   },
   {
    "papel": "comentarista",
@@ -434,17 +337,8 @@
   },
   {
    "papel": "narrador",
-   "texto": "¡El rayo!",
-   "tono": "alarma"
-  },
-  {
-   "papel": "narrador",
    "texto": "¡El platillo es tuyo!",
    "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Cohete!"
   },
   {
    "papel": "narrador",
@@ -452,28 +346,8 @@
    "tono": "triunfo"
   },
   {
-   "papel": "narrador",
-   "texto": "¡Castañazo!",
-   "tono": "pena"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Bombazo de baba!",
-   "tono": "pena"
-  },
-  {
    "papel": "municipal",
    "texto": "¡Alto ahí!"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Al ladrón!",
-   "tono": "alarma"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Al agua!",
-   "tono": "pena"
   },
   {
    "papel": "marciano",
@@ -508,16 +382,6 @@
    "tono": "misterio"
   },
   {
-   "papel": "narrador",
-   "texto": "Les has dado esquinazo al municipal y a la abuela. Y ahora, a portarse bien.",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "Le has dado esquinazo al municipal. Y ahora, a portarse bien.",
-   "tono": "triunfo"
-  },
-  {
    "papel": "municipal",
    "texto": "Multa por destrozar el mobiliario… y derechito a la Policía Local."
   },
@@ -543,17 +407,7 @@
   },
   {
    "papel": "narrador",
-   "texto": "¡Has derribado la nave nodriza! Y con premio extra.",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
    "texto": "Has recogido todos los meteoritos de esta lluvia. Los cráteres se quedan hasta la próxima.",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Invasión rechazada! Volverán otra noche… con refuerzos y otra nodriza más dura.",
    "tono": "triunfo"
   },
   {
@@ -565,21 +419,6 @@
    "papel": "narrador",
    "texto": "¡Tarde! Ya va dentro del platillo. Echa a los marcianos para que suelte su botín.",
    "tono": "pena"
-  },
-  {
-   "papel": "narrador",
-   "texto": "Marcianos tontos perdidos: ahora el culetazo vale por cualquier lado.",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "Marciano tonto perdido: ahora el culetazo vale por cualquier lado.",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Le has quitado la estatua dorada al ladrón! Vuelve volando a su fuente.",
-   "tono": "triunfo"
   },
   {
    "papel": "narrador",
@@ -661,39 +500,9 @@
   },
   {
    "papel": "narrador",
-   "texto": "Les has dado esquinazo a las gallinas. Premio: 300 studs… y a mirar por dónde pisas.",
-   "dicho": "Les has dado esquinazo a las gallinas. Premio: trescientos studs… y a mirar por dónde pisas.",
-   "tono": "triunfo"
-  },
-  {
-   "papel": "narrador",
-   "texto": "Con el gorro puesto el rayo no te detecta durante 20 segundos. Los marcianos de a pie sí te ven.",
-   "dicho": "Con el gorro puesto el rayo no te detecta durante veinte segundos. Los marcianos de a pie sí te ven."
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Agárrate! Turbo infinito durante 10 segundos.",
-   "dicho": "¡Agárrate! Turbo infinito durante diez segundos.",
-   "tono": "alarma"
-  },
-  {
-   "papel": "narrador",
-   "texto": "Durante 60 segundos los saltos son gigantes: llegas al rayo, al platillo y a los tejados.",
-   "dicho": "Durante sesenta segundos los saltos son gigantes: llegas al rayo, al platillo y a los tejados."
-  },
-  {
-   "papel": "narrador",
    "texto": "¡Un marciano se lleva la estatua dorada de la Plaza de la Villa! Búscalo en el minimapa y dale 3 culetazos antes de que se escape.",
    "dicho": "¡Un marciano se lleva la estatua dorada de la Plaza de la Villa! Búscalo en el minimapa y dale tres culetazos antes de que se escape.",
    "tono": "alarma"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Timbre sónico!"
-  },
-  {
-   "papel": "narrador",
-   "texto": "¡Gorro de aluminio!"
   },
   {
    "papel": "comentarista",

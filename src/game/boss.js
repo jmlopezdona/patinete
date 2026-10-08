@@ -415,7 +415,7 @@ export class Boss {
     this.hide();
     g.all.tally('motherships');
     g.all.addStuds(reward);
-    g.all.hud.toast(`🛸 ¡Has derribado la <b>nave nodriza</b>! Premio extra: <b>${reward.toLocaleString('es-ES')}</b> studs.`, '¡Has derribado la nave nodriza! Y con premio extra.');
+    g.all.hud.toast(`🛸 ¡Has derribado la <b>nave nodriza</b>! Premio extra: <b>${reward.toLocaleString('es-ES')}</b> studs.`);
     A.victory();
   }
 

@@ -175,7 +175,7 @@ export class Heist {
     g.all.hud.big('¡Estatua recuperada!', GOLD, 2.2);
     g.all.sfx.fanfare();
     g.all.confetti(k.x, k.y, k.z);
-    g.all.hud.toast(`🏆 ¡${g.party ? 'Le habéis' : 'Le has'} quitado la <b>estatua dorada</b> al ladrón! Vuelve volando a su fuente. Premio: <b>${reward.toLocaleString('es-ES')}</b> studs.`, '¡Le has quitado la estatua dorada al ladrón! Vuelve volando a su fuente.');
+    g.all.hud.toast(`🏆 ¡${g.party ? 'Le habéis' : 'Le has'} quitado la <b>estatua dorada</b> al ladrón! Vuelve volando a su fuente. Premio: <b>${reward.toLocaleString('es-ES')}</b> studs.`);
     if (!g.party) g.saveGame();
   }
 

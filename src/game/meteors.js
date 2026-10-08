@@ -284,7 +284,8 @@ export class Meteors {
     g.sfx.meteorAlarm();
     g.hud.big('¡Lluvia de meteoritos!', ORANGE, 2.2);
     g.hud.setMeteors(0, this.total);
-    g.hud.toast('☄️ ¡Que vienen! Apártate de las <b>dianas</b>: cada meteorito deja un <b>cráter</b> que se patina como un bowl… y una piedra del espacio en el fondo.');
+    const news = '☄️ ¡Que vienen! Apártate de las <b>dianas</b>: cada meteorito deja un <b>cráter</b> que se patina como un bowl… y una piedra del espacio en el fondo.';
+    g.hud.toast(news, g.told('lluvia de meteoritos') ? '' : news);
   }
 
   // Un meteorito con su diana: dónde cae, de qué tamaño, cuánto le falta y de qué lado viene
